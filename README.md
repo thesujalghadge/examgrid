@@ -1,36 +1,119 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ExamGrid
 
-## Getting Started
+NTA-style computer-based test (CBT) platform for JEE / NEET / CET institutes. Phase 3 provides a stable **student CBT runtime** and a **local-first admin foundation** for question banks and exam creation. Backend migration to Supabase is prepared but not yet wired to persistence.
 
-First, run the development server:
+## Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+### Student CBT runtime
+
+- Mock login and exam listing
+- Full exam flow: instructions → declaration → CBT → submit → results
+- MCQ and numerical question types with on-screen numerical keypad
+- Question palette (5 states), section tabs, scientific calculator
+- Wall-clock timer with refresh recovery and `localStorage` autosave
+- Exam integrity: fullscreen warnings, tab/blur detection, browser back protection
+
+### Admin module
+
+- Mock admin authentication (`/admin/login`)
+- Question bank with filters, search, and JSON import
+- Create exam workflow: dynamic sections (Physics, Chemistry, Mathematics, Biology, custom)
+- Publish exams to the student portal (`localStorage` catalog)
+- System status page for Supabase connectivity check
+
+### Built-in demo
+
+- JEE Main mock exam (30 mixed MCQ + numerical questions) always available
+
+## Tech stack
+
+- **Framework:** Next.js 16 (App Router)
+- **Language:** TypeScript
+- **UI:** Tailwind CSS v4, ShadCN UI
+- **State:** Zustand
+- **Persistence (current):** `localStorage` / `sessionStorage`
+- **Backend (prepared):** Supabase client (`@supabase/supabase-js`)
+
+## Project structure
+
+```
+src/
+  app/              # Routes (student + admin)
+  components/       # UI (exam CBT, admin)
+  stores/           # Zustand (auth, questions, timer, session)
+  repositories/     # localStorage adapters (swappable)
+  services/         # Import, exam builder, question bank
+  lib/              # Exam catalog, scoring, Supabase client
+  types/            # Shared TypeScript types
+public/samples/     # Sample JSON for question import
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Local development
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Prerequisites
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Node.js 20+ recommended
+- npm
 
-## Learn More
+### Install and run
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm install
+cp .env.example .env.local   # optional: Supabase status page
+npm run dev
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Area | URL |
+|------|-----|
+| Student login | `/login` |
+| Student exams | `/exams` |
+| Admin login | `/admin/login` |
+| Admin overview | `/admin` |
+| System status | `/admin/system/status` |
 
-## Deploy on Vercel
+### Admin mock login
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- Any email, password at least 4 characters (e.g. `admin@examgrid.local` / `admin123`)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Student mock login
+
+- Prefilled demo credentials on `/login`; any valid form submission works
+
+### Environment variables
+
+Copy `.env.example` to `.env.local` (never commit `.env.local`):
+
+| Variable | Description |
+|----------|-------------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon (public) key |
+
+The CBT engine does **not** depend on Supabase yet. Missing env vars only affect the admin system status page.
+
+### Question import sample
+
+`public/samples/question-import-sample.json` — upload via **Admin → Question Bank**.
+
+## Repository mode
+
+| Data | Storage |
+|------|---------|
+| Question bank | `localStorage` (`examgrid:question-bank`) |
+| Published exams | `localStorage` (`examgrid:exam-catalog`) |
+| Exam attempts | `localStorage` (`examgrid:attempt:*`) |
+| Admin session | `sessionStorage` |
+
+## Scripts
+
+```bash
+npm run dev      # Development server
+npm run build    # Production build
+npm run start    # Start production server
+npm run lint     # ESLint
+```
+
+## License
+
+Private — institute use. All rights reserved unless otherwise specified.

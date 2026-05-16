@@ -1,0 +1,35 @@
+{
+  "questions": [
+    {
+      "subject": "Physics",
+      "chapter": "Electrostatics",
+      "topic": "Coulomb Law",
+      "difficulty": "medium",
+      "questionType": "MCQ_SINGLE",
+      "questionText": "Two point charges +2μC and -3μC are separated by 0.3 m. Force magnitude (N)?",
+      "options": [
+        { "label": "A", "text": "0.6" },
+        { "label": "B", "text": "1.2" },
+        { "label": "C", "text": "2.4" },
+        { "label": "D", "text": "3.6" }
+      ],
+      "correctAnswer": "A",
+      "solution": "Use Coulomb's law.",
+      "marks": 4,
+      "negativeMarks": 1
+    },
+    {
+      "subject": "Chemistry",
+      "chapter": "Organic",
+      "topic": "Alkanes",
+      "difficulty": "easy",
+      "questionType": "NUMERICAL",
+      "questionText": "Molecular mass of methane (CH₄) — enter value.",
+      "options": [],
+      "correctAnswer": "16",
+      "solution": "",
+      "marks": 4,
+      "negativeMarks": 0
+    }
+  ]
+}
