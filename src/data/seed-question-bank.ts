@@ -1,8 +1,12 @@
 import type { BankQuestion } from "@/types/question-bank";
+import {
+  type LegacyBankQuestion,
+  withQuestionIntelligenceDefaults,
+} from "@/lib/question-intelligence/defaults";
 
 const now = Date.now();
 
-export const SEED_QUESTION_BANK: BankQuestion[] = [
+const SEED_QUESTION_BANK_BASE = [
   {
     id: "seed-phy-1",
     subject: "Physics",
@@ -99,4 +103,8 @@ export const SEED_QUESTION_BANK: BankQuestion[] = [
     createdAt: now,
     updatedAt: now,
   },
-];
+] satisfies LegacyBankQuestion[];
+
+export const SEED_QUESTION_BANK: BankQuestion[] = SEED_QUESTION_BANK_BASE.map(
+  withQuestionIntelligenceDefaults,
+);

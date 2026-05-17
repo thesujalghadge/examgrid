@@ -2,6 +2,10 @@ import { DEMO_INSTITUTE } from "@/config/demo";
 import type { ExamDefinition, ExamQuestion } from "@/types/exam";
 import type { Batch, ExamSchedule, InstituteStudent } from "@/types/institute-ops";
 import type { BankQuestion } from "@/types/question-bank";
+import {
+  type LegacyBankQuestion,
+  withQuestionIntelligenceDefaults,
+} from "@/lib/question-intelligence/defaults";
 
 const base = Date.parse("2026-05-17T09:00:00.000Z");
 const iso = (offsetHours: number) =>
@@ -57,7 +61,7 @@ export const DEMO_STUDENTS: InstituteStudent[] = [
   updatedAt: ts(),
 }));
 
-export const DEMO_QUESTION_BANK: BankQuestion[] = [
+const DEMO_QUESTION_BANK_BASE = [
   {
     id: "demo-phy-kinematics-1",
     subject: "Physics",
@@ -154,7 +158,11 @@ export const DEMO_QUESTION_BANK: BankQuestion[] = [
     createdAt: ts(),
     updatedAt: ts(),
   },
-];
+] satisfies LegacyBankQuestion[];
+
+export const DEMO_QUESTION_BANK: BankQuestion[] = DEMO_QUESTION_BANK_BASE.map(
+  withQuestionIntelligenceDefaults,
+);
 
 function q(
   id: string,

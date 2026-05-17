@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { MetricCard, StatusBadge } from "@/components/shared/product-ui";
 import { cn } from "@/lib/utils";
 import {
   Card,
@@ -58,25 +59,30 @@ export default function ResultPage() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <header className="bg-[#1a3c6e] px-6 py-4 text-center text-white">
+      <header className="bg-[#123763] px-6 py-4 text-center text-white">
         <h1 className="text-xl font-bold">Examination Submitted Successfully</h1>
         <p className="text-sm text-blue-100">{exam.title}</p>
       </header>
 
       <main className="mx-auto max-w-3xl space-y-6 p-6">
-        <Card>
+        <Card className="border-gray-200 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-[#1a3c6e]">Score Summary</CardTitle>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <CardTitle className="text-[#123763]">Score Summary</CardTitle>
+              <StatusBadge tone={result.violationCount ? "amber" : "green"}>
+                {result.violationCount ? "Review integrity log" : "Clean session"}
+              </StatusBadge>
+            </div>
             <CardDescription>
               {result.candidateName} · Roll {result.rollNumber}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-              <Stat label="Total Score" value={`${result.totalScore} / ${result.maxScore}`} />
-              <Stat label="Correct" value={String(result.correct)} highlight="green" />
-              <Stat label="Incorrect" value={String(result.incorrect)} highlight="red" />
-              <Stat label="Unattempted" value={String(result.unattempted)} />
+              <MetricCard label="Total Score" value={`${result.totalScore} / ${result.maxScore}`} />
+              <MetricCard label="Correct" value={result.correct} tone="good" />
+              <MetricCard label="Incorrect" value={result.incorrect} tone="warn" />
+              <MetricCard label="Unattempted" value={result.unattempted} />
             </div>
             <p className="text-sm text-gray-600">
               Time used: {formatDuration(result.durationUsedSeconds)} · Submitted:{" "}
@@ -120,6 +126,48 @@ export default function ResultPage() {
           </CardContent>
         </Card>
 
+        {result.academicInsights && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Academic Insights</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-3">
+                {result.academicInsights.subjectBreakdown.map((subject) => (
+                  <div key={subject.name} className="rounded border border-gray-100 bg-gray-50 p-3">
+                    <p className="text-xs font-semibold uppercase text-gray-500">
+                      {subject.name}
+                    </p>
+                    <p className="mt-1 text-lg font-semibold text-[#123763]">
+                      {subject.accuracy}%
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {subject.correct}/{subject.attempted || subject.total} correct
+                    </p>
+                  </div>
+                ))}
+              </div>
+              {result.academicInsights.suggestedRevisionTopics.length > 0 && (
+                <div>
+                  <p className="mb-2 text-xs font-semibold uppercase text-gray-500">
+                    Suggested revision
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {result.academicInsights.suggestedRevisionTopics.map((topic) => (
+                      <span
+                        key={topic}
+                        className="rounded bg-amber-50 px-2 py-1 text-xs font-medium text-amber-800"
+                      >
+                        {topic}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         <div className="flex flex-wrap justify-center gap-4">
           <Link
             href="/exams"
@@ -145,36 +193,9 @@ export default function ResultPage() {
         </div>
 
         <p className="text-center text-xs text-gray-500">
-          Phase 1 demo — scores computed from mock answer keys stored locally.
+          Scores are calculated from the configured answer key for this demo exam.
         </p>
       </main>
-    </div>
-  );
-}
-
-function Stat({
-  label,
-  value,
-  highlight,
-}: {
-  label: string;
-  value: string;
-  highlight?: "green" | "red";
-}) {
-  return (
-    <div className="rounded border bg-white p-3 text-center">
-      <p className="text-xs text-gray-500">{label}</p>
-      <p
-        className={`text-lg font-bold ${
-          highlight === "green"
-            ? "text-green-700"
-            : highlight === "red"
-              ? "text-red-700"
-              : "text-[#1a3c6e]"
-        }`}
-      >
-        {value}
-      </p>
     </div>
   );
 }

@@ -3,6 +3,32 @@ import type { BankQuestion } from "@/types/question-bank";
 import type { QuestionRow } from "@/repositories/supabase/types";
 import { assertBankQuestionForWrite } from "@/lib/validation/bank-question-stored-schema";
 
+const METADATA_KEYS = [
+  "examSource",
+  "examYear",
+  "subtopic",
+  "difficultyLevel",
+  "cognitiveLevel",
+  "estimatedSolveTimeSeconds",
+  "formulaTags",
+  "conceptTags",
+  "mistakeTags",
+  "sourceType",
+  "solutionDetailed",
+  "solutionShort",
+  "relatedQuestionIds",
+  "normalizedQuestionText",
+  "similarityFingerprint",
+  "similarityGroupKey",
+  "archetypeKey",
+  "weightageScore",
+  "predictiveScore",
+] as const satisfies readonly (keyof BankQuestion)[];
+
+function intelligenceMetadata(question: BankQuestion): Record<string, unknown> {
+  return Object.fromEntries(METADATA_KEYS.map((key) => [key, question[key]]));
+}
+
 export function bankQuestionToRow(
   question: BankQuestion,
   resolvedId: string,
@@ -27,7 +53,7 @@ export function bankQuestionToRow(
     solution: question.solution,
     marks: question.marks,
     negative_marks: question.negativeMarks,
-    metadata: {},
+    metadata: intelligenceMetadata(question),
     created_at: new Date(question.createdAt).toISOString(),
     updated_at: new Date(question.updatedAt).toISOString() || now,
   };
@@ -35,9 +61,11 @@ export function bankQuestionToRow(
 
 export function rowToBankQuestion(row: QuestionRow): BankQuestion {
   const publicId = row.legacy_id ?? row.id;
-  return {
+  const metadata = row.metadata ?? {};
+  return assertBankQuestionForWrite({
     id: publicId,
     subject: row.subject,
+    ...metadata,
     chapter: row.chapter,
     topic: row.topic,
     difficulty: row.difficulty as BankQuestion["difficulty"],
@@ -50,7 +78,7 @@ export function rowToBankQuestion(row: QuestionRow): BankQuestion {
     negativeMarks: Number(row.negative_marks),
     createdAt: new Date(row.created_at).getTime(),
     updatedAt: new Date(row.updated_at).getTime(),
-  };
+  }, "rowToBankQuestion");
 }
 
 export function validateBankQuestionForWrite(

@@ -1,4 +1,5 @@
 import { isNumericalAnswerCorrect, isNumericalAnswerAttempted } from "@/lib/numerical";
+import { buildAcademicInsights } from "@/lib/analytics";
 import type {
   ExamDefinition,
   ExamQuestion,
@@ -97,6 +98,7 @@ export function computeExamResult(
     totalScore: Math.round(totalScore * 100) / 100,
     maxScore,
     sectionScores,
+    academicInsights: buildAcademicInsights(exam, attempt),
     violationCount: attempt.violations?.length ?? 0,
   };
 }

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { analyzeQuestionMetadataQuality } from "@/lib/question-intelligence/quality";
 import type { BankQuestion } from "@/types/question-bank";
 import type { QuestionType } from "@/types/exam";
 import { cn } from "@/lib/utils";
@@ -44,8 +45,21 @@ export function QuestionBankList({ questions }: QuestionBankListProps) {
     });
   }, [questions, search, subject, difficulty, type, chapter]);
 
+  const quality = useMemo(
+    () => analyzeQuestionMetadataQuality(questions),
+    [questions],
+  );
+
   return (
     <div className="space-y-4">
+      <div className="grid gap-3 rounded border border-gray-200 bg-white p-4 sm:grid-cols-5">
+        <QualityStat label="Missing metadata" value={quality.missingMetadataCount} />
+        <QualityStat label="Incomplete taxonomy" value={quality.incompleteTaxonomyCount} />
+        <QualityStat label="Orphan topics" value={quality.orphanTopicCount} />
+        <QualityStat label="Low quality" value={quality.lowQualityCount} />
+        <QualityStat label="Duplicate candidates" value={quality.duplicateCandidateCount} />
+      </div>
+
       <div className="grid gap-3 rounded border border-gray-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-5">
         <FilterField label="Search">
           <Input
@@ -156,6 +170,7 @@ function QuestionRow({ question: q }: { question: BankQuestion }) {
           {q.questionType === "NUMERICAL" ? "Numerical" : "MCQ"}
         </Badge>
         <Badge className="bg-amber-50 text-amber-800">{q.difficulty}</Badge>
+        <Badge className="bg-emerald-50 text-emerald-800">{q.sourceType}</Badge>
         <span className="text-xs text-gray-400">{q.id}</span>
       </div>
       <p className="line-clamp-2 text-sm text-gray-900">{q.questionText}</p>
@@ -164,7 +179,21 @@ function QuestionRow({ question: q }: { question: BankQuestion }) {
         {q.negativeMarks > 0 ? ` / −${q.negativeMarks}` : ""} · Answer:{" "}
         {q.correctAnswer}
       </p>
+      <p className="mt-1 text-xs text-gray-400">
+        {q.examSource}
+        {q.examYear ? ` ${q.examYear}` : ""} · {q.subtopic || "No subtopic"} ·
+        fingerprint {q.similarityFingerprint || "pending"}
+      </p>
     </article>
+  );
+}
+
+function QualityStat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded bg-gray-50 p-3">
+      <p className="text-[10px] font-semibold uppercase text-gray-500">{label}</p>
+      <p className="mt-1 text-lg font-semibold text-[#1a3c6e]">{value}</p>
+    </div>
   );
 }
 

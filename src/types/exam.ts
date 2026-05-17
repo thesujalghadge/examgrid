@@ -30,6 +30,15 @@ export interface ExamQuestion {
   sectionId: string;
   number: number;
   type: QuestionType;
+  subject?: string;
+  chapter?: string;
+  topic?: string;
+  subtopic?: string;
+  difficultyLevel?: "easy" | "medium" | "hard";
+  estimatedSolveTimeSeconds?: number;
+  conceptTags?: string[];
+  mistakeTags?: string[];
+  archetypeKey?: string;
   text: string;
   options: ExamOption[];
   correctOptionId?: string;
@@ -84,6 +93,39 @@ export interface SectionScore {
   score: number;
 }
 
+export interface AcademicPerformanceBreakdown {
+  name: string;
+  total: number;
+  attempted: number;
+  correct: number;
+  incorrect: number;
+  unattempted: number;
+  accuracy: number;
+  averageSolveTimeSeconds?: number;
+  score?: number;
+}
+
+export interface TopicAnalysis extends AcademicPerformanceBreakdown {
+  subject: string;
+  chapter: string;
+  topic: string;
+}
+
+export interface ResultAcademicInsights {
+  topicAnalysis: TopicAnalysis[];
+  subjectBreakdown: AcademicPerformanceBreakdown[];
+  difficultyBreakdown: AcademicPerformanceBreakdown[];
+  chapterBreakdown: AcademicPerformanceBreakdown[];
+  archetypeWeaknesses: AcademicPerformanceBreakdown[];
+  chapterTrends: AcademicPerformanceBreakdown[];
+  topicMasteryProgression: TopicAnalysis[];
+  mistakePatterns: AcademicPerformanceBreakdown[];
+  weakAreas: TopicAnalysis[];
+  strongestTopics: TopicAnalysis[];
+  suggestedRevisionTopics: string[];
+  averageSolveTimeSeconds: number;
+}
+
 export interface ExamResult {
   examId: string;
   examTitle: string;
@@ -99,6 +141,7 @@ export interface ExamResult {
   totalScore: number;
   maxScore: number;
   sectionScores: SectionScore[];
+  academicInsights?: ResultAcademicInsights;
   violationCount?: number;
 }
 

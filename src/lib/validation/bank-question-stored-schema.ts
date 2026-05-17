@@ -7,12 +7,39 @@ const bankOptionSchema = z.object({
   text: z.string(),
 });
 
-export const bankQuestionStoredSchema = z.object({
+const difficultySchema = z.enum(["easy", "medium", "hard"]);
+const sourceTypeSchema = z.enum(["PYQ", "generated", "institute", "custom"]);
+const tagListSchema = z.array(z.string().min(1)).default([]);
+
+const questionIntelligenceSchema = z.object({
+  examSource: z.string().min(1).default("Custom"),
+  examYear: z.number().int().min(1900).max(2100).optional(),
+  subtopic: z.string().default(""),
+  difficultyLevel: difficultySchema.optional(),
+  cognitiveLevel: z.string().min(1).default("apply"),
+  estimatedSolveTimeSeconds: z.number().int().nonnegative().default(120),
+  formulaTags: tagListSchema,
+  conceptTags: tagListSchema,
+  mistakeTags: tagListSchema,
+  sourceType: sourceTypeSchema.default("custom"),
+  solutionDetailed: z.string().default(""),
+  solutionShort: z.string().default(""),
+  relatedQuestionIds: z.array(z.string().min(1)).default([]),
+  normalizedQuestionText: z.string().default(""),
+  similarityFingerprint: z.string().default(""),
+  similarityGroupKey: z.string().default(""),
+  archetypeKey: z.string().default(""),
+  weightageScore: z.number().nonnegative().default(1),
+  predictiveScore: z.number().nonnegative().default(0),
+});
+
+export const bankQuestionStoredSchema = z
+  .object({
   id: z.string().min(1),
   subject: z.string().min(1),
   chapter: z.string().min(1),
   topic: z.string().min(1),
-  difficulty: z.enum(["easy", "medium", "hard"]),
+  difficulty: difficultySchema,
   questionType: z.enum(["MCQ_SINGLE", "NUMERICAL"]),
   questionText: z.string().min(1),
   options: z.array(bankOptionSchema),
@@ -22,7 +49,14 @@ export const bankQuestionStoredSchema = z.object({
   negativeMarks: z.number().nonnegative(),
   createdAt: z.number(),
   updatedAt: z.number(),
-});
+})
+  .merge(questionIntelligenceSchema)
+  .transform((question) => ({
+    ...question,
+    difficultyLevel: question.difficultyLevel ?? question.difficulty,
+    solutionDetailed: question.solutionDetailed || question.solution,
+    solutionShort: question.solutionShort || question.solution,
+  }));
 
 export const bankQuestionListSchema = z.array(bankQuestionStoredSchema);
 
