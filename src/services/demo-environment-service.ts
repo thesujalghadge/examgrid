@@ -40,7 +40,7 @@ export async function reseedDemoEnvironment(): Promise<void> {
     actorRole: "admin",
     actionType: "student_import",
     resourceType: "demo_environment",
-    resourceId: "apex-jee-academy",
+    resourceId: "ca-institute",
     metadata: {
       students: DEMO_STUDENTS.length,
       batches: DEMO_BATCHES.length,

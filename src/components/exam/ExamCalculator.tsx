@@ -7,7 +7,7 @@ import { evaluateCalculatorExpression } from "@/lib/calculator-engine";
 import { cn } from "@/lib/utils";
 
 const BTN =
-  "h-8 min-w-0 rounded border border-gray-400 bg-gray-100 text-xs font-semibold text-gray-900 hover:bg-gray-200 active:bg-gray-300";
+  "h-8 min-w-0 rounded-md border border-slate-300 bg-slate-50 text-xs font-semibold text-slate-900 transition hover:bg-slate-100 active:bg-slate-200";
 
 export function ExamCalculator() {
   const [open, setOpen] = useState(false);

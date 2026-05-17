@@ -43,11 +43,11 @@ export const DEMO_BATCHES: Batch[] = [
 ];
 
 export const DEMO_STUDENTS: InstituteStudent[] = [
-  ["44444444-4444-4444-8444-444444444401", "Aarav Mehta", "aarav@apexjee.demo", "9876501001", "APX-JEE-26001", "JEE", DEMO_BATCHES[0].id],
-  ["44444444-4444-4444-8444-444444444402", "Diya Iyer", "diya@apexjee.demo", "9876501002", "APX-JEE-26002", "JEE", DEMO_BATCHES[0].id],
-  ["44444444-4444-4444-8444-444444444403", "Kabir Shah", "kabir@apexjee.demo", "9876501003", "APX-NEET-26011", "NEET", DEMO_BATCHES[1].id],
-  ["44444444-4444-4444-8444-444444444404", "Meera Nair", "meera@apexjee.demo", "9876501004", "APX-NEET-26012", "NEET", DEMO_BATCHES[1].id],
-  ["44444444-4444-4444-8444-444444444405", "Rohan Patil", "rohan@apexjee.demo", "9876501005", "APX-CET-26021", "CET", DEMO_BATCHES[2].id],
+  ["44444444-4444-4444-8444-444444444401", "Aarav Mehta", "aarav@cainstitute.demo", "9876501001", "CA-JEE-26001", "JEE", DEMO_BATCHES[0].id],
+  ["44444444-4444-4444-8444-444444444402", "Diya Iyer", "diya@cainstitute.demo", "9876501002", "CA-JEE-26002", "JEE", DEMO_BATCHES[0].id],
+  ["44444444-4444-4444-8444-444444444403", "Kabir Shah", "kabir@cainstitute.demo", "9876501003", "CA-NEET-26011", "NEET", DEMO_BATCHES[1].id],
+  ["44444444-4444-4444-8444-444444444404", "Meera Nair", "meera@cainstitute.demo", "9876501004", "CA-NEET-26012", "NEET", DEMO_BATCHES[1].id],
+  ["44444444-4444-4444-8444-444444444405", "Rohan Patil", "rohan@cainstitute.demo", "9876501005", "CA-CET-26021", "CET", DEMO_BATCHES[2].id],
 ].map(([id, fullName, email, phone, rollNumber, courseType, batchId]) => ({
   id,
   fullName,
@@ -246,7 +246,7 @@ function exam(
 }
 
 export const DEMO_EXAMS: ExamDefinition[] = [
-  exam("demo-jee-live", "Apex JEE Major Test 03", "JEE_MAIN", ["Physics", "Chemistry", "Mathematics"], iso(-1)),
+  exam("demo-jee-live", "CA Institute JEE Major Test 03", "JEE_MAIN", ["Physics", "Chemistry", "Mathematics"], iso(-1)),
   exam("demo-neet-upcoming", "NEET Repeaters Biology Drill", "NEET", ["Physics", "Chemistry", "Biology"], iso(48)),
   exam("demo-cet-completed", "CET Weekend Algebra Practice", "CET", ["Mathematics", "Logical Reasoning"], iso(-96)),
 ];
@@ -293,7 +293,7 @@ export const DEMO_SCHEDULES: ExamSchedule[] = [
 export const DEMO_LOGIN = {
   adminEmail: DEMO_INSTITUTE.adminEmail,
   adminPassword: "admin123",
-  studentRoll: "APX-JEE-26001",
+  studentRoll: "CA-JEE-26001",
   studentName: "Aarav Mehta",
-  applicationNumber: "APX-DEMO-2026-001",
+  applicationNumber: "CA-DEMO-2026-001",
 };

@@ -53,12 +53,12 @@ export function Timer({ onTimeUp }: TimerProps) {
   return (
     <div
       className={cn(
-        "mt-0.5 inline-block min-w-[5.5rem] rounded border-2 px-3 py-1 text-center font-mono text-xl font-bold tabular-nums tracking-tight",
+        "mt-0.5 inline-block min-w-[6rem] rounded-md border-2 px-3 py-1.5 text-center font-mono text-xl font-bold tabular-nums tracking-tight shadow-sm",
         isCritical
           ? "animate-pulse border-red-900 bg-red-600 text-white"
           : isLow
             ? "border-red-700 bg-red-600 text-white"
-            : "border-[#1a3c6e] bg-[#1a3c6e] text-white",
+            : "border-[var(--eg-cbt)] bg-[var(--eg-cbt)] text-white",
       )}
     >
       <span className="sr-only">Time remaining: </span>

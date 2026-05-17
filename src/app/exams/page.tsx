@@ -3,15 +3,16 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo } from "react";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Clock, FileText } from "lucide-react";
+import { buttonVariants } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  CountdownPill,
+  EmptyState,
+  SectionHeader,
+  StatusBadge,
+} from "@/components/shared/product-ui";
+import { StudentPortalShell } from "@/components/student/student-portal-shell";
+import { cn } from "@/lib/utils";
 import { listAllExams } from "@/lib/exam-catalog";
 import { getRepositories } from "@/lib/repositories/provider";
 import {
@@ -55,75 +56,54 @@ export default function ExamsPage() {
   if (!candidate) return null;
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <header className="border-b bg-[#1a3c6e] px-6 py-4 text-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between">
-          <div>
-            <h1 className="text-lg font-bold">Upcoming Examinations</h1>
-            <p className="text-sm text-blue-100">
-              Welcome, {candidate.name} (Roll: {candidate.rollNumber})
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="border-white/40 bg-transparent text-white hover:bg-white/10"
-            onClick={() => {
-              logout();
-              router.push("/login");
-            }}
-          >
-            Logout
-          </Button>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-5xl p-6">
-        <p className="mb-4 text-sm text-gray-600">
-          Select an active assigned examination to view instructions and begin
-          your CBT session.
-        </p>
-        <ExamGroup
-          title="Active Exams"
-          items={
-            opsActive
-              ? scheduledExams.filter((item) => item.status === "active")
-              : exams.map((exam) => ({
-                  exam,
-                  schedule: {
-                    id: exam.id,
-                    examId: exam.id,
-                    batchIds: [],
-                    startAt: exam.scheduledAt,
-                    endAt: "9999-12-31T23:59:59.000Z",
-                    durationMinutes: exam.durationMinutes,
-                    visibilityRule: "all_active_students",
-                    active: true,
-                    createdAt: 0,
-                    updatedAt: 0,
-                  },
-                  status: "active" as const,
-                }))
-          }
-        />
-        {opsActive && (
-          <>
-            <ExamGroup
-              title="Upcoming Exams"
-              items={scheduledExams.filter((item) => item.status === "upcoming")}
-            />
-            <ExamGroup
-              title="Completed Exams"
-              items={scheduledExams.filter(
-                (item) =>
-                  item.status === "completed" ||
-                  completedExamIds.has(item.exam.id),
-              )}
-            />
-          </>
-        )}
-      </main>
-    </div>
+    <StudentPortalShell
+      candidate={candidate}
+      onLogout={() => logout()}
+    >
+      <SectionHeader
+        title="My examinations"
+        description="Select an active assigned test to review instructions and begin your CBT session."
+      />
+      <ExamGroup
+        title="Active exams"
+        items={
+          opsActive
+            ? scheduledExams.filter((item) => item.status === "active")
+            : exams.map((exam) => ({
+                exam,
+                schedule: {
+                  id: exam.id,
+                  examId: exam.id,
+                  batchIds: [],
+                  startAt: exam.scheduledAt,
+                  endAt: "9999-12-31T23:59:59.000Z",
+                  durationMinutes: exam.durationMinutes,
+                  visibilityRule: "all_active_students",
+                  active: true,
+                  createdAt: 0,
+                  updatedAt: 0,
+                },
+                status: "active" as const,
+              }))
+        }
+      />
+      {opsActive && (
+        <>
+          <ExamGroup
+            title="Upcoming exams"
+            items={scheduledExams.filter((item) => item.status === "upcoming")}
+          />
+          <ExamGroup
+            title="Completed exams"
+            items={scheduledExams.filter(
+              (item) =>
+                item.status === "completed" ||
+                completedExamIds.has(item.exam.id),
+            )}
+          />
+        </>
+      )}
+    </StudentPortalShell>
   );
 }
 
@@ -135,78 +115,105 @@ function ExamGroup({
   items: ScheduledExamView[];
 }) {
   return (
-    <section className="mb-6">
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
-        {title}
-      </h2>
+    <section className="mb-10">
+      <h2 className="eg-section-title mb-4">{title}</h2>
       {items.length === 0 ? (
-        <div className="rounded border border-dashed border-gray-300 bg-white p-4 text-sm text-gray-500">
-          No exams in this section.
-        </div>
+        <EmptyState
+          title="No exams in this section"
+          description="Assigned exams appear here when their schedule matches this state."
+        />
       ) : (
         <div className="grid gap-4">
           {items.map(({ exam, schedule }) => {
             const status = getScheduleStatus(schedule);
             const active = status === "active";
             const startsIn = new Date(schedule.startAt).getTime() - Date.now();
+            const hoursUntil =
+              startsIn > 0 ? Math.max(1, Math.ceil(startsIn / 3600000)) : 0;
+
             return (
-            <Card key={exam.id} className="border-gray-300">
-              <CardHeader>
-                <CardTitle className="text-[#1a3c6e]">{exam.title}</CardTitle>
-                <CardDescription>
-                  {exam.subtitle}
-                  <span className="ml-2 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-700">
-                    {status}
-                  </span>
-                  {exam.id.startsWith("exam-") && (
-                    <span className="ml-2 rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-medium text-green-800">
-                      Institute
+              <article
+                key={`${exam.id}-${schedule.id}`}
+                className="eg-card overflow-hidden transition hover:shadow-md"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[var(--eg-border)] bg-slate-50/50 px-5 py-4">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-lg font-semibold text-[var(--eg-brand)]">
+                        {exam.title}
+                      </h3>
+                      <StatusBadge
+                        tone={
+                          status === "active"
+                            ? "green"
+                            : status === "upcoming"
+                              ? "blue"
+                              : "neutral"
+                        }
+                      >
+                        {status}
+                      </StatusBadge>
+                      {exam.id.startsWith("exam-") && (
+                        <StatusBadge tone="violet">Institute</StatusBadge>
+                      )}
+                    </div>
+                    {exam.subtitle && (
+                      <p className="mt-1 text-sm text-slate-600">{exam.subtitle}</p>
+                    )}
+                  </div>
+                  {status === "upcoming" && startsIn > 0 && (
+                    <CountdownPill
+                      label="Opens in"
+                      value={`${hoursUntil}h`}
+                      urgent={hoursUntil <= 24}
+                    />
+                  )}
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-6 px-5 py-4">
+                  <ul className="grid gap-2 text-sm text-slate-600 sm:grid-cols-2">
+                    <li className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-slate-400" />
+                      {exam.durationMinutes} minutes
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-slate-400" />
+                      {exam.totalQuestions} questions
+                    </li>
+                    <li className="sm:col-span-2">
+                      Sections: {exam.sections.map((s) => s.name).join(", ")}
+                    </li>
+                    <li>
+                      Opens:{" "}
+                      {new Date(schedule.startAt).toLocaleString("en-IN", {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      })}
+                    </li>
+                    <li>
+                      Closes:{" "}
+                      {new Date(schedule.endAt).toLocaleString("en-IN", {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      })}
+                    </li>
+                  </ul>
+                  {active ? (
+                    <Link
+                      href={`/exam/${exam.id}/instructions`}
+                      className={cn(
+                        buttonVariants(),
+                        "shrink-0 bg-[var(--eg-cbt)] hover:bg-[var(--eg-cbt-hover)]",
+                      )}
+                    >
+                      Proceed to instructions
+                    </Link>
+                  ) : (
+                    <span className="shrink-0 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-500">
+                      {status === "upcoming" ? "Not open yet" : "Window closed"}
                     </span>
                   )}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-wrap items-center justify-between gap-4">
-                <ul className="text-sm text-gray-600">
-                  <li>Duration: {exam.durationMinutes} minutes</li>
-                  <li>Questions: {exam.totalQuestions}</li>
-                  <li>Sections: {exam.sections.map((s) => s.name).join(", ")}</li>
-                  <li>
-                    Opens:{" "}
-                    {new Date(schedule.startAt).toLocaleString("en-IN", {
-                      dateStyle: "medium",
-                      timeStyle: "short",
-                    })}
-                  </li>
-                  <li>
-                    Closes:{" "}
-                    {new Date(schedule.endAt).toLocaleString("en-IN", {
-                      dateStyle: "medium",
-                      timeStyle: "short",
-                    })}
-                  </li>
-                  {status === "upcoming" && startsIn > 0 && (
-                    <li>
-                      Starts in: {Math.ceil(startsIn / 3600000)} hour(s)
-                    </li>
-                  )}
-                </ul>
-                {active ? (
-                  <Link
-                    href={`/exam/${exam.id}/instructions`}
-                    className={cn(
-                      buttonVariants(),
-                      "bg-[#1a3c6e] text-white hover:bg-[#152d52]",
-                    )}
-                  >
-                    Proceed to Instructions
-                  </Link>
-                ) : (
-                  <span className="rounded border border-gray-300 px-3 py-2 text-sm text-gray-500">
-                    {status === "upcoming" ? "Not open yet" : "Window closed"}
-                  </span>
-                )}
-              </CardContent>
-            </Card>
+                </div>
+              </article>
             );
           })}
         </div>

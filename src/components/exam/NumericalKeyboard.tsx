@@ -10,7 +10,7 @@ export interface NumericalKeyboardProps {
 }
 
 const KEY_CLASS =
-  "flex h-11 items-center justify-center rounded border border-[#1a3c6e]/25 bg-white text-base font-semibold text-[#1a3c6e] shadow-sm transition-colors hover:bg-[#eef3fa] active:bg-[#dce8f7] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#1a3c6e] disabled:pointer-events-none disabled:opacity-50";
+  "flex h-11 items-center justify-center rounded-md border border-[var(--eg-cbt)]/25 bg-white text-base font-semibold text-[var(--eg-cbt)] shadow-sm transition-colors hover:bg-blue-50 active:bg-blue-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--eg-cbt)] disabled:pointer-events-none disabled:opacity-50";
 
 const ACTION_CLASS =
   "flex h-11 items-center justify-center rounded border border-gray-400 bg-[#f4f6f9] text-sm font-bold text-gray-800 shadow-sm transition-colors hover:bg-gray-200 active:bg-gray-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#1a3c6e] disabled:pointer-events-none disabled:opacity-50";
@@ -26,13 +26,13 @@ export function NumericalKeyboard({
   return (
     <div
       className={cn(
-        "inline-block w-full max-w-[280px] rounded border-2 border-[#1a3c6e]/30 bg-[#eef3fa] p-2 shadow-inner",
+        "inline-block w-full max-w-[280px] rounded-lg border-2 border-[var(--eg-cbt)]/30 bg-blue-50/60 p-2.5 shadow-inner",
         className,
       )}
       role="group"
       aria-label="Numerical answer keypad"
     >
-      <p className="mb-2 text-center text-[10px] font-semibold uppercase tracking-wide text-[#1a3c6e]">
+      <p className="mb-2 text-center text-[10px] font-semibold uppercase tracking-wide text-[var(--eg-cbt)]">
         Enter your answer
       </p>
       <div className="grid grid-cols-3 gap-1.5">

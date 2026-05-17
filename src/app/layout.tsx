@@ -14,9 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ExamGrid · Institute CBT Operations",
+  title: "ExamGrid · Academic Intelligence & CBT Platform",
   description:
-    "Operational CBT platform for institute exam scheduling, delivery, and audit readiness.",
+    "AI-assisted academic operations, competitive exam delivery, PYQ intelligence, and institute modernization for coaching centers.",
 };
 
 export default function RootLayout({
@@ -29,7 +29,7 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full`}
     >
-      <body className="min-h-full bg-gray-100 font-sans antialiased">
+      <body className="min-h-full bg-[var(--eg-canvas)] font-sans antialiased text-slate-950">
         <ClientProviders>{children}</ClientProviders>
       </body>
     </html>

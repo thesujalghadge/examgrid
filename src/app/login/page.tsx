@@ -1,19 +1,14 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { DEMO_INSTITUTE } from "@/config/demo";
 import { DEMO_LOGIN } from "@/data/demo-data";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ProductMark } from "@/components/shared/product-ui";
 import { getRepositories } from "@/lib/repositories/provider";
 import { useAuthStore } from "@/stores/auth-store";
 
@@ -52,53 +47,73 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-[#eef3f8] to-gray-200 p-4">
-      <Card className="w-full max-w-md border-[#1a3c6e]/20 shadow-lg">
-        <CardHeader className="border-b bg-[#1a3c6e] text-white">
-          <CardTitle className="text-lg">{DEMO_INSTITUTE.name}</CardTitle>
-          <CardDescription className="text-blue-100">
-            ExamGrid CBT Portal · Demo Institute
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="pt-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Candidate Name</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="roll">Roll Number</Label>
-              <Input
-                id="roll"
-                value={rollNumber}
-                onChange={(e) => setRollNumber(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="app">Application Number</Label>
-              <Input
-                id="app"
-                value={applicationNumber}
-                onChange={(e) => setApplicationNumber(e.target.value)}
-                required
-              />
-            </div>
-            <Button type="submit" className="w-full bg-[#1a3c6e] hover:bg-[#152d52]">
-              Login to Examination System
-            </Button>
-            {error && <p className="text-sm text-red-700">{error}</p>}
-          </form>
-          <p className="mt-4 text-center text-xs text-gray-500">
-            Demo roll: {DEMO_LOGIN.studentRoll}
-          </p>
-        </CardContent>
-      </Card>
+    <div className="flex min-h-screen items-center justify-center bg-[var(--eg-canvas)] p-4">
+      <div className="w-full max-w-md">
+        <div className="mb-8 flex justify-center">
+          <ProductMark subtitle="Student examination portal" />
+        </div>
+        <div className="eg-card overflow-hidden shadow-md">
+          <div className="border-b border-[var(--eg-cbt)]/20 bg-[var(--eg-cbt)] px-6 py-5 text-white">
+            <p className="text-xs font-semibold uppercase tracking-wide text-blue-100/90">
+              {DEMO_INSTITUTE.name}
+            </p>
+            <h1 className="mt-1 text-lg font-semibold">CBT Examination Login</h1>
+            <p className="mt-1 text-sm text-blue-100/90">
+              Enter your credentials to access assigned tests.
+            </p>
+          </div>
+          <div className="p-6">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Candidate name</Label>
+                <Input
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  className="h-10"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="roll">Roll number</Label>
+                <Input
+                  id="roll"
+                  value={rollNumber}
+                  onChange={(e) => setRollNumber(e.target.value)}
+                  required
+                  className="h-10"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="app">Application number</Label>
+                <Input
+                  id="app"
+                  value={applicationNumber}
+                  onChange={(e) => setApplicationNumber(e.target.value)}
+                  required
+                  className="h-10"
+                />
+              </div>
+              <Button
+                type="submit"
+                className="h-10 w-full bg-[var(--eg-cbt)] hover:bg-[var(--eg-cbt-hover)]"
+              >
+                Login to examination system
+              </Button>
+              {error && <p className="text-sm text-red-700">{error}</p>}
+            </form>
+            <p className="mt-5 text-center text-xs text-slate-500">
+              Demo roll: {DEMO_LOGIN.studentRoll}
+            </p>
+            <p className="mt-3 text-center text-xs">
+              <Link href="/" className="text-[var(--eg-cbt)] hover:underline">
+                ← Back to ExamGrid
+              </Link>
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
+

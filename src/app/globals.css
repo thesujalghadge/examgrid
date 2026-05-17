@@ -49,6 +49,16 @@
 }
 
 :root {
+  /* ExamGrid brand (ops / marketing) */
+  --eg-brand: #0f2744;
+  --eg-brand-hover: #0a1c33;
+  --eg-brand-muted: #1a3d66;
+  --eg-cbt: #1a3c6e;
+  --eg-cbt-hover: #152d52;
+  --eg-canvas: #f4f6f9;
+  --eg-surface: #ffffff;
+  --eg-border: #e2e8f0;
+
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -125,6 +135,18 @@
     @apply bg-background text-foreground;
   }
   html {
-    @apply font-sans;
+    @apply font-sans scroll-smooth;
+  }
+}
+
+@layer utilities {
+  .eg-container {
+    @apply mx-auto w-full max-w-6xl px-4 sm:px-6;
+  }
+  .eg-card {
+    @apply rounded-xl border border-[var(--eg-border)] bg-[var(--eg-surface)] shadow-sm transition-shadow hover:shadow-md;
+  }
+  .eg-section-title {
+    @apply text-xs font-semibold uppercase tracking-wider text-slate-500;
   }
 }
