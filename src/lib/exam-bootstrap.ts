@@ -1,5 +1,15 @@
-import { getExamById, getFirstQuestionId } from "@/data/mock-exams";
-import { loadExamAttempt, saveExamAttempt } from "@/lib/persistence";
+import { getExamById } from "@/lib/exam-catalog";
+import { getFirstQuestionId } from "@/data/mock-exams";
+import {
+  clearExamAttempt,
+  loadExamAttempt,
+  saveExamAttempt,
+} from "@/lib/persistence";
+import {
+  ensureExamReadyForCbt,
+  prepareResumeAttempt,
+} from "@/lib/cbt/session-safety";
+import { logCbtGuard } from "@/lib/logging/runtime-logger";
 import { useExamLifecycleStore } from "@/stores/exam-lifecycle-store";
 import { useExamSessionStore } from "@/stores/exam-session-store";
 import { useQuestionStore } from "@/stores/question-store";
@@ -18,7 +28,9 @@ export function bootstrapExamSession(
   startedAt: number,
 ): BootstrapResult {
   const exam = getExamById(examId);
-  if (!exam) return { status: "not_found" };
+  if (!exam || !ensureExamReadyForCbt(exam)) {
+    return { status: "not_found" };
+  }
 
   const existing = loadExamAttempt(examId, candidateRoll);
 
@@ -27,21 +39,27 @@ export function bootstrapExamSession(
   }
 
   if (existing?.lifecycle === "in_progress") {
-    useQuestionStore.getState().restoreState({
-      exam,
-      answers: existing.answers,
-      visited: existing.visited,
-      markedForReview: existing.markedForReview,
-      currentQuestionId: existing.currentQuestionId,
-      currentSectionId: existing.currentSectionId,
-    });
-    useTimerStore.getState().restore(existing.examEndsAt);
-    useExamLifecycleStore.getState().setExamId(examId);
-    useExamLifecycleStore.getState().setPhase("in_progress");
-    useExamSessionStore
-      .getState()
-      .restoreViolations(existing.violations ?? []);
-    return { status: "resumed", attempt: existing };
+    const sanitized = prepareResumeAttempt(existing, exam);
+    if (!sanitized) {
+      clearExamAttempt(examId, candidateRoll);
+      logCbtGuard("corrupt attempt cleared — starting fresh", { examId });
+    } else {
+      useQuestionStore.getState().restoreState({
+        exam,
+        answers: sanitized.answers,
+        visited: sanitized.visited,
+        markedForReview: sanitized.markedForReview,
+        currentQuestionId: sanitized.currentQuestionId,
+        currentSectionId: sanitized.currentSectionId,
+      });
+      useTimerStore.getState().restore(sanitized.examEndsAt);
+      useExamLifecycleStore.getState().setExamId(examId);
+      useExamLifecycleStore.getState().setPhase("in_progress");
+      useExamSessionStore
+        .getState()
+        .restoreViolations(sanitized.violations ?? []);
+      return { status: "resumed", attempt: sanitized };
+    }
   }
 
   useExamSessionStore.getState().reset();

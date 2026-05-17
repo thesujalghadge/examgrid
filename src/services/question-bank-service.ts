@@ -1,4 +1,5 @@
 import { SEED_QUESTION_BANK } from "@/data/seed-question-bank";
+import { readQuestionBank } from "@/lib/repositories/async-access";
 import { questionBankRepository } from "@/repositories/question-bank-repository";
 import type { BankQuestion } from "@/types/question-bank";
 
@@ -16,6 +17,12 @@ export function ensureQuestionBankSeeded(): void {
 export function getQuestionBank(): BankQuestion[] {
   ensureQuestionBankSeeded();
   return questionBankRepository.getAll();
+}
+
+/** Async-readiness: same data, Promise wrapper for future Supabase repos. */
+export async function getQuestionBankAsync(): Promise<BankQuestion[]> {
+  ensureQuestionBankSeeded();
+  return readQuestionBank();
 }
 
 export function saveQuestionBank(questions: BankQuestion[]): void {

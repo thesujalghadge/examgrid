@@ -6,6 +6,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { isBuiltinExam, listAllExams } from "@/lib/exam-catalog";
+import { awaitRepositoryPersist } from "@/lib/repositories/await-persist";
 import { examCatalogRepository } from "@/repositories/exam-catalog-repository";
 import type { ExamDefinition } from "@/types/exam";
 
@@ -19,10 +20,13 @@ export default function AdminExamsPage() {
   }, []);
 
   const handleDelete = (examId: string) => {
-    if (isBuiltinExam(examId)) return;
-    if (!confirm("Delete this exam from the catalog?")) return;
-    examCatalogRepository.delete(examId);
-    refresh();
+    void (async () => {
+      if (isBuiltinExam(examId)) return;
+      if (!confirm("Delete this exam from the catalog?")) return;
+      examCatalogRepository.delete(examId);
+      await awaitRepositoryPersist();
+      refresh();
+    })();
   };
 
   return (

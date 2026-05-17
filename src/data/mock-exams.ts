@@ -152,7 +152,15 @@ export const MOCK_EXAMS: ExamDefinition[] = [JEE_MAIN_MOCK];
 export { getExamById, listAllExams } from "@/lib/exam-catalog";
 
 export function getFirstQuestionId(exam: ExamDefinition): string {
-  return exam.sections[0].questionIds[0];
+  const firstSection = exam.sections[0];
+  const qid = firstSection?.questionIds[0];
+  if (qid && exam.questions[qid]) return qid;
+  for (const section of exam.sections) {
+    for (const id of section.questionIds) {
+      if (exam.questions[id]) return id;
+    }
+  }
+  throw new Error(`Exam "${exam.id}" has no valid questions`);
 }
 
 export function getQuestionGlobalIndex(

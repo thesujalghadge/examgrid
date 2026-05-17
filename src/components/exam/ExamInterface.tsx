@@ -7,8 +7,10 @@ import { getExamById } from "@/data/mock-exams";
 import { useExamPersistence } from "@/hooks/use-exam-persistence";
 import { useExamGuard } from "@/hooks/useExamGuard";
 import { bootstrapExamSession } from "@/lib/exam-bootstrap";
+import { canSubmitExam, ensureExamReadyForCbt } from "@/lib/cbt/session-safety";
 import { requestExamFullscreen } from "@/lib/fullscreen";
 import { loadExamAttempt, saveExamAttempt } from "@/lib/persistence";
+import { logCbtGuard } from "@/lib/logging/runtime-logger";
 import { computeExamResult } from "@/lib/scoring";
 import { useAuthStore } from "@/stores/auth-store";
 import { useExamLifecycleStore } from "@/stores/exam-lifecycle-store";
@@ -46,14 +48,48 @@ export function ExamInterface({ examId }: ExamInterfaceProps) {
   });
 
   const finalizeSubmit = useCallback(() => {
-    if (submitInProgressRef.current || !candidate || !exam) return;
+    if (!candidate || !exam) return;
+
+    const previous = loadExamAttempt(examId, candidate.rollNumber);
+    const lifecyclePhase = useExamLifecycleStore.getState().phase;
+
+    if (
+      !canSubmitExam({
+        lifecyclePhase,
+        submitInProgress: submitInProgressRef.current,
+        existingAttempt: previous,
+      })
+    ) {
+      logCbtGuard("submit blocked — duplicate or already submitted");
+      if (previous?.lifecycle === "submitted") {
+        router.replace(`/exam/${examId}/result`);
+      }
+      return;
+    }
+
     submitInProgressRef.current = true;
 
     const qState = useQuestionStore.getState();
     const timerState = useTimerStore.getState();
     timerState.stop();
 
-    const previous = loadExamAttempt(examId, candidate.rollNumber);
+    const currentQuestionId =
+      qState.currentQuestionId &&
+      exam.questions[qState.currentQuestionId]
+        ? qState.currentQuestionId
+        : Object.keys(exam.questions)[0];
+
+    const currentSectionId =
+      qState.currentSectionId &&
+      exam.sections.some((s) => s.id === qState.currentSectionId)
+        ? qState.currentSectionId
+        : exam.sections[0].id;
+
+    if (!currentQuestionId) {
+      submitInProgressRef.current = false;
+      return;
+    }
+
     const sessionViolations = useExamSessionStore.getState().violations;
     const attempt: PersistedExamAttempt = {
       version: 1,
@@ -62,8 +98,8 @@ export function ExamInterface({ examId }: ExamInterfaceProps) {
       lifecycle: "submitted",
       examEndsAt: timerState.examEndsAt ?? Date.now(),
       startedAt: previous?.startedAt ?? Date.now(),
-      currentQuestionId: qState.currentQuestionId!,
-      currentSectionId: qState.currentSectionId!,
+      currentQuestionId,
+      currentSectionId,
       answers: qState.answers,
       visited: qState.visited,
       markedForReview: qState.markedForReview,
@@ -73,7 +109,11 @@ export function ExamInterface({ examId }: ExamInterfaceProps) {
 
     const result = computeExamResult(exam, attempt, candidate.name);
     attempt.result = result;
-    saveExamAttempt(attempt);
+    const saved = saveExamAttempt(attempt);
+    if (!saved) {
+      submitInProgressRef.current = false;
+      return;
+    }
 
     useExamLifecycleStore.getState().setPhase("submitted");
     setResult(result);
@@ -88,7 +128,7 @@ export function ExamInterface({ examId }: ExamInterfaceProps) {
     }
 
     const examDef = getExamById(examId);
-    if (!examDef) {
+    if (!examDef || !ensureExamReadyForCbt(examDef)) {
       router.replace("/exams");
       return;
     }

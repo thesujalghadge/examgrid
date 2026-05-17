@@ -1,3 +1,4 @@
+import { questionImportPayloadSchema } from "@/lib/validation/question-schema";
 import type { BankQuestion, QuestionImportPayload } from "@/types/question-bank";
 import type { QuestionType } from "@/types/exam";
 
@@ -141,6 +142,20 @@ export function parseAndValidateQuestionImport(json: unknown): ImportResult {
       success: false,
       questions: [],
       errors: [{ index: -1, message: "Root must be a JSON object" }],
+    };
+  }
+
+  const zodShape = questionImportPayloadSchema.safeParse(json);
+  if (!zodShape.success && !Array.isArray(json.questions) && !Array.isArray(json)) {
+    return {
+      success: false,
+      questions: [],
+      errors: [
+        {
+          index: -1,
+          message: zodShape.error.issues.map((i) => i.message).join("; "),
+        },
+      ],
     };
   }
 

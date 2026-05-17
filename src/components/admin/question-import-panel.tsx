@@ -32,6 +32,10 @@ export function QuestionImportPanel({ onImported }: QuestionImportPanelProps) {
         return;
       }
       saveQuestionBank(result.merged);
+      const { awaitRepositoryPersist } = await import(
+        "@/lib/repositories/await-persist"
+      );
+      await awaitRepositoryPersist();
       setSuccess(`Imported ${result.questions.length} question(s) successfully.`);
       onImported();
     } catch {

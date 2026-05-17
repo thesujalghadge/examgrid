@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef } from "react";
 import type { ExamResult, PersistedExamAttempt } from "@/types/exam";
 import { saveExamAttempt } from "@/lib/persistence";
+import { logAutosaveFailure } from "@/lib/logging/runtime-logger";
+import { parsePersistedExamAttempt } from "@/lib/validation/attempt-schema";
 import { useAuthStore } from "@/stores/auth-store";
 import { useExamLifecycleStore } from "@/stores/exam-lifecycle-store";
 import { useExamSessionStore } from "@/stores/exam-session-store";
@@ -44,6 +46,10 @@ export function useExamPersistence() {
       return;
     }
 
+    if (!exam.questions[currentQuestionId]) {
+      return;
+    }
+
     const attempt: PersistedExamAttempt = {
       version: 1,
       examId,
@@ -60,7 +66,17 @@ export function useExamPersistence() {
       submittedAt: phase === "submitted" ? Date.now() : undefined,
       result: resultRef.current,
     };
-    saveExamAttempt(attempt);
+
+    const valid = parsePersistedExamAttempt(attempt);
+    if (!valid.success) {
+      logAutosaveFailure(examId, valid.error);
+      return;
+    }
+
+    const ok = saveExamAttempt(valid.data);
+    if (!ok) {
+      logAutosaveFailure(examId, "saveExamAttempt returned false");
+    }
   }, [
     candidate,
     examId,

@@ -1,0 +1,104 @@
+import {
+  getRepositoryModeFromEnv,
+  type RepositoryMode,
+} from "@/config/repository";
+import { logRepositoryMode } from "@/lib/logging/runtime-logger";
+import { validateRepositoryContracts } from "@/lib/repositories/contract-check";
+import { wrapRepositoryBundle } from "@/lib/repositories/safe-wrapper";
+import type { AttemptRepository } from "@/repositories/interfaces/attempt-repository";
+import type { ExamRepository } from "@/repositories/interfaces/exam-repository";
+import type { QuestionRepository } from "@/repositories/interfaces/question-repository";
+import type { StudentRepository } from "@/repositories/interfaces/student-repository";
+import { LocalAttemptRepository } from "@/repositories/local/local-attempt-repository";
+import { LocalExamRepository } from "@/repositories/local/local-exam-repository";
+import { LocalQuestionRepository } from "@/repositories/local/local-question-repository";
+import { LocalStudentRepository } from "@/repositories/local/local-student-repository";
+import { SupabaseExamRepository } from "@/repositories/supabase/supabase-exam-repository";
+import { SupabaseQuestionRepository } from "@/repositories/supabase/supabase-question-repository";
+import { SupabaseStudentRepository } from "@/repositories/supabase/supabase-student-repository";
+
+export interface RepositoryBundle {
+  mode: RepositoryMode;
+  questions: QuestionRepository;
+  exams: ExamRepository;
+  students: StudentRepository;
+  attempts: AttemptRepository;
+}
+
+function buildBundle(mode: RepositoryMode): RepositoryBundle {
+  const inner: RepositoryBundle =
+    mode === "supabase"
+      ? {
+          mode: "supabase",
+          questions: new SupabaseQuestionRepository(),
+          exams: new SupabaseExamRepository(),
+          students: new LocalStudentRepository(),
+          attempts: new LocalAttemptRepository(),
+        }
+      : {
+          mode: "local",
+          questions: new LocalQuestionRepository(),
+          exams: new LocalExamRepository(),
+          students: new LocalStudentRepository(),
+          attempts: new LocalAttemptRepository(),
+        };
+
+  const safe = wrapRepositoryBundle(inner);
+  const bundle: RepositoryBundle = { mode: inner.mode, ...safe };
+
+  if (process.env.NODE_ENV !== "production") {
+    validateRepositoryContracts(bundle);
+  }
+
+  return bundle;
+}
+
+let activeBundle: RepositoryBundle | null = null;
+let modeLogged = false;
+
+export function getRepositoryMode(): RepositoryMode {
+  return getRepositoryModeFromEnv();
+}
+
+function logRepositoryModeOnce(mode: RepositoryMode): void {
+  if (modeLogged) return;
+  modeLogged = true;
+  const label =
+    mode === "local"
+      ? "localStorage (browser)"
+      : "Supabase questions/exams + local attempts";
+  logRepositoryMode(mode, label);
+}
+
+/** Singleton repository bundle selected by NEXT_PUBLIC_REPOSITORY_MODE. */
+export function getRepositories(): RepositoryBundle {
+  const mode = getRepositoryMode();
+  if (!activeBundle || activeBundle.mode !== mode) {
+    activeBundle = buildBundle(mode);
+    logRepositoryModeOnce(mode);
+  }
+  return activeBundle;
+}
+
+/** For admin/status APIs — does not trigger client-only logging side effects. */
+export function describeRepositoryMode(): {
+  mode: RepositoryMode;
+  label: string;
+  persistence: string;
+} {
+  const mode = getRepositoryMode();
+  if (mode === "supabase") {
+    return {
+      mode,
+      label: "Supabase mode",
+      persistence:
+        "Question bank and exam catalog persist in Supabase. Exam attempts and candidate session remain in browser localStorage.",
+    };
+  }
+  return {
+    mode,
+    label: "localStorage mode",
+    persistence:
+      "Question bank, exam catalog, student session, and attempts use browser storage.",
+  };
+}

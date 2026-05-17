@@ -1,6 +1,7 @@
+import { getRepositories } from "@/lib/repositories/provider";
 import type { BankQuestion } from "@/types/question-bank";
-import { STORAGE_KEYS } from "./storage-keys";
 
+/** @deprecated Use getRepositories().questions — kept for gradual migration. */
 export interface QuestionBankRepository {
   getAll(): BankQuestion[];
   saveAll(questions: BankQuestion[]): void;
@@ -9,38 +10,12 @@ export interface QuestionBankRepository {
   delete(id: string): void;
 }
 
-class LocalQuestionBankRepository implements QuestionBankRepository {
-  getAll(): BankQuestion[] {
-    if (typeof window === "undefined") return [];
-    const raw = localStorage.getItem(STORAGE_KEYS.questionBank);
-    if (!raw) return [];
-    try {
-      return JSON.parse(raw) as BankQuestion[];
-    } catch {
-      return [];
-    }
-  }
+export const questionBankRepository: QuestionBankRepository = {
+  getAll: () => getRepositories().questions.list(),
+  saveAll: (questions) => getRepositories().questions.saveAll(questions),
+  getById: (id) => getRepositories().questions.getById(id),
+  upsert: (question) => getRepositories().questions.upsert(question),
+  delete: (id) => getRepositories().questions.delete(id),
+};
 
-  saveAll(questions: BankQuestion[]): void {
-    if (typeof window === "undefined") return;
-    localStorage.setItem(STORAGE_KEYS.questionBank, JSON.stringify(questions));
-  }
-
-  getById(id: string): BankQuestion | undefined {
-    return this.getAll().find((q) => q.id === id);
-  }
-
-  upsert(question: BankQuestion): void {
-    const all = this.getAll();
-    const idx = all.findIndex((q) => q.id === question.id);
-    if (idx >= 0) all[idx] = question;
-    else all.push(question);
-    this.saveAll(all);
-  }
-
-  delete(id: string): void {
-    this.saveAll(this.getAll().filter((q) => q.id !== id));
-  }
-}
-
-export const questionBankRepository = new LocalQuestionBankRepository();
+export { LocalQuestionRepository } from "@/repositories/local/local-question-repository";

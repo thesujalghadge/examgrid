@@ -1,3 +1,4 @@
+import { parseExamDefinition } from "@/lib/validation/exam-schema";
 import type { ExamBuildDraft } from "@/types/exam-builder";
 import type { BankQuestion } from "@/types/question-bank";
 import type { ExamDefinition, ExamQuestion, ExamOption } from "@/types/exam";
@@ -143,6 +144,13 @@ export function buildExamDefinition(
             "Do not switch tabs or exit fullscreen during the examination.",
           ],
   };
+
+  const parsed = parseExamDefinition(exam);
+  if (!parsed.success) {
+    return {
+      errors: [{ message: `Exam schema validation failed: ${parsed.error}` }],
+    };
+  }
 
   return { exam, errors: [] };
 }

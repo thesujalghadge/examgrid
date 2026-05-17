@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { awaitRepositoryPersist } from "@/lib/repositories/await-persist";
 import { examCatalogRepository } from "@/repositories/exam-catalog-repository";
 import {
   buildExamDefinition,
@@ -110,18 +111,21 @@ export function CreateExamForm() {
   };
 
   const handlePublish = () => {
-    const validation = validateExamDraft(draft);
-    const built = buildExamDefinition(draft, bank);
-    const allErrors = [
-      ...validation.map((e) => e.message),
-      ...built.errors.map((e) => e.message),
-    ];
-    if (allErrors.length > 0 || !built.exam) {
-      setErrors(allErrors);
-      return;
-    }
-    examCatalogRepository.save(built.exam);
-    router.push("/admin/exams");
+    void (async () => {
+      const validation = validateExamDraft(draft);
+      const built = buildExamDefinition(draft, bank);
+      const allErrors = [
+        ...validation.map((e) => e.message),
+        ...built.errors.map((e) => e.message),
+      ];
+      if (allErrors.length > 0 || !built.exam) {
+        setErrors(allErrors);
+        return;
+      }
+      examCatalogRepository.save(built.exam);
+      await awaitRepositoryPersist();
+      router.push("/admin/exams");
+    })();
   };
 
   const sec = draft.sections[activeSection];
