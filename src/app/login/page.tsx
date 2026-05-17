@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getRepositories } from "@/lib/repositories/provider";
 import { useAuthStore } from "@/stores/auth-store";
 
 export default function LoginPage() {
@@ -20,10 +21,29 @@ export default function LoginPage() {
   const [name, setName] = useState("Rahul Sharma");
   const [rollNumber, setRollNumber] = useState("NTA2026001234");
   const [applicationNumber, setApplicationNumber] = useState("APP-JEE-2026-001");
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    login({ name, rollNumber, applicationNumber });
+    setError(null);
+    const roster = getRepositories().students.list();
+    const matched = getRepositories().students.getByRollNumber(rollNumber);
+    if (roster.length > 0 && !matched) {
+      setError("No active institute student found for this roll number.");
+      return;
+    }
+    if (matched && !matched.active) {
+      setError("This student account is inactive. Contact the institute admin.");
+      return;
+    }
+    login({
+      name: matched?.fullName ?? name,
+      rollNumber,
+      applicationNumber,
+      studentId: matched?.id,
+      batchId: matched?.batchId,
+      courseType: matched?.courseType,
+    });
     router.push("/exams");
   };
 
@@ -68,6 +88,7 @@ export default function LoginPage() {
             <Button type="submit" className="w-full bg-[#1a3c6e] hover:bg-[#152d52]">
               Login to Examination System
             </Button>
+            {error && <p className="text-sm text-red-700">{error}</p>}
           </form>
           <p className="mt-4 text-center text-xs text-gray-500">
             Demo mode — any valid form submission proceeds.

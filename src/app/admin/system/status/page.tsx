@@ -68,6 +68,9 @@ export default function AdminSystemStatusPage() {
     ok: boolean;
     questionsCount: number;
     examsCount: number;
+    studentsCount?: number;
+    batchesCount?: number;
+    schedulesCount?: number;
     durationMs: number;
     error?: string;
   } | null>(startup?.hydration ?? null);
@@ -433,6 +436,21 @@ export default function AdminSystemStatusPage() {
             <StatusRow
               label="Saved attempts (localStorage)"
               value={String(diagnostics.attemptKeyCount)}
+              ok
+            />
+            <StatusRow
+              label="Audit log health"
+              value={`${diagnostics.auditLogCount} event(s)`}
+              ok
+            />
+            <StatusRow
+              label="Failed/blocked operations"
+              value={String(diagnostics.failedOperationCount)}
+              ok={diagnostics.failedOperationCount === 0}
+            />
+            <StatusRow
+              label="Session metrics"
+              value={`${diagnostics.sessionMetricCount} session record(s)`}
               ok
             />
             <StatusRow

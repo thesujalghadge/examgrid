@@ -38,9 +38,12 @@ The files in this folder mirror migrations. Prefer `npm run db:bootstrap` instea
 | `institutes.sql` | `institutes` table |
 | `seed.sql` | Default institute row |
 | `questions.sql` | Question bank |
+| `batches.sql` | Institute batches |
 | `exams.sql` | Exam header |
 | `exam_sections.sql` | Sections |
 | `exam_questions.sql` | Assembled questions |
+| `exam_schedules.sql` | Exam windows and batch assignments |
+| `audit_logs.sql` | Operational audit trail |
 | `rls-dev.sql` | Dev RLS policies |
 
 ## App env

@@ -9,6 +9,8 @@ import { getAttemptStorageKey } from "@/repositories/local/local-attempt-reposit
 import { parseBankQuestionList } from "@/lib/validation/bank-question-stored-schema";
 import { parseExamDefinition } from "@/lib/validation/exam-schema";
 import { parseJsonSafe } from "@/lib/storage/safe-json";
+import { parseAuditLogList } from "@/lib/validation/audit-schema";
+import { getSessionMetrics } from "@/services/audit-service";
 
 export interface StorageKeyHealth {
   key: string;
@@ -27,6 +29,9 @@ export interface RepositoryDiagnostics {
   localStorageBytes: number;
   sessionStorageBytes: number;
   attemptKeyCount: number;
+  auditLogCount: number;
+  failedOperationCount: number;
+  sessionMetricCount: number;
   storageKeys: StorageKeyHealth[];
   checkedAt: string;
 }
@@ -104,6 +109,26 @@ function checkExamCatalog(): StorageKeyHealth {
   };
 }
 
+function checkAuditLogs(): StorageKeyHealth {
+  const key = STORAGE_KEYS.auditLogs;
+  if (typeof window === "undefined") return { key, present: false, valid: true };
+  const raw = localStorage.getItem(key);
+  if (!raw) return { key, present: false, valid: true, itemCount: 0 };
+  const parsed = parseJsonSafe(raw);
+  if (!parsed.ok) {
+    return { key, present: true, valid: false, issue: parsed.error };
+  }
+  const list = parseAuditLogList(parsed.value);
+  return {
+    key,
+    present: true,
+    valid: list.success,
+    itemCount: list.success ? list.data.length : undefined,
+    bytesEstimate: keyBytes(localStorage, key),
+    issue: list.success ? undefined : list.error.issues[0]?.message,
+  };
+}
+
 function countAttemptKeys(): number {
   if (typeof window === "undefined") return 0;
   let count = 0;
@@ -118,7 +143,11 @@ function countAttemptKeys(): number {
 export function getRepositoryDiagnostics(): RepositoryDiagnostics {
   const bundle = getRepositories();
   const contract = validateRepositoryContracts(bundle);
-  const storageKeys = [checkQuestionBank(), checkExamCatalog()];
+  const auditPage = bundle.audit.list({ pageSize: 100 });
+  const failedOperationCount = auditPage.rows.filter(
+    (entry) => entry.outcome === "failure" || entry.outcome === "blocked",
+  ).length;
+  const storageKeys = [checkQuestionBank(), checkExamCatalog(), checkAuditLogs()];
   const healthy =
     contract.ok && storageKeys.every((k) => k.valid || !k.present);
 
@@ -130,6 +159,9 @@ export function getRepositoryDiagnostics(): RepositoryDiagnostics {
     localStorageBytes: estimateStorageBytes("local"),
     sessionStorageBytes: estimateStorageBytes("session"),
     attemptKeyCount: countAttemptKeys(),
+    auditLogCount: auditPage.total,
+    failedOperationCount,
+    sessionMetricCount: getSessionMetrics().length,
     storageKeys,
     checkedAt: new Date().toISOString(),
   };

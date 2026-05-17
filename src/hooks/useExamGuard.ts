@@ -2,11 +2,18 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { isFullscreenActive } from "@/lib/fullscreen";
+import { recordAuditEvent } from "@/services/audit-service";
 import { useExamSessionStore } from "@/stores/exam-session-store";
+import type { AuditActorRole } from "@/types/audit";
 
 export interface UseExamGuardOptions {
   enabled: boolean;
   onPersist?: () => void;
+  auditContext?: {
+    actorId: string;
+    actorRole: AuditActorRole;
+    examId: string;
+  };
 }
 
 export interface UseExamGuardResult {
@@ -24,6 +31,7 @@ export interface UseExamGuardResult {
 export function useExamGuard({
   enabled,
   onPersist,
+  auditContext,
 }: UseExamGuardOptions): UseExamGuardResult {
   const violations = useExamSessionStore((s) => s.violations);
   const lastViolationMessage = useExamSessionStore((s) => s.lastViolationMessage);
@@ -57,10 +65,28 @@ export function useExamGuard({
 
   const recordWithPersist = useCallback(
     (type: Parameters<typeof recordViolation>[0]) => {
-      recordViolation(type);
+      const violation = recordViolation(type);
+      if (auditContext) {
+        recordAuditEvent({
+          actorId: auditContext.actorId,
+          actorRole: auditContext.actorRole,
+          actionType:
+            type === "fullscreen_exit"
+              ? "fullscreen_violation"
+              : type === "tab_switch"
+                ? "tab_switch_violation"
+                : type === "window_blur"
+                  ? "window_blur_violation"
+                  : "browser_back_violation",
+          resourceType: "exam",
+          resourceId: auditContext.examId,
+          metadata: { violationId: violation.id, type },
+          outcome: "warning",
+        });
+      }
       onPersist?.();
     },
-    [recordViolation, onPersist],
+    [auditContext, recordViolation, onPersist],
   );
 
   useEffect(() => {

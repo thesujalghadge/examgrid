@@ -12,6 +12,11 @@ import { requestExamFullscreen } from "@/lib/fullscreen";
 import { loadExamAttempt, saveExamAttempt } from "@/lib/persistence";
 import { logCbtGuard } from "@/lib/logging/runtime-logger";
 import { computeExamResult } from "@/lib/scoring";
+import {
+  canCandidateAccessExam,
+  isOperationalSchedulingActive,
+} from "@/services/institute-ops-service";
+import { recordAuditEvent } from "@/services/audit-service";
 import { useAuthStore } from "@/stores/auth-store";
 import { useExamLifecycleStore } from "@/stores/exam-lifecycle-store";
 import { useExamSessionStore } from "@/stores/exam-session-store";
@@ -45,6 +50,9 @@ export function ExamInterface({ examId }: ExamInterfaceProps) {
   const guard = useExamGuard({
     enabled: ready,
     onPersist: persistNow,
+    auditContext: candidate
+      ? { actorId: candidate.rollNumber, actorRole: "student", examId }
+      : undefined,
   });
 
   const finalizeSubmit = useCallback(() => {
@@ -116,6 +124,18 @@ export function ExamInterface({ examId }: ExamInterfaceProps) {
     }
 
     useExamLifecycleStore.getState().setPhase("submitted");
+    recordAuditEvent({
+      actorId: candidate.rollNumber,
+      actorRole: "student",
+      actionType: "exam_submit",
+      resourceType: "exam",
+      resourceId: examId,
+      metadata: {
+        violationCount: sessionViolations.length,
+        attempted: result.attempted,
+        totalScore: result.totalScore,
+      },
+    });
     setResult(result);
     persistNow();
     router.replace(`/exam/${examId}/result`);
@@ -128,7 +148,12 @@ export function ExamInterface({ examId }: ExamInterfaceProps) {
     }
 
     const examDef = getExamById(examId);
-    if (!examDef || !ensureExamReadyForCbt(examDef)) {
+    if (
+      !examDef ||
+      !ensureExamReadyForCbt(examDef) ||
+      (isOperationalSchedulingActive() &&
+        !canCandidateAccessExam(candidate, examId))
+    ) {
       router.replace("/exams");
       return;
     }
@@ -159,6 +184,14 @@ export function ExamInterface({ examId }: ExamInterfaceProps) {
       }
     } else {
       setStartedAt(startedAt);
+      recordAuditEvent({
+        actorId: candidate.rollNumber,
+        actorRole: "student",
+        actionType: "exam_start",
+        resourceType: "exam",
+        resourceId: examId,
+        metadata: { startedAtUTC: new Date(startedAt).toISOString() },
+      });
     }
 
     void requestExamFullscreen();

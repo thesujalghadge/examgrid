@@ -7,7 +7,9 @@ import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { isBuiltinExam, listAllExams } from "@/lib/exam-catalog";
 import { awaitRepositoryPersist } from "@/lib/repositories/await-persist";
+import { getRepositories } from "@/lib/repositories/provider";
 import { examCatalogRepository } from "@/repositories/exam-catalog-repository";
+import { recordAuditEvent } from "@/services/audit-service";
 import type { ExamDefinition } from "@/types/exam";
 
 export default function AdminExamsPage() {
@@ -22,8 +24,29 @@ export default function AdminExamsPage() {
   const handleDelete = (examId: string) => {
     void (async () => {
       if (isBuiltinExam(examId)) return;
+      const activeSchedule = getRepositories()
+        .schedules.listByExamId(examId)
+        .find((schedule) => schedule.active);
+      if (activeSchedule) {
+        recordAuditEvent({
+          actorRole: "admin",
+          actionType: "operation_blocked",
+          resourceType: "exam",
+          resourceId: examId,
+          metadata: { reason: "active_schedule", scheduleId: activeSchedule.id },
+          outcome: "blocked",
+        });
+        alert("Cannot delete an exam with an active schedule.");
+        return;
+      }
       if (!confirm("Delete this exam from the catalog?")) return;
       examCatalogRepository.delete(examId);
+      recordAuditEvent({
+        actorRole: "admin",
+        actionType: "exam_delete",
+        resourceType: "exam",
+        resourceId: examId,
+      });
       await awaitRepositoryPersist();
       refresh();
     })();

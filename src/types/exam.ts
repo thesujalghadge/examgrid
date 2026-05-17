@@ -61,6 +61,9 @@ export interface Candidate {
   name: string;
   rollNumber: string;
   applicationNumber: string;
+  studentId?: string;
+  batchId?: string;
+  courseType?: string;
 }
 
 export type ExamLifecyclePhase =

@@ -12,10 +12,20 @@ const DEFAULT_INSTITUTE_ID =
 const REQUIRED_TABLES = [
   "institutes",
   "questions",
+  "students",
+  "batches",
   "exams",
   "exam_sections",
   "exam_questions",
+  "exam_schedules",
+  "exam_schedule_batches",
+  "audit_logs",
 ];
+
+const TABLE_PROBE_COLUMNS = {
+  exam_schedule_batches: "schedule_id",
+  audit_logs: "event_id",
+};
 
 const REQUIRED_QUESTION_INSERT_FIELDS = [
   "difficulty",
@@ -65,9 +75,10 @@ async function main() {
   // 1. Tables
   console.log("--- Table access ---");
   for (const table of REQUIRED_TABLES) {
+    const column = TABLE_PROBE_COLUMNS[table] ?? "id";
     const { error, count } = await client
       .from(table)
-      .select("id", { count: "exact", head: true });
+      .select(column, { count: "exact", head: true });
     if (error) {
       console.log(`  ✗ ${table}: ${error.message}`);
       allOk = false;

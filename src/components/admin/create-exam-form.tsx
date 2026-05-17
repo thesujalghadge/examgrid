@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { awaitRepositoryPersist } from "@/lib/repositories/await-persist";
 import { examCatalogRepository } from "@/repositories/exam-catalog-repository";
+import { recordAuditEvent } from "@/services/audit-service";
 import {
   buildExamDefinition,
   validateExamDraft,
@@ -123,6 +124,16 @@ export function CreateExamForm() {
         return;
       }
       examCatalogRepository.save(built.exam);
+      recordAuditEvent({
+        actorRole: "admin",
+        actionType: "exam_create",
+        resourceType: "exam",
+        resourceId: built.exam.id,
+        metadata: {
+          title: built.exam.title,
+          totalQuestions: built.exam.totalQuestions,
+        },
+      });
       await awaitRepositoryPersist();
       router.push("/admin/exams");
     })();

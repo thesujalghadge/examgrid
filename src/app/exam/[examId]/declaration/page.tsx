@@ -12,6 +12,10 @@ import {
   isFullscreenActive,
   requestExamFullscreen,
 } from "@/lib/fullscreen";
+import {
+  canCandidateAccessExam,
+  isOperationalSchedulingActive,
+} from "@/services/institute-ops-service";
 import { useAuthStore } from "@/stores/auth-store";
 import { useExamLifecycleStore } from "@/stores/exam-lifecycle-store";
 
@@ -30,7 +34,15 @@ export default function DeclarationPage() {
   useEffect(() => {
     if (!candidate) router.replace("/login");
     if (!exam) router.replace("/exams");
-  }, [candidate, exam, router]);
+    if (
+      candidate &&
+      exam &&
+      isOperationalSchedulingActive() &&
+      !canCandidateAccessExam(candidate, examId)
+    ) {
+      router.replace("/exams");
+    }
+  }, [candidate, exam, examId, router]);
 
   useEffect(() => {
     setFullscreenReady(isFullscreenActive());
@@ -55,7 +67,13 @@ export default function DeclarationPage() {
     router.push(`/exam/${examId}/take`);
   };
 
-  if (!candidate || !exam) return null;
+  if (
+    !candidate ||
+    !exam ||
+    (isOperationalSchedulingActive() && !canCandidateAccessExam(candidate, examId))
+  ) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-white">

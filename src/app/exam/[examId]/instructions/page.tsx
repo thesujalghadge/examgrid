@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getExamById } from "@/data/mock-exams";
+import { canCandidateAccessExam, isOperationalSchedulingActive } from "@/services/institute-ops-service";
 import { useAuthStore } from "@/stores/auth-store";
 import { useExamLifecycleStore } from "@/stores/exam-lifecycle-store";
 
@@ -22,10 +23,24 @@ export default function InstructionsPage() {
   useEffect(() => {
     if (!candidate) router.replace("/login");
     if (!exam) router.replace("/exams");
+    if (
+      candidate &&
+      exam &&
+      isOperationalSchedulingActive() &&
+      !canCandidateAccessExam(candidate, examId)
+    ) {
+      router.replace("/exams");
+    }
     if (exam) setExamId(examId);
   }, [candidate, exam, examId, router, setExamId]);
 
-  if (!candidate || !exam) return null;
+  if (
+    !candidate ||
+    !exam ||
+    (isOperationalSchedulingActive() && !canCandidateAccessExam(candidate, examId))
+  ) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-white">

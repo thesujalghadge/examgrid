@@ -60,3 +60,49 @@ export interface ExamQuestionRow {
   bank_question_id: string | null;
   sort_order: number;
 }
+
+export interface StudentRow {
+  id: string;
+  institute_id: string;
+  name: string;
+  full_name: string;
+  email: string | null;
+  phone: string | null;
+  roll_number: string;
+  application_number: string;
+  course_type: string;
+  batch_id: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BatchRow {
+  id: string;
+  institute_id: string;
+  name: string;
+  course_type: string;
+  academic_year: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ExamScheduleRow {
+  id: string;
+  institute_id: string;
+  exam_id: string;
+  start_at: string;
+  end_at: string;
+  duration_minutes: number;
+  visibility_rule: "assigned_batches" | "all_active_students";
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ExamScheduleBatchRow {
+  schedule_id: string;
+  batch_id: string;
+  institute_id: string;
+}

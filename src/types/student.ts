@@ -4,4 +4,7 @@ export interface StudentRecord {
   rollNumber: string;
   applicationNumber: string;
   instituteId?: string;
+  studentId?: string;
+  batchId?: string;
+  courseType?: string;
 }

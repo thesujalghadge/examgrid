@@ -15,6 +15,50 @@ import { useExamSessionStore } from "@/stores/exam-session-store";
 import { useQuestionStore } from "@/stores/question-store";
 import { useTimerStore } from "@/stores/timer-store";
 import type { PersistedExamAttempt } from "@/types/exam";
+import {
+  getActiveScheduleForRoll,
+  isOperationalSchedulingActive,
+} from "@/services/institute-ops-service";
+import { getOrCreateSessionId, recordAuditEvent } from "@/services/audit-service";
+import { STORAGE_KEYS } from "@/repositories/storage-keys";
+
+const ACTIVE_EXAM_SESSION_TTL_MS = 6 * 60 * 60 * 1000;
+
+function registerActiveExamSession(examId: string, candidateRoll: string): void {
+  if (typeof window === "undefined") return;
+  const key = `${examId}:${candidateRoll}`;
+  const sessionId = getOrCreateSessionId();
+  const now = Date.now();
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.activeExamSessions);
+    const sessions = raw
+      ? (JSON.parse(raw) as Record<string, { sessionId: string; updatedAt: number }>)
+      : {};
+    for (const [id, value] of Object.entries(sessions)) {
+      if (now - value.updatedAt > ACTIVE_EXAM_SESSION_TTL_MS) delete sessions[id];
+    }
+    const existing = sessions[key];
+    if (
+      existing &&
+      existing.sessionId !== sessionId &&
+      now - existing.updatedAt < 30_000
+    ) {
+      recordAuditEvent({
+        actorId: candidateRoll,
+        actorRole: "student",
+        actionType: "operation_blocked",
+        resourceType: "exam_session",
+        resourceId: key,
+        metadata: { reason: "duplicate_session_detected" },
+        outcome: "warning",
+      });
+    }
+    sessions[key] = { sessionId, updatedAt: now };
+    localStorage.setItem(STORAGE_KEYS.activeExamSessions, JSON.stringify(sessions));
+  } catch {
+    localStorage.removeItem(STORAGE_KEYS.activeExamSessions);
+  }
+}
 
 export type BootstrapResult =
   | { status: "not_found" }
@@ -32,7 +76,13 @@ export function bootstrapExamSession(
     return { status: "not_found" };
   }
 
+  const activeSchedule = getActiveScheduleForRoll(examId, candidateRoll);
+  if (isOperationalSchedulingActive() && !activeSchedule) {
+    return { status: "not_found" };
+  }
+
   const existing = loadExamAttempt(examId, candidateRoll);
+  registerActiveExamSession(examId, candidateRoll);
 
   if (existing?.lifecycle === "submitted") {
     return { status: "already_submitted", attempt: existing };
@@ -66,7 +116,9 @@ export function bootstrapExamSession(
 
   const firstQuestionId = getFirstQuestionId(exam);
   useQuestionStore.getState().loadExam(exam, firstQuestionId);
-  useTimerStore.getState().start(exam.durationMinutes);
+  useTimerStore
+    .getState()
+    .start(activeSchedule?.durationMinutes ?? exam.durationMinutes);
   useExamLifecycleStore.getState().setExamId(examId);
   useExamLifecycleStore.getState().setPhase("in_progress");
 

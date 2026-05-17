@@ -44,7 +44,13 @@ async function probeTable(
 ): Promise<TableAccessResult> {
   try {
     const client = requireSupabaseClient(`verify.${table}`);
-    let query = client.from(table).select("*", { count: "exact", head: true });
+    const column =
+      table === "exam_schedule_batches"
+        ? "schedule_id"
+        : table === "audit_logs"
+          ? "event_id"
+          : "*";
+    let query = client.from(table).select(column, { count: "exact", head: true });
     if (instituteFilter && table !== "institutes") {
       query = query.eq("institute_id", DEFAULT_INSTITUTE_ID);
     }
@@ -64,9 +70,14 @@ export async function verifySupabaseTableAccess(): Promise<TableAccessResult[]> 
   const tables = [
     "institutes",
     "questions",
+    "students",
+    "batches",
     "exams",
     "exam_sections",
     "exam_questions",
+    "exam_schedules",
+    "exam_schedule_batches",
+    "audit_logs",
   ];
   const results: TableAccessResult[] = [];
   for (const table of tables) {
@@ -301,6 +312,9 @@ export async function refreshHydrationDiagnostics(): Promise<{
   ok: boolean;
   questionsCount: number;
   examsCount: number;
+  studentsCount: number;
+  batchesCount: number;
+  schedulesCount: number;
   durationMs: number;
   error?: string;
 }> {
@@ -310,6 +324,9 @@ export async function refreshHydrationDiagnostics(): Promise<{
     ok: result.ok,
     questionsCount: result.questionsCount,
     examsCount: result.examsCount,
+    studentsCount: result.studentsCount,
+    batchesCount: result.batchesCount,
+    schedulesCount: result.schedulesCount,
     durationMs: Math.round(performance.now() - t0),
     error: result.error,
   };

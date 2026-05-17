@@ -5,6 +5,9 @@ export interface HydrationDiagnostics {
   ok: boolean;
   questionsCount: number;
   examsCount: number;
+  studentsCount: number;
+  batchesCount: number;
+  schedulesCount: number;
   durationMs: number;
   error?: string;
   completedAt: string;

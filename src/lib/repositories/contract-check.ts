@@ -1,6 +1,9 @@
 import type { AttemptRepository } from "@/repositories/interfaces/attempt-repository";
+import type { AuditRepository } from "@/repositories/interfaces/audit-repository";
+import type { BatchRepository } from "@/repositories/interfaces/batch-repository";
 import type { ExamRepository } from "@/repositories/interfaces/exam-repository";
 import type { QuestionRepository } from "@/repositories/interfaces/question-repository";
+import type { ScheduleRepository } from "@/repositories/interfaces/schedule-repository";
 import type { StudentRepository } from "@/repositories/interfaces/student-repository";
 import { logValidationFailure } from "@/lib/logging/runtime-logger";
 
@@ -23,13 +26,42 @@ const STUDENT_METHODS = [
   "getSession",
   "saveSession",
   "clearSession",
+  "list",
+  "getById",
+  "getByRollNumber",
+  "save",
+  "deactivate",
+  "delete",
 ] as const satisfies readonly (keyof StudentRepository)[];
+
+const BATCH_METHODS = [
+  "list",
+  "getById",
+  "save",
+  "archive",
+  "delete",
+] as const satisfies readonly (keyof BatchRepository)[];
+
+const SCHEDULE_METHODS = [
+  "list",
+  "getById",
+  "listByExamId",
+  "save",
+  "deactivate",
+  "delete",
+] as const satisfies readonly (keyof ScheduleRepository)[];
 
 const ATTEMPT_METHODS = [
   "load",
   "save",
   "clear",
 ] as const satisfies readonly (keyof AttemptRepository)[];
+
+const AUDIT_METHODS = [
+  "append",
+  "list",
+  "clear",
+] as const satisfies readonly (keyof AuditRepository)[];
 
 function hasMethods(
   repo: object,
@@ -53,7 +85,10 @@ export function validateRepositoryContracts(bundle: {
   questions: QuestionRepository;
   exams: ExamRepository;
   students: StudentRepository;
+  batches: BatchRepository;
+  schedules: ScheduleRepository;
   attempts: AttemptRepository;
+  audit: AuditRepository;
 }): ContractCheckResult {
   const issues: string[] = [];
 
@@ -61,7 +96,10 @@ export function validateRepositoryContracts(bundle: {
     ["QuestionRepository", bundle.questions, QUESTION_METHODS],
     ["ExamRepository", bundle.exams, EXAM_METHODS],
     ["StudentRepository", bundle.students, STUDENT_METHODS],
+    ["BatchRepository", bundle.batches, BATCH_METHODS],
+    ["ScheduleRepository", bundle.schedules, SCHEDULE_METHODS],
     ["AttemptRepository", bundle.attempts, ATTEMPT_METHODS],
+    ["AuditRepository", bundle.audit, AUDIT_METHODS],
   ];
 
   for (const [name, repo, methods] of checks) {

@@ -58,6 +58,9 @@ export async function runStartupDiagnostics(): Promise<StartupDiagnosticsSnapsho
       ok: result.ok,
       questionsCount: result.questionsCount,
       examsCount: result.examsCount,
+      studentsCount: result.studentsCount,
+      batchesCount: result.batchesCount,
+      schedulesCount: result.schedulesCount,
       durationMs,
       error: result.error,
       completedAt: new Date().toISOString(),
@@ -67,7 +70,7 @@ export async function runStartupDiagnostics(): Promise<StartupDiagnosticsSnapsho
 
     if (result.ok) {
       console.info(
-        `[ExamGrid:startup] Hydration OK — ${result.questionsCount} questions, ${result.examsCount} exams (${durationMs}ms)`,
+        `[ExamGrid:startup] Hydration OK — ${result.questionsCount} questions, ${result.examsCount} exams, ${result.studentsCount} students, ${result.batchesCount} batches, ${result.schedulesCount} schedules (${durationMs}ms)`,
       );
     } else {
       console.error(

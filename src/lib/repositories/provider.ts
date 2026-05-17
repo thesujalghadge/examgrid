@@ -6,15 +6,24 @@ import { logRepositoryMode } from "@/lib/logging/runtime-logger";
 import { validateRepositoryContracts } from "@/lib/repositories/contract-check";
 import { wrapRepositoryBundle } from "@/lib/repositories/safe-wrapper";
 import type { AttemptRepository } from "@/repositories/interfaces/attempt-repository";
+import type { AuditRepository } from "@/repositories/interfaces/audit-repository";
+import type { BatchRepository } from "@/repositories/interfaces/batch-repository";
 import type { ExamRepository } from "@/repositories/interfaces/exam-repository";
 import type { QuestionRepository } from "@/repositories/interfaces/question-repository";
+import type { ScheduleRepository } from "@/repositories/interfaces/schedule-repository";
 import type { StudentRepository } from "@/repositories/interfaces/student-repository";
 import { LocalAttemptRepository } from "@/repositories/local/local-attempt-repository";
+import { LocalAuditRepository } from "@/repositories/local/local-audit-repository";
+import { LocalBatchRepository } from "@/repositories/local/local-batch-repository";
 import { LocalExamRepository } from "@/repositories/local/local-exam-repository";
 import { LocalQuestionRepository } from "@/repositories/local/local-question-repository";
+import { LocalScheduleRepository } from "@/repositories/local/local-schedule-repository";
 import { LocalStudentRepository } from "@/repositories/local/local-student-repository";
+import { SupabaseBatchRepository } from "@/repositories/supabase/supabase-batch-repository";
+import { SupabaseAuditRepository } from "@/repositories/supabase/supabase-audit-repository";
 import { SupabaseExamRepository } from "@/repositories/supabase/supabase-exam-repository";
 import { SupabaseQuestionRepository } from "@/repositories/supabase/supabase-question-repository";
+import { SupabaseScheduleRepository } from "@/repositories/supabase/supabase-schedule-repository";
 import { SupabaseStudentRepository } from "@/repositories/supabase/supabase-student-repository";
 
 export interface RepositoryBundle {
@@ -22,7 +31,10 @@ export interface RepositoryBundle {
   questions: QuestionRepository;
   exams: ExamRepository;
   students: StudentRepository;
+  batches: BatchRepository;
+  schedules: ScheduleRepository;
   attempts: AttemptRepository;
+  audit: AuditRepository;
 }
 
 function buildBundle(mode: RepositoryMode): RepositoryBundle {
@@ -32,15 +44,21 @@ function buildBundle(mode: RepositoryMode): RepositoryBundle {
           mode: "supabase",
           questions: new SupabaseQuestionRepository(),
           exams: new SupabaseExamRepository(),
-          students: new LocalStudentRepository(),
+          students: new SupabaseStudentRepository(),
+          batches: new SupabaseBatchRepository(),
+          schedules: new SupabaseScheduleRepository(),
           attempts: new LocalAttemptRepository(),
+          audit: new SupabaseAuditRepository(),
         }
       : {
           mode: "local",
           questions: new LocalQuestionRepository(),
           exams: new LocalExamRepository(),
           students: new LocalStudentRepository(),
+          batches: new LocalBatchRepository(),
+          schedules: new LocalScheduleRepository(),
           attempts: new LocalAttemptRepository(),
+          audit: new LocalAuditRepository(),
         };
 
   const safe = wrapRepositoryBundle(inner);
@@ -66,7 +84,7 @@ function logRepositoryModeOnce(mode: RepositoryMode): void {
   const label =
     mode === "local"
       ? "localStorage (browser)"
-      : "Supabase questions/exams + local attempts";
+      : "Supabase operations/questions/exams + local attempts";
   logRepositoryMode(mode, label);
 }
 
