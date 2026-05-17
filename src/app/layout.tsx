@@ -14,8 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ExamGrid — CBT Exam Engine",
-  description: "NTA-style computer based test simulation for JEE / NEET / CET",
+  title: "ExamGrid · Institute CBT Operations",
+  description:
+    "Operational CBT platform for institute exam scheduling, delivery, and audit readiness.",
 };
 
 export default function RootLayout({

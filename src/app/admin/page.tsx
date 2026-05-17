@@ -2,9 +2,12 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DEMO_INSTITUTE } from "@/config/demo";
 import { listAllExams } from "@/lib/exam-catalog";
 import { getRepositories } from "@/lib/repositories/provider";
+import { resetAndReseedDemoEnvironment } from "@/services/demo-environment-service";
 import { getQuestionBank } from "@/services/question-bank-service";
 
 export default function AdminOverviewPage() {
@@ -18,13 +21,21 @@ export default function AdminOverviewPage() {
       schedules: repos.schedules.list().length,
     };
   });
+  const [seeding, setSeeding] = useState(false);
+
+  const reseedDemo = async () => {
+    if (!confirm("Reset and reseed the Apex JEE Academy demo environment?")) return;
+    setSeeding(true);
+    await resetAndReseedDemoEnvironment();
+    window.location.reload();
+  };
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Admin Overview</h1>
         <p className="text-sm text-gray-600">
-          Manage institute operations, question bank, and examinations.
+          {DEMO_INSTITUTE.name} · {DEMO_INSTITUTE.tagline}
         </p>
       </div>
 
@@ -98,6 +109,24 @@ export default function AdminOverviewPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Demo Environment</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-wrap items-center justify-between gap-4">
+          <div className="text-sm text-gray-600">
+            <p className="font-medium text-gray-900">Apex JEE Academy demo mode</p>
+            <p>
+              Seeds realistic batches, students, JEE/NEET/CET exams, schedules,
+              and question bank data for institute walkthroughs.
+            </p>
+          </div>
+          <Button onClick={() => void reseedDemo()} disabled={seeding}>
+            {seeding ? "Seeding…" : "Reset & Seed Demo"}
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }

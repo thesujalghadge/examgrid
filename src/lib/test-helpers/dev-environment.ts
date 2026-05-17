@@ -3,6 +3,11 @@ import { migrateLocalToSupabase } from "@/lib/migration/local-to-supabase";
 import { getRepositories } from "@/lib/repositories/provider";
 import { STORAGE_KEYS } from "@/repositories/storage-keys";
 import { logPersistenceEvent } from "@/lib/logging/runtime-logger";
+import {
+  reseedDemoEnvironment,
+  resetAndReseedDemoEnvironment,
+  resetDemoEnvironment,
+} from "@/services/demo-environment-service";
 
 const ATTEMPT_PREFIX = "examgrid:attempt:";
 
@@ -62,6 +67,9 @@ export function installDevHelpers(): void {
     clearExamCatalog,
     resetLocalEnvironment,
     migrateLocalToSupabase,
+    resetDemoEnvironment,
+    reseedDemoEnvironment,
+    resetAndReseedDemoEnvironment,
   };
   (window as unknown as { __EXAMGRID_DEV__?: typeof api }).__EXAMGRID_DEV__ =
     api;

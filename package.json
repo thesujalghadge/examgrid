@@ -10,7 +10,8 @@
     "db:bootstrap": "node scripts/supabase/bootstrap-db.mjs",
     "db:push": "npx supabase db push",
     "db:verify": "node scripts/supabase/verify-remote.mjs",
-    "db:setup": "npm run db:bootstrap && npm run db:verify"
+    "db:setup": "npm run db:bootstrap && npm run db:verify",
+    "deploy:check": "node scripts/validate-deployment.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",

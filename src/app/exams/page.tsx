@@ -148,12 +148,16 @@ function ExamGroup({
           {items.map(({ exam, schedule }) => {
             const status = getScheduleStatus(schedule);
             const active = status === "active";
+            const startsIn = new Date(schedule.startAt).getTime() - Date.now();
             return (
             <Card key={exam.id} className="border-gray-300">
               <CardHeader>
                 <CardTitle className="text-[#1a3c6e]">{exam.title}</CardTitle>
                 <CardDescription>
                   {exam.subtitle}
+                  <span className="ml-2 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-700">
+                    {status}
+                  </span>
                   {exam.id.startsWith("exam-") && (
                     <span className="ml-2 rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-medium text-green-800">
                       Institute
@@ -180,6 +184,11 @@ function ExamGroup({
                       timeStyle: "short",
                     })}
                   </li>
+                  {status === "upcoming" && startsIn > 0 && (
+                    <li>
+                      Starts in: {Math.ceil(startsIn / 3600000)} hour(s)
+                    </li>
+                  )}
                 </ul>
                 {active ? (
                   <Link

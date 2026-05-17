@@ -41,12 +41,23 @@ export default function AdminStudentsPage() {
   });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [csv, setCsv] = useState("");
+  const [search, setSearch] = useState("");
   const [preview, setPreview] = useState<StudentImportPreview | null>(null);
 
   const batchById = useMemo(
     () => new Map(batches.map((batch) => [batch.id, batch])),
     [batches],
   );
+  const visibleStudents = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return students;
+    return students.filter((student) =>
+      [student.fullName, student.rollNumber, student.email, student.courseType]
+        .join(" ")
+        .toLowerCase()
+        .includes(q),
+    );
+  }, [search, students]);
 
   const refresh = () => setStudents(repos.students.list());
 
@@ -134,6 +145,13 @@ export default function AdminStudentsPage() {
           active access.
         </p>
       </div>
+
+      <Input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Search students by name, roll, email, or course"
+        className="max-w-md bg-white"
+      />
 
       <Card>
         <CardHeader>
@@ -284,7 +302,7 @@ export default function AdminStudentsPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {students.map((student) => (
+            {visibleStudents.map((student) => (
               <tr key={student.id}>
                 <td className="px-4 py-3">
                   <p className="font-medium">{student.fullName}</p>

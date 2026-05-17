@@ -48,6 +48,7 @@ export default function AdminSchedulesPage() {
     examId: repos.exams.list()[0]?.id ?? "",
   });
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState("all");
 
   const examById = useMemo(
     () => new Map(exams.map((exam) => [exam.id, exam])),
@@ -59,6 +60,11 @@ export default function AdminSchedulesPage() {
   );
 
   const refresh = () => setSchedules(repos.schedules.list());
+  const visibleSchedules = schedules.filter((schedule) => {
+    if (statusFilter === "all") return true;
+    if (statusFilter === "inactive") return !schedule.active;
+    return schedule.active && getScheduleStatus(schedule) === statusFilter;
+  });
 
   const toggleBatch = (batchId: string) => {
     setForm((current) => ({
@@ -136,6 +142,18 @@ export default function AdminSchedulesPage() {
           Assign exams to batches and control the visible testing window.
         </p>
       </div>
+
+      <select
+        className="h-10 max-w-xs rounded-md border border-gray-300 bg-white px-3 text-sm"
+        value={statusFilter}
+        onChange={(e) => setStatusFilter(e.target.value)}
+      >
+        <option value="all">All schedules</option>
+        <option value="active">Active now</option>
+        <option value="upcoming">Upcoming</option>
+        <option value="completed">Completed</option>
+        <option value="inactive">Inactive</option>
+      </select>
 
       <Card>
         <CardHeader>
@@ -270,7 +288,7 @@ export default function AdminSchedulesPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {schedules.map((schedule) => (
+            {visibleSchedules.map((schedule) => (
               <tr key={schedule.id}>
                 <td className="px-4 py-3 font-medium">
                   {examById.get(schedule.examId)?.title ?? schedule.examId}

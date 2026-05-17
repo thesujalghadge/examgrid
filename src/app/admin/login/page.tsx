@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DEMO_INSTITUTE } from "@/config/demo";
+import { DEMO_LOGIN } from "@/data/demo-data";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAdminAuthStore } from "@/stores/admin-auth-store";
@@ -13,8 +15,8 @@ export default function AdminLoginPage() {
   const admin = useAdminAuthStore((s) => s.admin);
   const hydrate = useAdminAuthStore((s) => s.hydrate);
   const login = useAdminAuthStore((s) => s.login);
-  const [email, setEmail] = useState("admin@examgrid.local");
-  const [password, setPassword] = useState("admin123");
+  const [email, setEmail] = useState<string>(DEMO_LOGIN.adminEmail);
+  const [password, setPassword] = useState<string>(DEMO_LOGIN.adminPassword);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -38,7 +40,7 @@ export default function AdminLoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-gray-100 p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>ExamGrid Admin</CardTitle>
+          <CardTitle>{DEMO_INSTITUTE.name} Admin</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -68,7 +70,7 @@ export default function AdminLoginPage() {
             </Button>
           </form>
           <p className="mt-4 text-center text-xs text-gray-500">
-            Mock admin auth — any email, password ≥ 4 chars.
+            Demo admin: {DEMO_LOGIN.adminEmail} / {DEMO_LOGIN.adminPassword}
           </p>
         </CardContent>
       </Card>

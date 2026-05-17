@@ -1,6 +1,6 @@
 # ExamGrid
 
-NTA-style computer-based test (CBT) platform for JEE / NEET / CET institutes. Phase 3 provides a stable **student CBT runtime** and a **local-first admin foundation** for question banks and exam creation. Backend migration to Supabase is prepared but not yet wired to persistence.
+Operational CBT platform for JEE / NEET / CET institutes. It includes student CBT delivery, institute operations, Supabase-backed persistence for operational data, schedule-based access, and audit logging for pilot demos.
 
 ## Features
 
@@ -16,6 +16,7 @@ NTA-style computer-based test (CBT) platform for JEE / NEET / CET institutes. Ph
 ### Admin module
 
 - Mock admin authentication (`/admin/login`)
+- Student, batch, schedule, and audit-log workflows
 - Question bank with filters, search, and JSON import
 - Create exam workflow: dynamic sections (Physics, Chemistry, Mathematics, Biology, custom)
 - Publish exams to the student portal (`localStorage` catalog)
@@ -23,7 +24,8 @@ NTA-style computer-based test (CBT) platform for JEE / NEET / CET institutes. Ph
 
 ### Built-in demo
 
-- JEE Main mock exam (30 mixed MCQ + numerical questions) always available
+- Apex JEE Academy demo data with realistic students, batches, exams, schedules, and question bank
+- Admin overview includes **Reset & Seed Demo**
 
 ## Tech stack
 
@@ -41,7 +43,7 @@ src/
   app/              # Routes (student + admin)
   components/       # UI (exam CBT, admin)
   stores/           # Zustand (auth, questions, timer, session)
-  repositories/     # localStorage adapters (swappable)
+  repositories/     # local/Supabase repository adapters
   services/         # Import, exam builder, question bank
   lib/              # Exam catalog, scoring, Supabase client
   types/            # Shared TypeScript types
@@ -71,15 +73,16 @@ Open [http://localhost:3000](http://localhost:3000).
 | Student exams | `/exams` |
 | Admin login | `/admin/login` |
 | Admin overview | `/admin` |
+| Audit logs | `/admin/audit-logs` |
 | System status | `/admin/system/status` |
 
 ### Admin mock login
 
-- Any email, password at least 4 characters (e.g. `admin@examgrid.local` / `admin123`)
+- Demo: `admin@apexjee.demo` / `admin123`
 
 ### Student mock login
 
-- Prefilled demo credentials on `/login`; any valid form submission works
+- Demo: `APX-JEE-26001`
 
 ### Environment variables
 
@@ -89,8 +92,13 @@ Copy `.env.example` to `.env.local` (never commit `.env.local`):
 |----------|-------------|
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon (public) key |
+| `NEXT_PUBLIC_DEFAULT_INSTITUTE_ID` | Institute UUID |
 
-The CBT engine does **not** depend on Supabase yet. Missing env vars only affect the admin system status page.
+Attempts remain localStorage by design for this phase.
+
+### Deployment
+
+See `docs/DEPLOYMENT.md`.
 
 ### Question import sample
 
@@ -100,8 +108,9 @@ The CBT engine does **not** depend on Supabase yet. Missing env vars only affect
 
 | Data | Storage |
 |------|---------|
-| Question bank | `localStorage` (`examgrid:question-bank`) |
-| Published exams | `localStorage` (`examgrid:exam-catalog`) |
+| Question bank | localStorage or Supabase |
+| Published exams | localStorage or Supabase |
+| Students/batches/schedules/audit | localStorage or Supabase |
 | Exam attempts | `localStorage` (`examgrid:attempt:*`) |
 | Admin session | `sessionStorage` |
 
@@ -112,6 +121,7 @@ npm run dev      # Development server
 npm run build    # Production build
 npm run start    # Start production server
 npm run lint     # ESLint
+npm run deploy:check # Deployment env validation
 ```
 
 ## License

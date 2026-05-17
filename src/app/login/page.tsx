@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { DEMO_INSTITUTE } from "@/config/demo";
+import { DEMO_LOGIN } from "@/data/demo-data";
 import {
   Card,
   CardContent,
@@ -18,9 +20,11 @@ import { useAuthStore } from "@/stores/auth-store";
 export default function LoginPage() {
   const router = useRouter();
   const login = useAuthStore((s) => s.login);
-  const [name, setName] = useState("Rahul Sharma");
-  const [rollNumber, setRollNumber] = useState("NTA2026001234");
-  const [applicationNumber, setApplicationNumber] = useState("APP-JEE-2026-001");
+  const [name, setName] = useState<string>(DEMO_LOGIN.studentName);
+  const [rollNumber, setRollNumber] = useState<string>(DEMO_LOGIN.studentRoll);
+  const [applicationNumber, setApplicationNumber] = useState<string>(
+    DEMO_LOGIN.applicationNumber,
+  );
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -48,12 +52,12 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-[#e8eef5] to-gray-200 p-4">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-[#eef3f8] to-gray-200 p-4">
       <Card className="w-full max-w-md border-[#1a3c6e]/20 shadow-lg">
         <CardHeader className="border-b bg-[#1a3c6e] text-white">
-          <CardTitle className="text-lg">National Testing Agency</CardTitle>
+          <CardTitle className="text-lg">{DEMO_INSTITUTE.name}</CardTitle>
           <CardDescription className="text-blue-100">
-            ExamGrid — Candidate Login (Mock)
+            ExamGrid CBT Portal · Demo Institute
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-6">
@@ -91,7 +95,7 @@ export default function LoginPage() {
             {error && <p className="text-sm text-red-700">{error}</p>}
           </form>
           <p className="mt-4 text-center text-xs text-gray-500">
-            Demo mode — any valid form submission proceeds.
+            Demo roll: {DEMO_LOGIN.studentRoll}
           </p>
         </CardContent>
       </Card>

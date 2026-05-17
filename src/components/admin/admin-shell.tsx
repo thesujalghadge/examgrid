@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { DEMO_INSTITUTE } from "@/config/demo";
 import { cn } from "@/lib/utils";
 import { useAdminAuthStore } from "@/stores/admin-auth-store";
 
@@ -97,7 +98,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       <aside className="flex w-56 shrink-0 flex-col border-r border-gray-300 bg-white">
         <div className="border-b border-gray-200 px-4 py-4">
           <p className="text-xs font-semibold uppercase text-gray-500">
-            ExamGrid Admin
+            {DEMO_INSTITUTE.name}
           </p>
           <p className="truncate text-sm font-medium text-gray-900">
             {admin.name}
