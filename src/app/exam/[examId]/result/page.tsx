@@ -4,27 +4,20 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { MetricCard, StatusBadge } from "@/components/shared/product-ui";
+import { DashboardPanel, SectionHeader, StatusBadge } from "@/components/shared/product-ui";
 import { cn } from "@/lib/utils";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { getExamById } from "@/data/mock-exams";
 import { clearExamAttempt, loadExamAttempt } from "@/lib/persistence";
 import { useAuthStore } from "@/stores/auth-store";
 import type { ExamResult } from "@/types/exam";
+import { Target, Trophy, Clock, BrainCircuit, Activity, AlertTriangle, ArrowRight, BookOpen } from "lucide-react";
 
 function formatDuration(seconds: number): string {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   const s = seconds % 60;
-  if (h > 0) return `${h}h ${m}m ${s}s`;
-  if (m > 0) return `${m}m ${s}s`;
-  return `${s}s`;
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m ${s}s`;
 }
 
 export default function ResultPage() {
@@ -54,150 +47,188 @@ export default function ResultPage() {
 
   if (!candidate || !result || !exam) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-sm text-gray-500">
-        Loading result…
+      <div className="flex min-h-screen items-center justify-center bg-muted/20 text-sm text-muted-foreground">
+        <Activity className="mr-2 h-4 w-4 animate-spin" /> Analyzing performance...
       </div>
     );
   }
 
+  const accuracy = Math.round((result.correct / result.attempted) * 100) || 0;
+  const timePerQ = Math.round(result.durationUsedSeconds / (result.attempted || 1));
+
   return (
-    <div className="min-h-screen bg-gray-100">
-      <header className="bg-[#123763] px-6 py-4 text-center text-white">
-        <h1 className="text-xl font-bold">Examination Submitted Successfully</h1>
-        <p className="text-sm text-blue-100">{exam.title}</p>
-      </header>
-
-      <main className="mx-auto max-w-3xl space-y-6 p-6">
-        <Card className="border-gray-200 shadow-sm">
-          <CardHeader>
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <CardTitle className="text-[#123763]">Score Summary</CardTitle>
-              <StatusBadge tone={result.violationCount ? "amber" : "green"}>
-                {result.violationCount ? "Review integrity log" : "Clean session"}
-              </StatusBadge>
+    <div className="min-h-screen bg-muted/20 pb-12">
+      {/* Top Banner */}
+      <div className="bg-primary px-4 py-8 text-primary-foreground sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-5xl">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-sm font-medium uppercase tracking-wider text-primary-foreground/80 mb-1">
+                Performance Intelligence
+              </p>
+              <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+                {exam.title}
+              </h1>
+              <p className="mt-2 text-sm text-primary-foreground/80">
+                {candidate.name} · Completed {new Date(result.submittedAt).toLocaleDateString("en-IN", { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              </p>
             </div>
-            <CardDescription>
-              {result.candidateName} · Roll {result.rollNumber}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-              <MetricCard label="Total Score" value={`${result.totalScore} / ${result.maxScore}`} />
-              <MetricCard label="Correct" value={result.correct} tone="good" />
-              <MetricCard label="Incorrect" value={result.incorrect} tone="warn" />
-              <MetricCard label="Unattempted" value={result.unattempted} />
-            </div>
-            <p className="text-sm text-gray-600">
-              Time used: {formatDuration(result.durationUsedSeconds)} · Submitted:{" "}
-              {new Date(result.submittedAt).toLocaleString("en-IN")}
-              {result.violationCount != null && result.violationCount > 0 && (
-                <> · Integrity violations: {result.violationCount}</>
-              )}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Section-wise Performance</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-left text-gray-600">
-                    <th className="pb-2 pr-4">Section</th>
-                    <th className="pb-2 pr-4">Attempted</th>
-                    <th className="pb-2 pr-4">Correct</th>
-                    <th className="pb-2 pr-4">Wrong</th>
-                    <th className="pb-2">Score</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {result.sectionScores.map((s) => (
-                    <tr key={s.sectionId} className="border-b border-gray-100">
-                      <td className="py-2 pr-4 font-medium">{s.sectionName}</td>
-                      <td className="py-2 pr-4">{s.attempted}/{s.total}</td>
-                      <td className="py-2 pr-4 text-green-700">{s.correct}</td>
-                      <td className="py-2 pr-4 text-red-700">{s.incorrect}</td>
-                      <td className="py-2 font-semibold">{s.score}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-
-        {result.academicInsights && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Academic Insights</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-3 sm:grid-cols-3">
-                {result.academicInsights.subjectBreakdown.map((subject) => (
-                  <div key={subject.name} className="rounded border border-gray-100 bg-gray-50 p-3">
-                    <p className="text-xs font-semibold uppercase text-gray-500">
-                      {subject.name}
-                    </p>
-                    <p className="mt-1 text-lg font-semibold text-[#123763]">
-                      {subject.accuracy}%
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {subject.correct}/{subject.attempted || subject.total} correct
-                    </p>
-                  </div>
-                ))}
+            {result.violationCount != null && result.violationCount > 0 ? (
+              <div className="flex items-center gap-2 rounded-full bg-amber-500/20 px-4 py-2 text-sm font-medium text-amber-200 ring-1 ring-amber-500/50">
+                <AlertTriangle className="h-4 w-4" /> Integrity Flag
               </div>
-              {result.academicInsights.suggestedRevisionTopics.length > 0 && (
-                <div>
-                  <p className="mb-2 text-xs font-semibold uppercase text-gray-500">
-                    Suggested revision
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {result.academicInsights.suggestedRevisionTopics.map((topic) => (
-                      <span
-                        key={topic}
-                        className="rounded bg-amber-50 px-2 py-1 text-xs font-medium text-amber-800"
-                      >
-                        {topic}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
+            ) : (
+              <div className="flex items-center gap-2 rounded-full bg-emerald-500/20 px-4 py-2 text-sm font-medium text-emerald-200 ring-1 ring-emerald-500/50">
+                <Trophy className="h-4 w-4" /> Verified Clean Session
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
-        <div className="flex flex-wrap justify-center gap-4">
-          <Link
-            href="/exams"
-            className={cn(buttonVariants({ variant: "outline" }))}
-          >
-            Back to Exams
-          </Link>
-          <Button
-            variant="outline"
-            onClick={() => {
-              clearExamAttempt(examId, candidate.rollNumber);
-              router.push(`/exam/${examId}/instructions`);
-            }}
-          >
-            Retake Exam
-          </Button>
-          <Button
-            className="bg-[#1a3c6e] hover:bg-[#152d52]"
-            onClick={() => router.push("/login")}
-          >
-            Logout
-          </Button>
+      <main className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 -mt-6">
+        {/* Core Metrics */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+          <DashboardPanel className="bg-card shadow-md flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Target className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-xs font-medium uppercase text-muted-foreground">Total Score</p>
+              <p className="text-2xl font-bold text-foreground">
+                {result.totalScore} <span className="text-sm text-muted-foreground font-normal">/ {result.maxScore}</span>
+              </p>
+            </div>
+          </DashboardPanel>
+
+          <DashboardPanel className="bg-card shadow-md flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <Activity className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-xs font-medium uppercase text-muted-foreground">Accuracy</p>
+              <p className="text-2xl font-bold text-foreground">{accuracy}%</p>
+            </div>
+          </DashboardPanel>
+
+          <DashboardPanel className="bg-card shadow-md flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
+              <Clock className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-xs font-medium uppercase text-muted-foreground">Time Invested</p>
+              <p className="text-2xl font-bold text-foreground">{formatDuration(result.durationUsedSeconds)}</p>
+            </div>
+          </DashboardPanel>
+
+          <DashboardPanel className="bg-card shadow-md flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400">
+              <BrainCircuit className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-xs font-medium uppercase text-muted-foreground">Pacing</p>
+              <p className="text-2xl font-bold text-foreground">{timePerQ}s <span className="text-sm text-muted-foreground font-normal">/ q</span></p>
+            </div>
+          </DashboardPanel>
         </div>
 
-        <p className="text-center text-xs text-gray-500">
-          Scores are calculated from the configured answer key for this demo exam.
-        </p>
+        <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+          <div className="space-y-6">
+            <DashboardPanel>
+              <SectionHeader title="Section Diagnostics" description="Detailed breakdown of your performance across subjects." />
+              <div className="mt-4 overflow-hidden rounded-xl border border-border">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50 text-left">
+                    <tr>
+                      <th className="px-4 py-3 font-medium text-muted-foreground">Subject</th>
+                      <th className="px-4 py-3 font-medium text-muted-foreground text-center">Score</th>
+                      <th className="px-4 py-3 font-medium text-muted-foreground text-center">Accuracy</th>
+                      <th className="px-4 py-3 font-medium text-muted-foreground text-right">Hit/Miss</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {result.sectionScores.map((s) => {
+                      const secAccuracy = Math.round((s.correct / (s.attempted || 1)) * 100);
+                      return (
+                        <tr key={s.sectionId} className="bg-card hover:bg-muted/20 transition-colors">
+                          <td className="px-4 py-4 font-semibold text-foreground">{s.sectionName}</td>
+                          <td className="px-4 py-4 text-center font-bold text-primary">{s.score}</td>
+                          <td className="px-4 py-4 text-center">
+                            <StatusBadge tone={secAccuracy > 70 ? "green" : secAccuracy > 40 ? "amber" : "red"}>
+                              {secAccuracy}%
+                            </StatusBadge>
+                          </td>
+                          <td className="px-4 py-4 text-right text-xs">
+                            <span className="text-emerald-600 font-medium">{s.correct}</span>
+                            <span className="text-muted-foreground mx-1">/</span>
+                            <span className="text-red-600 font-medium">{s.incorrect}</span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </DashboardPanel>
+            
+            <div className="flex flex-col sm:flex-row gap-3 pt-4">
+              <Button onClick={() => router.push("/exams")} size="lg" className="flex-1 shadow-sm">
+                Return to Dashboard <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={() => {
+                  clearExamAttempt(examId, candidate.rollNumber);
+                  router.push(`/exam/${examId}/instructions`);
+                }}
+                className="flex-1"
+              >
+                Retake Exam
+              </Button>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            {result.academicInsights && (
+              <DashboardPanel className="bg-gradient-to-b from-card to-muted/20 border-primary/10">
+                <div className="flex items-center gap-2 mb-4">
+                  <BrainCircuit className="h-5 w-5 text-primary" />
+                  <h2 className="font-semibold text-foreground">AI Knowledge Graph</h2>
+                </div>
+                
+                {result.academicInsights.suggestedRevisionTopics.length > 0 ? (
+                  <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      Based on your error patterns, the intelligence engine recommends immediate revision in the following areas:
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {result.academicInsights.suggestedRevisionTopics.map((topic) => (
+                        <span
+                          key={topic}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-900 dark:border-amber-900/50 dark:bg-amber-900/20 dark:text-amber-400"
+                        >
+                          <BookOpen className="h-3.5 w-3.5 opacity-70" />
+                          {topic}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-emerald-600 dark:text-emerald-400">
+                    No critical weaknesses detected in this session. Excellent performance!
+                  </p>
+                )}
+                
+                <div className="mt-8 border-t border-border pt-4">
+                  <Button variant="link" className="px-0 text-primary h-auto font-semibold">
+                    View full concept breakdown <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </DashboardPanel>
+            )}
+          </div>
+        </div>
       </main>
     </div>
   );

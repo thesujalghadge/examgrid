@@ -137,8 +137,8 @@ export default function AdminOverviewPage() {
           <SectionHeader title="Operational alerts" />
           <div className="space-y-3">
             {stats.alerts.length === 0 ? (
-              <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50/80 p-3">
-                <span className="text-sm text-emerald-800">
+              <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50/80 p-3 dark:border-emerald-900/30 dark:bg-emerald-900/20">
+                <span className="text-sm font-medium text-emerald-800 dark:text-emerald-400">
                   Demo environment is ready.
                 </span>
                 <StatusBadge tone="green">Healthy</StatusBadge>
@@ -147,14 +147,14 @@ export default function AdminOverviewPage() {
               stats.alerts.map((alert) => (
                 <div
                   key={alert}
-                  className="rounded-lg border border-amber-200 bg-amber-50/80 p-3 text-sm text-amber-900"
+                  className="rounded-lg border border-amber-200 bg-amber-50/80 p-3 text-sm text-amber-900 dark:border-amber-900/30 dark:bg-amber-900/20 dark:text-amber-400"
                 >
                   {alert}
                 </div>
               ))
             )}
-            <div className="rounded-lg border border-[var(--eg-border)] bg-slate-50/80 p-3 text-sm text-slate-600">
-              <p className="font-medium text-slate-950">Demo environment</p>
+            <div className="rounded-lg border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
+              <p className="font-medium text-foreground">Demo environment</p>
               <p className="mt-1 leading-relaxed">
                 Seeds {DEMO_INSTITUTE.name} data for institute walkthroughs and
                 CBT rehearsals.
@@ -171,7 +171,7 @@ export default function AdminOverviewPage() {
           action={
             <Link
               href="/admin/audit-logs"
-              className="text-sm font-medium text-[var(--eg-brand)] hover:underline"
+              className="text-sm font-medium text-primary hover:underline transition-colors"
             >
               View all
             </Link>
@@ -179,7 +179,7 @@ export default function AdminOverviewPage() {
         />
         <div className="space-y-2">
           {stats.recentAudit.length === 0 ? (
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-muted-foreground">
               No audit activity yet. Login, seed demo data, or schedule an exam
               to populate this feed.
             </p>
@@ -187,12 +187,12 @@ export default function AdminOverviewPage() {
             stats.recentAudit.map((entry) => (
               <div
                 key={entry.eventId}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--eg-border)] p-3 text-sm transition hover:bg-slate-50/80"
+                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card p-3 text-sm transition hover:border-primary/30 hover:bg-secondary/50"
               >
                 <div>
-                  <p className="font-medium text-slate-950">{entry.actionType}</p>
-                  <p className="text-xs text-slate-500">
-                    {entry.actorId} · {entry.resourceType}/{entry.resourceId}
+                  <p className="font-medium text-foreground">{entry.actionType}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    <span className="font-mono text-meta">{entry.actorId}</span> · {entry.resourceType}/{entry.resourceId}
                   </p>
                 </div>
                 <StatusBadge
@@ -208,4 +208,3 @@ export default function AdminOverviewPage() {
     </div>
   );
 }
-

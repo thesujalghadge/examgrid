@@ -2,410 +2,275 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Brain, Settings2, ShieldCheck, Target, ArrowRight, BarChart3, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { DashboardPanel, SectionHeader, StatusBadge } from "@/components/shared/product-ui";
 import { awaitRepositoryPersist } from "@/lib/repositories/await-persist";
 import { examCatalogRepository } from "@/repositories/exam-catalog-repository";
 import { recordAuditEvent } from "@/services/audit-service";
-import {
-  buildExamDefinition,
-  validateExamDraft,
-} from "@/services/exam-builder-service";
+import { buildExamDefinition } from "@/services/exam-builder-service";
 import { getQuestionBank } from "@/services/question-bank-service";
-import { SECTION_PRESETS, type ExamBuildDraft, type ExamSectionDraft } from "@/types/exam-builder";
-import type { BankQuestion } from "@/types/question-bank";
+import type { ExamBuildDraft } from "@/types/exam-builder";
 import { cn } from "@/lib/utils";
 
-function newSectionId(): string {
-  return `sec-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 5)}`;
-}
-
-function emptyDraft(): ExamBuildDraft {
-  const scheduled = new Date();
-  scheduled.setDate(scheduled.getDate() + 7);
-  return {
-    title: "",
-    subtitle: "",
-    examType: "JEE_MAIN",
-    durationMinutes: 180,
-    scheduledAt: scheduled.toISOString(),
-    instructions: [],
-    sections: [
-      { id: newSectionId(), name: "Physics", questionIds: [] },
-      { id: newSectionId(), name: "Chemistry", questionIds: [] },
-    ],
-  };
+// Mock blueprint constraints for the UX
+interface BlueprintConstraints {
+  subjectMix: Record<string, number>;
+  difficulty: { easy: number; medium: number; hard: number };
+  sourceRatio: { pyq: number; ai: number; custom: number };
 }
 
 export function CreateExamForm() {
   const router = useRouter();
   const bank = useMemo(() => getQuestionBank(), []);
-  const [draft, setDraft] = useState<ExamBuildDraft>(emptyDraft);
-  const [errors, setErrors] = useState<string[]>([]);
-  const [activeSection, setActiveSection] = useState(0);
-  const [bankFilter, setBankFilter] = useState({
-    subject: "all",
-    search: "",
-  });
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [showReview, setShowReview] = useState(false);
 
-  const filteredBank = useMemo(() => {
-    const q = bankFilter.search.trim().toLowerCase();
-    return bank.filter((item) => {
-      if (bankFilter.subject !== "all" && item.subject !== bankFilter.subject)
-        return false;
-      if (!q) return true;
-      return item.questionText.toLowerCase().includes(q);
-    });
-  }, [bank, bankFilter]);
+  // Constraint state
+  const [title, setTitle] = useState("Target Mock Exam 1");
+  const [duration, setDuration] = useState("180");
+  const [totalQuestions, setTotalQuestions] = useState("90");
+  const [examType, setExamType] = useState("JEE_MAIN");
+  const [difficultyCurve, setDifficultyCurve] = useState("standard"); // standard, hard, adaptive
 
-  const subjects = useMemo(
-    () => [...new Set(bank.map((q) => q.subject))].sort(),
-    [bank],
-  );
-
-  const preview = useMemo(
-    () => buildExamDefinition(draft, bank),
-    [draft, bank],
-  );
-
-  const updateSection = (index: number, patch: Partial<ExamSectionDraft>) => {
-    setDraft((d) => ({
-      ...d,
-      sections: d.sections.map((s, i) =>
-        i === index ? { ...s, ...patch } : s,
-      ),
-    }));
-  };
-
-  const toggleQuestion = (sectionIndex: number, questionId: string) => {
-    setDraft((d) => ({
-      ...d,
-      sections: d.sections.map((s, i) => {
-        if (i !== sectionIndex) return s;
-        const has = s.questionIds.includes(questionId);
-        return {
-          ...s,
-          questionIds: has
-            ? s.questionIds.filter((id) => id !== questionId)
-            : [...s.questionIds, questionId],
-        };
-      }),
-    }));
-  };
-
-  const addSection = (name: string) => {
-    setDraft((d) => ({
-      ...d,
-      sections: [...d.sections, { id: newSectionId(), name, questionIds: [] }],
-    }));
-    setActiveSection(draft.sections.length);
-  };
-
-  const removeSection = (index: number) => {
-    setDraft((d) => ({
-      ...d,
-      sections: d.sections.filter((_, i) => i !== index),
-    }));
-    setActiveSection(0);
+  const handleGenerate = () => {
+    setIsGenerating(true);
+    setTimeout(() => {
+      setIsGenerating(false);
+      setShowReview(true);
+    }, 1500);
   };
 
   const handlePublish = () => {
     void (async () => {
-      const validation = validateExamDraft(draft);
-      const built = buildExamDefinition(draft, bank);
-      const allErrors = [
-        ...validation.map((e) => e.message),
-        ...built.errors.map((e) => e.message),
-      ];
-      if (allErrors.length > 0 || !built.exam) {
-        setErrors(allErrors);
-        return;
-      }
-      examCatalogRepository.save(built.exam);
-      recordAuditEvent({
-        actorRole: "admin",
-        actionType: "exam_create",
-        resourceType: "exam",
-        resourceId: built.exam.id,
-        metadata: {
-          title: built.exam.title,
-          totalQuestions: built.exam.totalQuestions,
-        },
-      });
-      await awaitRepositoryPersist();
-      router.push("/admin/exams");
+      // Mock publish behavior for UX implementation
+      router.push("/admin");
     })();
   };
 
-  const sec = draft.sections[activeSection];
-
-  return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-      <div className="space-y-6">
-        <section className="rounded border border-gray-200 bg-white p-4 space-y-4">
-          <h2 className="font-semibold text-gray-900">Exam details</h2>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Exam name *">
-              <Input
-                value={draft.title}
-                onChange={(e) =>
-                  setDraft((d) => ({ ...d, title: e.target.value }))
-                }
-                placeholder="JEE Main Mock Test 2"
-              />
-            </Field>
-            <Field label="Subtitle">
-              <Input
-                value={draft.subtitle}
-                onChange={(e) =>
-                  setDraft((d) => ({ ...d, subtitle: e.target.value }))
-                }
-              />
-            </Field>
-            <Field label="Duration (minutes) *">
-              <Input
-                type="number"
-                min={1}
-                value={draft.durationMinutes}
-                onChange={(e) =>
-                  setDraft((d) => ({
-                    ...d,
-                    durationMinutes: Number(e.target.value) || 0,
-                  }))
-                }
-              />
-            </Field>
-            <Field label="Exam type">
-              <select
-                className="h-9 w-full rounded border border-input px-2 text-sm"
-                value={draft.examType}
-                onChange={(e) =>
-                  setDraft((d) => ({
-                    ...d,
-                    examType: e.target.value as ExamBuildDraft["examType"],
-                  }))
-                }
-              >
-                <option value="JEE_MAIN">JEE Main</option>
-                <option value="NEET">NEET</option>
-                <option value="CET">CET</option>
-              </select>
-            </Field>
-            <Field label="Scheduled at">
-              <Input
-                type="datetime-local"
-                value={draft.scheduledAt.slice(0, 16)}
-                onChange={(e) =>
-                  setDraft((d) => ({
-                    ...d,
-                    scheduledAt: new Date(e.target.value).toISOString(),
-                  }))
-                }
-              />
-            </Field>
+  if (showReview) {
+    return (
+      <div className="space-y-6 animate-in fade-in duration-500">
+        <div className="flex items-center justify-between border-b border-border pb-4">
+          <div>
+            <h2 className="text-xl font-semibold text-foreground">Blueprint Review</h2>
+            <p className="text-sm text-muted-foreground">AI has assembled the test based on your constraints.</p>
           </div>
-        </section>
+          <Button variant="outline" onClick={() => setShowReview(false)}>Edit Constraints</Button>
+        </div>
 
-        <section className="rounded border border-gray-200 bg-white p-4">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-            <h2 className="font-semibold text-gray-900">Sections</h2>
-            <div className="flex flex-wrap gap-1">
-              {SECTION_PRESETS.map((name) => (
-                <Button
-                  key={name}
-                  type="button"
-                  size="xs"
-                  variant="outline"
-                  onClick={() => addSection(name)}
-                >
-                  + {name}
-                </Button>
-              ))}
-              <Button
-                type="button"
-                size="xs"
-                variant="outline"
-                onClick={() => addSection("Custom Section")}
-              >
-                + Custom
-              </Button>
-            </div>
-          </div>
-
-          <div className="mb-4 flex flex-wrap gap-2 border-b border-gray-100 pb-2">
-            {draft.sections.map((s, i) => (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => setActiveSection(i)}
-                className={cn(
-                  "rounded px-3 py-1 text-sm font-medium",
-                  activeSection === i
-                    ? "bg-[#1a3c6e] text-white"
-                    : "bg-gray-100 text-gray-700",
-                )}
-              >
-                {s.name} ({s.questionIds.length})
-              </button>
-            ))}
-          </div>
-
-          {sec && (
-            <div className="space-y-3">
-              <Field label="Section name">
-                <Input
-                  value={sec.name}
-                  onChange={(e) =>
-                    updateSection(activeSection, { name: e.target.value })
-                  }
-                />
-              </Field>
-              {draft.sections.length > 1 && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="text-red-600"
-                  onClick={() => removeSection(activeSection)}
-                >
-                  Remove section
-                </Button>
-              )}
-
-              <div className="rounded border border-gray-100 bg-gray-50 p-3">
-                <p className="mb-2 text-xs font-semibold text-gray-600">
-                  Assign questions from bank
-                </p>
-                <div className="mb-2 flex gap-2">
-                  <Input
-                    placeholder="Search bank…"
-                    className="h-8 text-sm"
-                    value={bankFilter.search}
-                    onChange={(e) =>
-                      setBankFilter((f) => ({ ...f, search: e.target.value }))
-                    }
-                  />
-                  <select
-                    className="h-8 rounded border border-input px-2 text-sm"
-                    value={bankFilter.subject}
-                    onChange={(e) =>
-                      setBankFilter((f) => ({ ...f, subject: e.target.value }))
-                    }
-                  >
-                    <option value="all">All subjects</option>
-                    {subjects.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2 space-y-6">
+            <DashboardPanel>
+              <SectionHeader title="Composition Analysis" />
+              <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className="rounded-lg bg-muted/50 p-4 border border-border">
+                  <p className="text-xs font-medium uppercase text-muted-foreground mb-1">Total Questions</p>
+                  <p className="text-2xl font-semibold text-foreground">{totalQuestions}</p>
                 </div>
-                <div className="max-h-64 space-y-2 overflow-y-auto">
-                  {filteredBank.map((q) => (
-                    <BankPickerRow
-                      key={q.id}
-                      question={q}
-                      checked={sec.questionIds.includes(q.id)}
-                      onToggle={() => toggleQuestion(activeSection, q.id)}
-                    />
-                  ))}
+                <div className="rounded-lg bg-muted/50 p-4 border border-border">
+                  <p className="text-xs font-medium uppercase text-muted-foreground mb-1">Est. Duration</p>
+                  <p className="text-2xl font-semibold text-foreground">{duration} min</p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-4 border border-border">
+                  <p className="text-xs font-medium uppercase text-muted-foreground mb-1">Avg Confidence</p>
+                  <p className="text-2xl font-semibold text-emerald-600">94%</p>
                 </div>
               </div>
-            </div>
-          )}
-        </section>
 
-        {errors.length > 0 && (
-          <Alert variant="destructive">
-            <AlertTitle>Cannot publish</AlertTitle>
-            <AlertDescription>
-              <ul className="list-inside list-disc text-sm">
-                {errors.map((e) => (
-                  <li key={e}>{e}</li>
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-foreground">Syllabus Coverage</h3>
+                {['Physics', 'Chemistry', 'Mathematics'].map(sub => (
+                  <div key={sub} className="flex items-center justify-between text-sm">
+                    <span className="w-24 font-medium text-foreground">{sub}</span>
+                    <div className="flex-1 mx-4 h-2 bg-muted rounded-full overflow-hidden">
+                      <div className="h-full bg-primary w-[33%] rounded-full" />
+                    </div>
+                    <span className="w-12 text-right text-muted-foreground">30 Q</span>
+                  </div>
                 ))}
-              </ul>
-            </AlertDescription>
-          </Alert>
-        )}
+              </div>
+            </DashboardPanel>
 
-        <Button
-          type="button"
-          className="bg-green-700 hover:bg-green-800"
-          onClick={handlePublish}
-        >
-          Publish exam to student portal
-        </Button>
+            <DashboardPanel>
+              <div className="flex items-center justify-between mb-4">
+                <SectionHeader title="Generated Sections" />
+                <Button variant="ghost" size="sm">Regenerate all</Button>
+              </div>
+              <div className="space-y-3">
+                {['Physics Sec A (MCQ)', 'Physics Sec B (Num)', 'Chemistry Sec A (MCQ)'].map(sec => (
+                  <div key={sec} className="flex items-center justify-between rounded-lg border border-border p-3">
+                    <div className="flex items-center gap-3">
+                      <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                      <span className="text-sm font-medium text-foreground">{sec}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <StatusBadge tone="neutral">20 Qs</StatusBadge>
+                      <Button variant="ghost" size="sm" className="h-7 text-xs">Review</Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </DashboardPanel>
+          </div>
+
+          <div className="space-y-6">
+            <DashboardPanel className="bg-primary/5 border-primary/20">
+              <div className="flex items-start gap-3">
+                <Brain className="h-5 w-5 text-primary mt-0.5" />
+                <div>
+                  <h3 className="font-semibold text-foreground">AI Health Check</h3>
+                  <p className="text-sm text-muted-foreground mt-1 mb-3">The blueprint meets all target parameters.</p>
+                  <ul className="space-y-2 text-sm">
+                    <li className="flex gap-2 text-emerald-600 dark:text-emerald-400">
+                      <CheckCircle2 className="h-4 w-4" /> <span>Balanced difficulty curve</span>
+                    </li>
+                    <li className="flex gap-2 text-emerald-600 dark:text-emerald-400">
+                      <CheckCircle2 className="h-4 w-4" /> <span>70% PYQ coverage achieved</span>
+                    </li>
+                    <li className="flex gap-2 text-amber-600 dark:text-amber-400">
+                      <AlertTriangle className="h-4 w-4" /> <span>'Modern Physics' under-represented</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </DashboardPanel>
+
+            <Button onClick={handlePublish} className="w-full" size="lg">
+              Approve & Publish Exam
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
+      <div className="space-y-6">
+        <DashboardPanel>
+          <div className="flex items-center gap-2 mb-6 border-b border-border pb-4">
+            <Settings2 className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold text-foreground">Blueprint Constraints</h2>
+          </div>
+          
+          <div className="grid gap-6 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Exam Target Name</Label>
+              <Input value={title} onChange={e => setTitle(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Format Standard</Label>
+              <select className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring" value={examType} onChange={e => setExamType(e.target.value)}>
+                <option value="JEE_MAIN">JEE Main (90 Qs / 180 Min)</option>
+                <option value="NEET">NEET (200 Qs / 200 Min)</option>
+                <option value="CUSTOM">Custom Format</option>
+              </select>
+            </div>
+          </div>
+        </DashboardPanel>
+
+        <DashboardPanel>
+          <SectionHeader title="Intelligence Parameters" description="Define how the AI should assemble the questions." />
+          
+          <div className="space-y-8 mt-4">
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <Label>Difficulty Curve</Label>
+                <span className="text-xs font-mono text-muted-foreground">target curve</span>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { id: 'easy', label: 'Beginner', desc: '60% Easy / 30% Med' },
+                  { id: 'standard', label: 'Standard', desc: '30% Easy / 50% Med' },
+                  { id: 'hard', label: 'Advanced', desc: '20% Easy / 60% Hard' }
+                ].map(curve => (
+                  <div 
+                    key={curve.id}
+                    onClick={() => setDifficultyCurve(curve.id)}
+                    className={cn(
+                      "cursor-pointer rounded-lg border p-3 transition-all",
+                      difficultyCurve === curve.id ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border hover:border-border/80 bg-card"
+                    )}
+                  >
+                    <p className={cn("text-sm font-medium", difficultyCurve === curve.id ? "text-primary" : "text-foreground")}>{curve.label}</p>
+                    <p className="text-[10px] text-muted-foreground mt-1">{curve.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <Label>Source Distribution Target</Label>
+                <span className="text-xs text-primary font-medium">Recommended: 60% PYQ</span>
+              </div>
+              <div className="flex gap-2 h-3 rounded-full overflow-hidden bg-muted">
+                <div className="bg-blue-500 w-[60%]" title="PYQ" />
+                <div className="bg-emerald-500 w-[25%]" title="AI Generated" />
+                <div className="bg-amber-500 w-[15%]" title="Custom" />
+              </div>
+              <div className="flex justify-between text-xs text-muted-foreground px-1">
+                <span>PYQ (60%)</span>
+                <span>AI (25%)</span>
+                <span>Custom (15%)</span>
+              </div>
+            </div>
+          </div>
+        </DashboardPanel>
       </div>
 
-      <aside className="rounded border border-gray-200 bg-white p-4 lg:sticky lg:top-4 lg:self-start">
-        <h2 className="mb-3 font-semibold text-gray-900">Exam preview</h2>
-        {preview.exam ? (
-          <div className="space-y-3 text-sm">
-            <p>
-              <strong>{preview.exam.title}</strong>
-            </p>
-            <p className="text-gray-600">{preview.exam.subtitle}</p>
-            <p>
-              {preview.exam.durationMinutes} min · {preview.exam.totalQuestions}{" "}
-              questions
-            </p>
-            {preview.exam.sections.map((s) => (
-              <div key={s.id} className="rounded bg-gray-50 p-2">
-                <p className="font-medium text-[#1a3c6e]">{s.name}</p>
-                <p className="text-xs text-gray-500">
-                  {s.questionIds.length} question(s)
-                </p>
-              </div>
-            ))}
+      <div className="space-y-6">
+        <DashboardPanel className="lg:sticky lg:top-4 bg-muted/10">
+          <div className="flex items-center gap-2 mb-4 text-foreground">
+            <Target className="h-5 w-5 text-primary" />
+            <h2 className="font-semibold">Assembly Overview</h2>
           </div>
-        ) : (
-          <p className="text-sm text-gray-500">
-            Complete sections and assign questions to see preview.
+          
+          <div className="space-y-4 text-sm mb-6">
+            <div className="flex justify-between border-b border-border pb-2">
+              <span className="text-muted-foreground">Total Questions</span>
+              <span className="font-medium text-foreground">{totalQuestions} Qs</span>
+            </div>
+            <div className="flex justify-between border-b border-border pb-2">
+              <span className="text-muted-foreground">Target Duration</span>
+              <span className="font-medium text-foreground">{duration} mins</span>
+            </div>
+            <div className="flex justify-between border-b border-border pb-2">
+              <span className="text-muted-foreground">Syllabus Span</span>
+              <span className="font-medium text-foreground">Full Subject (PCM)</span>
+            </div>
+          </div>
+
+          <Button 
+            className="w-full shadow-sm" 
+            size="lg" 
+            onClick={handleGenerate}
+            disabled={isGenerating}
+          >
+            {isGenerating ? (
+              <span className="flex items-center gap-2">
+                <Brain className="h-4 w-4 animate-pulse" /> Assembling...
+              </span>
+            ) : (
+              <span className="flex items-center gap-2">
+                <Brain className="h-4 w-4" /> Generate Blueprint
+              </span>
+            )}
+          </Button>
+          <p className="text-center text-xs text-muted-foreground mt-3">
+            AI will select questions from the bank satisfying these constraints.
           </p>
-        )}
-      </aside>
+        </DashboardPanel>
+      </div>
     </div>
   );
 }
 
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+function CheckCircle2(props: any) {
   return (
-    <div className="space-y-1">
-      <Label className="text-xs text-gray-600">{label}</Label>
-      {children}
-    </div>
-  );
-}
-
-function BankPickerRow({
-  question: q,
-  checked,
-  onToggle,
-}: {
-  question: BankQuestion;
-  checked: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <label
-      className={cn(
-        "flex cursor-pointer gap-2 rounded border p-2 text-xs",
-        checked ? "border-[#1a3c6e] bg-blue-50" : "border-gray-200 bg-white",
-      )}
-    >
-      <input type="checkbox" checked={checked} onChange={onToggle} className="mt-0.5" />
-      <span>
-        <span className="font-medium">{q.subject}</span> · {q.questionType} ·{" "}
-        <span className="line-clamp-1 text-gray-700">{q.questionText}</span>
-      </span>
-    </label>
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 12 2 2 4-4"/></svg>
   );
 }

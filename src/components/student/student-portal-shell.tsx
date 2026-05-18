@@ -19,20 +19,20 @@ export function StudentPortalShell({
   const router = useRouter();
 
   return (
-    <div className="min-h-screen bg-[var(--eg-canvas)]">
-      <header className="border-b border-[var(--eg-border)] bg-[var(--eg-brand)] text-white shadow-sm">
+    <div className="min-h-screen bg-muted/20">
+      <header className="border-b border-border bg-primary text-primary-foreground shadow-md">
         <div className="eg-container flex flex-wrap items-center justify-between gap-4 py-4">
           <div className="flex items-center gap-4">
             <div className="hidden sm:block">
               <ProductMark compact />
             </div>
-            <div className="border-l border-white/20 pl-4">
-              <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-blue-100/90">
+            <div className="border-l border-primary-foreground/20 pl-4">
+              <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-primary-foreground/80">
                 <GraduationCap className="h-3.5 w-3.5" />
                 Student portal
               </p>
               <h1 className="text-lg font-semibold">{DEMO_INSTITUTE.name}</h1>
-              <p className="text-sm text-blue-100/90">
+              <p className="text-sm text-primary-foreground/80">
                 {candidate.name} · Roll {candidate.rollNumber}
               </p>
             </div>
@@ -40,7 +40,7 @@ export function StudentPortalShell({
           <Button
             variant="outline"
             size="sm"
-            className="border-white/30 bg-white/5 text-white hover:bg-white/15"
+            className="border-primary-foreground/30 bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20 hover:text-white"
             onClick={() => {
               onLogout();
               router.push("/login");
@@ -51,7 +51,7 @@ export function StudentPortalShell({
           </Button>
         </div>
       </header>
-      <main className="eg-container py-6 sm:py-8">{children}</main>
+      <main className="eg-container py-6 sm:py-8 max-w-5xl">{children}</main>
     </div>
   );
 }

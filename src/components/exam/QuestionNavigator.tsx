@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { useQuestionStore } from "@/stores/question-store";
+import { Eraser, ArrowLeft, ArrowRight, SaveAll, BookmarkPlus, Send } from "lucide-react";
 
 interface QuestionNavigatorProps {
   onSubmitClick: () => void;
@@ -24,65 +25,79 @@ export function QuestionNavigator({ onSubmitClick }: QuestionNavigatorProps) {
   const isLast = idx >= allIds.length - 1;
 
   return (
-    <div className="border-t-2 border-[#1a3c6e]/20 bg-[#e8eef5] px-4 py-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-2">
+    <div className="border-t border-border bg-background px-3 py-3 md:px-6 shadow-[0_-4px_10px_rgba(0,0,0,0.02)]">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        
+        {/* Mobile: Top Row Actions */}
+        <div className="flex flex-wrap items-center justify-between gap-2 sm:justify-start">
           <Button
             type="button"
             variant="outline"
             size="sm"
-            className="h-9 border-gray-400 bg-white px-4 font-semibold text-gray-800 shadow-sm hover:bg-gray-50"
+            className="h-10 px-3 font-medium shadow-sm flex-1 sm:flex-none justify-center gap-1.5 active:scale-[0.98]"
             disabled={!currentQuestionId}
-            onClick={() =>
-              currentQuestionId && clearResponse(currentQuestionId)
-            }
+            onClick={() => currentQuestionId && clearResponse(currentQuestionId)}
           >
-            Clear Response
+            <Eraser className="h-4 w-4" />
+            <span className="hidden sm:inline">Clear</span>
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-9 border-gray-400 bg-white px-4 font-semibold text-gray-800 shadow-sm hover:bg-gray-50"
-            disabled={isFirst}
-            onClick={goPrevious}
-          >
-            &lt;&lt; Previous
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            className="h-9 border border-[#152d52] bg-[#1a3c6e] px-4 font-semibold text-white shadow-sm hover:bg-[#152d52]"
-            disabled={isLast}
-            onClick={goNext}
-          >
-            Next &gt;&gt;
-          </Button>
+          
+          <div className="flex gap-2 flex-1 sm:flex-none">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="h-10 px-3 font-medium flex-1 sm:flex-none justify-center gap-1.5 active:scale-[0.98]"
+              disabled={isFirst}
+              onClick={goPrevious}
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden lg:inline">Prev</span>
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="h-10 px-3 font-medium flex-1 sm:flex-none justify-center gap-1.5 active:scale-[0.98]"
+              disabled={isLast}
+              onClick={goNext}
+            >
+              <span className="hidden lg:inline">Next</span>
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
+        {/* Primary State Actions */}
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"
             size="sm"
-            className="h-9 bg-[#2e7d32] px-4 font-semibold text-white shadow-sm hover:bg-[#256628]"
-            onClick={saveAndNext}
-          >
-            Save &amp; Next
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            className="h-9 bg-[#6a1b9a] px-4 font-semibold text-white shadow-sm hover:bg-[#5a1785]"
+            className="h-10 flex-1 sm:flex-none bg-[#f59e0b] px-4 font-semibold text-amber-950 shadow-sm hover:bg-[#d97706] gap-1.5 active:scale-[0.98] transition-all"
             onClick={markForReviewAndNext}
           >
-            Mark for Review &amp; Next
+            <BookmarkPlus className="h-4 w-4" />
+            <span className="truncate">Review & Next</span>
           </Button>
           <Button
             type="button"
             size="sm"
-            className="h-9 bg-[#c62828] px-5 font-bold text-white shadow-sm hover:bg-[#a82020]"
+            className="h-10 flex-1 sm:flex-none bg-emerald-600 px-4 font-semibold text-white shadow-sm hover:bg-emerald-700 gap-1.5 active:scale-[0.98] transition-all"
+            onClick={saveAndNext}
+          >
+            <SaveAll className="h-4 w-4" />
+            <span className="truncate">Save & Next</span>
+          </Button>
+          
+          {/* Submit usually hidden in real CBT unless on last question, but keeping it visible as per old layout */}
+          <Button
+            type="button"
+            size="sm"
+            variant="destructive"
+            className="h-10 px-4 font-bold shadow-sm gap-1.5 active:scale-[0.98] hidden lg:flex"
             onClick={onSubmitClick}
           >
+            <Send className="h-4 w-4" />
             Submit
           </Button>
         </div>

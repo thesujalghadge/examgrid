@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { awaitRepositoryPersist } from "@/lib/repositories/await-persist";
@@ -10,6 +9,7 @@ import { getRepositories } from "@/lib/repositories/provider";
 import { recordAuditEvent } from "@/services/audit-service";
 import { createBatchInput } from "@/services/institute-ops-service";
 import type { Batch } from "@/types/institute-ops";
+import { DashboardPanel, PageHeader, SectionHeader, StatusBadge } from "@/components/shared/product-ui";
 
 const blank = {
   name: "",
@@ -98,107 +98,125 @@ export default function AdminBatchesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Batch Management</h1>
-        <p className="text-sm text-gray-600">
-          {activeCount} active batches, {batches.length} total.
-        </p>
-      </div>
+      <PageHeader
+        title="Batch Management"
+        description={`${activeCount} active batches, ${batches.length} total. Organize students into operational groups.`}
+      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">
-            {editingId ? "Edit Batch" : "Create Batch"}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={save} className="grid gap-4 md:grid-cols-5">
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="name">Batch name</Label>
-              <Input
-                id="name"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="JEE 2026 A"
-                required
-              />
+      <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
+        {/* Roster Table */}
+        <div className="space-y-4">
+          <SectionHeader title="Active & Archived Batches" />
+          <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead className="bg-muted/50 border-b border-border sticky top-0">
+                  <tr>
+                    <th className="px-5 py-3 text-meta text-muted-foreground font-medium">Batch</th>
+                    <th className="px-5 py-3 text-meta text-muted-foreground font-medium">Course</th>
+                    <th className="px-5 py-3 text-meta text-muted-foreground font-medium">Year</th>
+                    <th className="px-5 py-3 text-meta text-muted-foreground font-medium">Status</th>
+                    <th className="px-5 py-3 text-meta text-muted-foreground font-medium text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {batches.map((batch) => (
+                    <tr key={batch.id} className="transition-colors hover:bg-muted/30">
+                      <td className="px-5 py-4 text-table font-medium text-foreground">{batch.name}</td>
+                      <td className="px-5 py-4 text-table text-muted-foreground">{batch.courseType}</td>
+                      <td className="px-5 py-4 text-table text-muted-foreground">{batch.academicYear}</td>
+                      <td className="px-5 py-4">
+                        <StatusBadge tone={batch.active ? "green" : "neutral"}>
+                          {batch.active ? "Active" : "Archived"}
+                        </StatusBadge>
+                      </td>
+                      <td className="space-x-2 px-5 py-4 text-right">
+                        <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => edit(batch)}>
+                          Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 text-xs text-amber-600 hover:bg-amber-100/50 hover:text-amber-700 dark:hover:bg-amber-900/30"
+                          onClick={() => archive(batch.id)}
+                          disabled={!batch.active}
+                        >
+                          Archive
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                  {batches.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="px-5 py-8 text-center text-sm text-muted-foreground">
+                        No batches configured. Create your first batch to begin.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="course">Course</Label>
-              <Input
-                id="course"
-                value={form.courseType}
-                onChange={(e) =>
-                  setForm({ ...form, courseType: e.target.value })
-                }
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="year">Academic year</Label>
-              <Input
-                id="year"
-                value={form.academicYear}
-                onChange={(e) =>
-                  setForm({ ...form, academicYear: e.target.value })
-                }
-                required
-              />
-            </div>
-            <div className="flex items-end gap-3">
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={form.active}
-                  onChange={(e) =>
-                    setForm({ ...form, active: e.target.checked })
-                  }
+          </div>
+        </div>
+
+        {/* Sidebar Actions */}
+        <div className="space-y-6">
+          <DashboardPanel>
+            <SectionHeader title={editingId ? "Edit Batch" : "Create Batch"} />
+            <form onSubmit={save} className="grid gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Batch name</Label>
+                <Input
+                  id="name"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  placeholder="JEE 2026 A"
+                  required
                 />
-                Active
-              </label>
-              <Button type="submit">{editingId ? "Update" : "Create"}</Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-
-      <div className="overflow-hidden rounded border border-gray-200 bg-white">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-gray-50 text-xs uppercase text-gray-500">
-            <tr>
-              <th className="px-4 py-3">Batch</th>
-              <th className="px-4 py-3">Course</th>
-              <th className="px-4 py-3">Year</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {batches.map((batch) => (
-              <tr key={batch.id}>
-                <td className="px-4 py-3 font-medium">{batch.name}</td>
-                <td className="px-4 py-3">{batch.courseType}</td>
-                <td className="px-4 py-3">{batch.academicYear}</td>
-                <td className="px-4 py-3">
-                  {batch.active ? "Active" : "Archived"}
-                </td>
-                <td className="space-x-2 px-4 py-3 text-right">
-                  <Button size="sm" variant="outline" onClick={() => edit(batch)}>
-                    Edit
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => archive(batch.id)}
-                    disabled={!batch.active}
-                  >
-                    Archive
-                  </Button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="course">Course</Label>
+                  <Input
+                    id="course"
+                    value={form.courseType}
+                    onChange={(e) =>
+                      setForm({ ...form, courseType: e.target.value })
+                    }
+                    placeholder="JEE"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="year">Academic year</Label>
+                  <Input
+                    id="year"
+                    value={form.academicYear}
+                    onChange={(e) =>
+                      setForm({ ...form, academicYear: e.target.value })
+                    }
+                    placeholder="2026"
+                    required
+                  />
+                </div>
+              </div>
+              <div className="flex items-center justify-between pt-2">
+                <label className="flex items-center gap-2 text-sm text-foreground">
+                  <input
+                    type="checkbox"
+                    className="rounded border-input text-primary focus:ring-primary"
+                    checked={form.active}
+                    onChange={(e) =>
+                      setForm({ ...form, active: e.target.checked })
+                    }
+                  />
+                  Active status
+                </label>
+                <Button type="submit">{editingId ? "Update Batch" : "Create Batch"}</Button>
+              </div>
+            </form>
+          </DashboardPanel>
+        </div>
       </div>
     </div>
   );

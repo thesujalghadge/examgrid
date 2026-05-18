@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { Clock, FileText } from "lucide-react";
+import { Clock, FileText, Calendar as CalendarIcon, ArrowRight } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import {
   CountdownPill,
@@ -60,10 +60,13 @@ export default function ExamsPage() {
       candidate={candidate}
       onLogout={() => logout()}
     >
-      <SectionHeader
-        title="My examinations"
-        description="Select an active assigned test to review instructions and begin your CBT session."
-      />
+      <div className="mb-6">
+        <SectionHeader
+          title="My assigned examinations"
+          description="Review active and upcoming CBT sessions scheduled by your institute."
+        />
+      </div>
+
       <ExamGroup
         title="Active exams"
         items={
@@ -123,14 +126,14 @@ function ExamGroup({
 
   return (
     <section className="mb-10">
-      <h2 className="eg-section-title mb-4">{title}</h2>
+      <h2 className="text-meta mb-4 text-muted-foreground">{title}</h2>
       {items.length === 0 ? (
         <EmptyState
           title="No exams in this section"
           description="Assigned exams appear here when their schedule matches this state."
         />
       ) : (
-        <div className="grid gap-4">
+        <div className="grid gap-4 md:grid-cols-2">
           {items.map(({ exam, schedule }) => {
             const status = getScheduleStatus(schedule);
             const active = status === "active";
@@ -141,83 +144,84 @@ function ExamGroup({
             return (
               <article
                 key={`${exam.id}-${schedule.id}`}
-                className="eg-card overflow-hidden transition hover:shadow-md"
+                className={cn(
+                  "flex flex-col rounded-xl border bg-card shadow-sm transition-all",
+                  active ? "border-primary/30 ring-1 ring-primary/10 shadow-md" : "border-border hover:border-border/80 hover:shadow-md"
+                )}
               >
-                <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[var(--eg-border)] bg-slate-50/50 px-5 py-4">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-lg font-semibold text-[var(--eg-brand)]">
+                <div className="flex flex-col gap-3 p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <StatusBadge
+                          tone={
+                            status === "active"
+                              ? "green"
+                              : status === "upcoming"
+                                ? "blue"
+                                : "neutral"
+                          }
+                        >
+                          {status}
+                        </StatusBadge>
+                        {exam.id.startsWith("exam-") && (
+                          <StatusBadge tone="violet">Institute</StatusBadge>
+                        )}
+                      </div>
+                      <h3 className="text-lg font-semibold text-foreground tracking-tight leading-tight">
                         {exam.title}
                       </h3>
-                      <StatusBadge
-                        tone={
-                          status === "active"
-                            ? "green"
-                            : status === "upcoming"
-                              ? "blue"
-                              : "neutral"
-                        }
-                      >
-                        {status}
-                      </StatusBadge>
-                      {exam.id.startsWith("exam-") && (
-                        <StatusBadge tone="violet">Institute</StatusBadge>
-                      )}
                     </div>
-                    {exam.subtitle && (
-                      <p className="mt-1 text-sm text-slate-600">{exam.subtitle}</p>
+                    {status === "upcoming" && now > 0 && startsIn > 0 && (
+                      <CountdownPill
+                        label="Opens in"
+                        value={`${hoursUntil}h`}
+                        urgent={hoursUntil <= 24}
+                      />
                     )}
                   </div>
-                  {status === "upcoming" && now > 0 && startsIn > 0 && (
-                    <CountdownPill
-                      label="Opens in"
-                      value={`${hoursUntil}h`}
-                      urgent={hoursUntil <= 24}
-                    />
+                  
+                  {exam.subtitle && (
+                    <p className="text-sm text-muted-foreground">{exam.subtitle}</p>
                   )}
-                </div>
-                <div className="flex flex-wrap items-center justify-between gap-6 px-5 py-4">
-                  <ul className="grid gap-2 text-sm text-slate-600 sm:grid-cols-2">
-                    <li className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-slate-400" />
+                  
+                  <div className="mt-2 grid grid-cols-2 gap-y-2 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-1.5">
+                      <Clock className="h-4 w-4 text-muted-foreground/70" />
                       {exam.durationMinutes} minutes
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-slate-400" />
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <FileText className="h-4 w-4 text-muted-foreground/70" />
                       {exam.totalQuestions} questions
-                    </li>
-                    <li className="sm:col-span-2">
-                      Sections: {exam.sections.map((s) => s.name).join(", ")}
-                    </li>
-                    <li>
-                      Opens:{" "}
-                      {new Date(schedule.startAt).toLocaleString("en-IN", {
-                        dateStyle: "medium",
-                        timeStyle: "short",
-                      })}
-                    </li>
-                    <li>
-                      Closes:{" "}
-                      {new Date(schedule.endAt).toLocaleString("en-IN", {
-                        dateStyle: "medium",
-                        timeStyle: "short",
-                      })}
-                    </li>
-                  </ul>
+                    </div>
+                    <div className="flex items-center gap-1.5 col-span-2">
+                      <CalendarIcon className="h-4 w-4 text-muted-foreground/70" />
+                      <span className="truncate">
+                        Opens: {new Date(schedule.startAt).toLocaleString("en-IN", {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-auto border-t border-border bg-muted/20 px-5 py-4">
                   {active ? (
                     <Link
                       href={`/exam/${exam.id}/instructions`}
                       className={cn(
                         buttonVariants(),
-                        "shrink-0 bg-[var(--eg-cbt)] hover:bg-[var(--eg-cbt-hover)]",
+                        "w-full bg-primary hover:bg-primary/90 text-primary-foreground group"
                       )}
                     >
                       Proceed to instructions
+                      <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                     </Link>
                   ) : (
-                    <span className="shrink-0 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-500">
+                    <div className="flex h-10 w-full items-center justify-center rounded-md border border-border bg-background text-sm font-medium text-muted-foreground">
                       {status === "upcoming" ? "Not open yet" : "Window closed"}
-                    </span>
+                    </div>
                   )}
                 </div>
               </article>

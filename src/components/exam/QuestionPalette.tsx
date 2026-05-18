@@ -3,10 +3,14 @@
 import { cn } from "@/lib/utils";
 import { getPaletteButtonClass, PALETTE_LEGEND } from "@/lib/palette-styles";
 import { useQuestionStore } from "@/stores/question-store";
+import { X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Fragment } from "react";
 
 interface QuestionPaletteProps {
   collapsed?: boolean;
   onToggleCollapse?: () => void;
+  isMobile?: boolean; // deprecated prop
 }
 
 export function QuestionPalette({
@@ -19,91 +23,107 @@ export function QuestionPalette({
   const questionStatuses = useQuestionStore((s) => s.questionStatuses);
   const goToQuestion = useQuestionStore((s) => s.goToQuestion);
 
-  if (!exam || collapsed) {
-    return (
-      <button
-        type="button"
-        onClick={onToggleCollapse}
-        className="absolute right-0 top-1/2 z-10 -translate-y-1/2 rounded-l bg-[#1a3c6e] px-1 py-6 text-xs text-white shadow-md"
-        aria-label="Show question palette"
-      >
-        ◀
-      </button>
-    );
-  }
+  if (!exam) return null;
 
   const section = exam.sections.find((s) => s.id === currentSectionId);
 
-  return (
-    <aside className="flex w-[280px] shrink-0 flex-col border-l-2 border-[#1a3c6e]/30 bg-[#f4f6f9] shadow-inner">
-      <div className="flex items-center justify-between border-b border-gray-300 bg-[#1a3c6e] px-3 py-2 text-white">
-        <h2 className="text-sm font-semibold tracking-wide">Question Palette</h2>
-        <button
-          type="button"
-          onClick={onToggleCollapse}
-          className="text-xs hover:underline"
-        >
-          Hide ▶
-        </button>
+  const PaletteContent = (isMobileView: boolean) => (
+    <>
+      <div className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-muted/30 px-4 md:h-16 md:bg-transparent">
+        <h2 className="text-sm font-semibold tracking-tight text-foreground">Question Palette</h2>
+        {isMobileView ? (
+          <Button variant="ghost" size="icon" onClick={onToggleCollapse} className="-mr-2 h-8 w-8">
+            <X className="h-4 w-4" />
+          </Button>
+        ) : (
+          <Button variant="ghost" size="icon" onClick={onToggleCollapse} className="-mr-2 h-8 w-8 hidden md:inline-flex">
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </Button>
+        )}
       </div>
 
-      <div className="border-b border-gray-300 bg-white px-3 py-2 text-[11px]">
-        <p className="mb-1.5 font-semibold text-gray-800">Legend</p>
-        <ul className="space-y-1">
-          {PALETTE_LEGEND.map((item) => (
-            <li key={item.status} className="flex items-center gap-2">
-              <span
-                className={cn(
-                  "inline-block h-4 w-4 shrink-0 rounded-sm",
-                  item.className,
-                )}
-              />
-              <span className="text-gray-700">{item.label}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
+      <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 md:py-6">
+        <div className="mb-6 rounded-lg border border-border bg-card p-3 shadow-sm">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status Legend</p>
+          <ul className="grid grid-cols-2 gap-y-2 gap-x-4 text-xs sm:grid-cols-1">
+            {PALETTE_LEGEND.map((item) => (
+              <li key={item.status} className="flex items-center gap-2">
+                <span className={cn("inline-block h-3.5 w-3.5 shrink-0 rounded", item.className)} />
+                <span className="text-muted-foreground">{item.label}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
 
-      <div className="flex-1 overflow-y-auto px-2 py-2">
-        {exam.sections.map((sec) => (
-          <div key={sec.id} className="mb-3">
-            <p className="mb-1.5 border-b border-gray-300 pb-1 text-[11px] font-bold uppercase tracking-wider text-[#1a3c6e]">
-              {sec.name}
-            </p>
-            <div className="grid grid-cols-5 gap-1">
-              {sec.questionIds.map((qId, idx) => {
-                const status = questionStatuses[qId] ?? "not-visited";
-                const isActive = qId === currentQuestionId;
-                return (
-                  <button
-                    key={qId}
-                    type="button"
-                    onClick={() => goToQuestion(qId)}
-                    className={cn(
-                      "flex h-8 w-8 items-center justify-center rounded-sm text-xs font-bold",
-                      getPaletteButtonClass(status),
-                      isActive &&
-                        "ring-2 ring-[#1a3c6e] ring-offset-1 ring-offset-white",
-                    )}
-                    aria-label={`Question ${idx + 1}, ${status}`}
-                    aria-current={isActive ? "true" : undefined}
-                  >
-                    {idx + 1}
-                  </button>
-                );
-              })}
+        <div className="space-y-6">
+          {exam.sections.map((sec) => (
+            <div key={sec.id}>
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-primary">
+                  {sec.name}
+                </p>
+                <span className="text-[10px] font-medium text-muted-foreground">{sec.questionIds.length} Qs</span>
+              </div>
+              <div className="grid grid-cols-5 gap-2 sm:grid-cols-6 md:grid-cols-5 lg:grid-cols-5 xl:grid-cols-6">
+                {sec.questionIds.map((qId, idx) => {
+                  const status = questionStatuses[qId] ?? "not-visited";
+                  const isActive = qId === currentQuestionId;
+                  return (
+                    <button
+                      key={qId}
+                      type="button"
+                      onClick={() => {
+                        goToQuestion(qId);
+                        if (isMobileView && onToggleCollapse) onToggleCollapse();
+                      }}
+                      className={cn(
+                        "flex aspect-square items-center justify-center rounded-md text-xs font-semibold transition-all duration-200",
+                        getPaletteButtonClass(status),
+                        isActive && "ring-2 ring-primary ring-offset-2 ring-offset-background scale-110 shadow-sm"
+                      )}
+                      aria-label={`Question ${idx + 1}, ${status}`}
+                      aria-current={isActive ? "true" : undefined}
+                    >
+                      {idx + 1}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
-
+      
       {section && (
-        <div className="border-t border-gray-300 bg-white px-3 py-2 text-[11px] text-gray-600">
-          <p>
-            Current section: <strong>{section.name}</strong>
-          </p>
+        <div className="border-t border-border bg-muted/10 px-4 py-3 text-xs text-muted-foreground">
+          Section: <strong className="text-foreground">{section.name}</strong>
         </div>
       )}
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Mobile Drawer (visible only on mobile) */}
+      <div className={cn(
+        "fixed inset-y-0 right-0 z-50 flex w-[280px] sm:w-[320px] flex-col bg-background shadow-2xl transition-transform duration-300 ease-in-out md:hidden",
+        collapsed ? "translate-x-full" : "translate-x-0"
+      )}>
+        {PaletteContent(true)}
+      </div>
+
+      {/* Desktop Sidebar (visible only on md+) */}
+      {collapsed ? (
+        <div className="hidden md:flex h-full w-12 flex-col items-center border-l border-border bg-muted/20 py-4 z-10 relative">
+          <Button variant="ghost" size="icon" onClick={onToggleCollapse} className="mb-4">
+            <ChevronLeft className="h-5 w-5 text-muted-foreground" />
+          </Button>
+        </div>
+      ) : (
+        <aside className="hidden w-[280px] shrink-0 flex-col border-l border-border bg-muted/10 md:flex xl:w-[320px] z-10 relative">
+          {PaletteContent(false)}
+        </aside>
+      )}
+    </>
   );
 }

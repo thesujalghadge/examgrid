@@ -4,6 +4,7 @@ import { getQuestionTypeLabel } from "@/data/mock-exams";
 import { cn } from "@/lib/utils";
 import { useQuestionStore } from "@/stores/question-store";
 import { NumericalAnswerInput } from "./NumericalAnswerInput";
+import { StatusBadge } from "@/components/shared/product-ui";
 
 export function QuestionCard() {
   const exam = useQuestionStore((s) => s.exam);
@@ -14,7 +15,7 @@ export function QuestionCard() {
 
   if (!exam || !currentQuestionId) {
     return (
-      <div className="flex flex-1 items-center justify-center bg-white text-gray-500">
+      <div className="flex flex-1 items-center justify-center bg-background text-sm text-muted-foreground">
         Loading question…
       </div>
     );
@@ -30,75 +31,94 @@ export function QuestionCard() {
   const isNumerical = question.type === "NUMERICAL";
 
   return (
-    <div className="flex-1 overflow-y-auto bg-white">
-      <div className="border-b border-slate-200 bg-slate-50 px-6 py-3.5">
-        <div className="flex items-center justify-between gap-4">
-          <h3 className="text-sm font-bold text-[var(--eg-cbt)]">
-            Question Type: {getQuestionTypeLabel(question.type)}
-          </h3>
-          <span className="rounded-md border border-slate-200 bg-white px-2.5 py-0.5 text-xs font-medium text-slate-700">
-            Marks: +{question.marks}
-            {question.negativeMarks > 0 ? ` / −${question.negativeMarks}` : ""}
+    <div className="flex flex-1 flex-col overflow-hidden bg-background">
+      <div className="flex shrink-0 items-center justify-between gap-4 border-b border-border bg-muted/10 px-4 py-3 md:px-6">
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-primary">
+              {getQuestionTypeLabel(question.type)}
+            </h3>
+            <span className="hidden h-1 w-1 rounded-full bg-border sm:block" />
+            <span className="hidden text-xs text-muted-foreground sm:block">
+              {section?.name} · Q. {question.number} (Overall #{globalIndex})
+            </span>
+          </div>
+          <span className="text-[11px] text-muted-foreground sm:hidden">
+            {section?.name} · Q. {question.number}
           </span>
         </div>
-        <p className="mt-1 text-xs text-gray-500">
-          Section: {section?.name} · Q. {question.number} (Overall #{globalIndex})
-        </p>
+        <StatusBadge tone="neutral" className="shrink-0 text-xs shadow-sm">
+          +{question.marks} {question.negativeMarks > 0 ? ` / -${question.negativeMarks}` : ""}
+        </StatusBadge>
       </div>
 
-      <div className="px-6 py-6 sm:px-8">
-        <p className="mb-6 text-base leading-relaxed text-slate-900">
-          <span className="mr-2 font-bold text-[var(--eg-cbt)]">
-            Q.{question.number}.
-          </span>
-          {question.text}
-        </p>
+      <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-6 md:px-8 md:py-8 lg:px-12">
+        <div className="mx-auto max-w-4xl">
+          <div className="prose prose-sm md:prose-base dark:prose-invert max-w-none mb-8">
+            <p className="text-foreground leading-relaxed text-sm md:text-base">
+              <span className="mr-3 inline-flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary shadow-sm select-none">
+                {question.number}
+              </span>
+              {question.text}
+            </p>
+          </div>
 
-        {isNumerical ? (
-          <NumericalAnswerInput
-            questionId={question.id}
-            value={selected}
-            onValueChange={setNumericalAnswer}
-          />
-        ) : (
-          <fieldset>
-            <legend className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
-              Select one option
-            </legend>
-            <ul className="space-y-2.5">
-              {question.options.map((opt) => {
-                const isSelected = selected === opt.id;
-                return (
-                  <li key={opt.id}>
-                    <label
-                      className={cn(
-                        "flex cursor-pointer items-start gap-3 rounded-sm border-2 px-4 py-3 transition-colors",
-                        isSelected
-                          ? "border-[var(--eg-cbt)] bg-blue-50/80"
-                          : "border-slate-300 bg-white hover:border-slate-400",
-                      )}
-                    >
-                      <input
-                        type="radio"
-                        name={question.id}
-                        value={opt.id}
-                        checked={isSelected}
-                        onChange={() => selectOption(question.id, opt.id)}
-                        className="mt-0.5 h-4 w-4 shrink-0 accent-[#1a3c6e]"
-                      />
-                      <span className="text-sm leading-relaxed text-gray-900">
-                        <span className="mr-2 inline-flex h-6 w-6 items-center justify-center rounded-full border border-[#1a3c6e] text-xs font-bold text-[#1a3c6e]">
-                          {opt.label}
+          {isNumerical ? (
+            <div className="mt-8 max-w-md">
+              <NumericalAnswerInput
+                questionId={question.id}
+                value={selected}
+                onValueChange={setNumericalAnswer}
+              />
+            </div>
+          ) : (
+            <fieldset className="mt-8">
+              <legend className="mb-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Select one option
+              </legend>
+              <ul className="grid gap-3 sm:grid-cols-2 lg:gap-4">
+                {question.options.map((opt) => {
+                  const isSelected = selected === opt.id;
+                  return (
+                    <li key={opt.id}>
+                      <label
+                        className={cn(
+                          "group relative flex cursor-pointer items-start gap-4 rounded-xl border-2 p-4 transition-all duration-200 active:scale-[0.99]",
+                          isSelected
+                            ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20"
+                            : "border-border bg-card hover:border-primary/50 hover:bg-muted/50",
+                        )}
+                      >
+                        <div className="flex h-5 items-center">
+                          <div className={cn(
+                            "flex h-5 w-5 items-center justify-center rounded-full border transition-colors",
+                            isSelected ? "border-primary bg-primary" : "border-input bg-background group-hover:border-primary/50"
+                          )}>
+                            {isSelected && <div className="h-2 w-2 rounded-full bg-primary-foreground" />}
+                          </div>
+                        </div>
+                        <input
+                          type="radio"
+                          name={question.id}
+                          value={opt.id}
+                          checked={isSelected}
+                          onChange={() => selectOption(question.id, opt.id)}
+                          className="sr-only"
+                        />
+                        <span className="text-sm font-medium leading-relaxed text-foreground flex-1">
+                          <span className="mr-3 font-mono text-xs font-bold text-muted-foreground group-hover:text-primary transition-colors">
+                            {opt.label}.
+                          </span>
+                          {opt.text}
                         </span>
-                        {opt.text}
-                      </span>
-                    </label>
-                  </li>
-                );
-              })}
-            </ul>
-          </fieldset>
-        )}
+                      </label>
+                    </li>
+                  );
+                })}
+              </ul>
+            </fieldset>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -215,7 +215,7 @@ export function ExamInterface({ examId }: ExamInterfaceProps) {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#c8d0dc]">
+    <div className="flex h-[100dvh] flex-col bg-muted/20 overflow-hidden">
       <ExamHeader
         examTitle={exam.title}
         candidate={candidate}
@@ -224,7 +224,7 @@ export function ExamInterface({ examId }: ExamInterfaceProps) {
       />
 
       {resumed && (
-        <Alert className="mx-4 mt-2 border-amber-300 bg-amber-50">
+        <Alert className="mx-4 mt-4 border-amber-300 bg-amber-50">
           <AlertTitle>Session restored</AlertTitle>
           <AlertDescription>
             Your previous attempt was recovered from local storage, including
@@ -235,14 +235,32 @@ export function ExamInterface({ examId }: ExamInterfaceProps) {
 
       <SectionTabs />
 
-      <div className="relative flex flex-1 overflow-hidden">
-        <main className="flex min-w-0 flex-1 flex-col border-r border-[#1a3c6e]/10 bg-white shadow-sm">
+      <div className="relative flex flex-1 overflow-hidden h-full">
+        <main className="flex min-w-0 flex-1 flex-col bg-background shadow-sm h-full relative">
           <QuestionCard />
           <QuestionNavigator onSubmitClick={() => setSubmitOpen(true)} />
+          
+          <button 
+            className="md:hidden absolute right-4 top-1/2 -translate-y-1/2 z-30 flex h-12 w-10 items-center justify-center rounded-l-xl bg-primary shadow-lg ring-1 ring-black/5"
+            onClick={() => setPaletteCollapsed(false)}
+          >
+            <span className="sr-only">Open Palette</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+
+          {/* Palette Overlay backdrop for mobile */}
+          {!paletteCollapsed && (
+            <div 
+              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden animate-in fade-in duration-200"
+              onClick={() => setPaletteCollapsed(true)}
+            />
+          )}
         </main>
+        
         <QuestionPalette
           collapsed={paletteCollapsed}
           onToggleCollapse={() => setPaletteCollapsed((c) => !c)}
+          isMobile={true}
         />
       </div>
 

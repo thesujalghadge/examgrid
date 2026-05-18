@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DashboardPanel, PageHeader, SectionHeader, StatusBadge } from "@/components/shared/product-ui";
 import { awaitRepositoryPersist } from "@/lib/repositories/await-persist";
 import { getRepositories } from "@/lib/repositories/provider";
 import { recordAuditEvent } from "@/services/audit-service";
@@ -18,6 +18,7 @@ import type {
   InstituteStudent,
   StudentImportPreview,
 } from "@/types/institute-ops";
+import { Search, Mail, Phone, MoreVertical } from "lucide-react";
 
 const blank = {
   fullName: "",
@@ -99,6 +100,7 @@ export default function AdminStudentsPage() {
       batchId: student.batchId,
       active: student.active,
     });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const deactivate = async (id: string) => {
@@ -138,204 +140,276 @@ export default function AdminStudentsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Student Management</h1>
-        <p className="text-sm text-gray-600">
-          Add students, assign roll numbers, place them into batches, and control
-          active access.
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Student Management</h1>
+          <p className="text-sm text-muted-foreground mt-1">Manage enrollments, batches, and active access.</p>
+        </div>
+        <div className="relative w-full sm:w-72">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search students..."
+            className="w-full pl-9 bg-card border-input"
+          />
+        </div>
       </div>
 
-      <Input
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Search students by name, roll, email, or course"
-        className="max-w-md bg-white"
-      />
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">
-            {editingId ? "Edit Student" : "Add Student"}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={save} className="grid gap-4 md:grid-cols-4">
-            <div className="space-y-2">
-              <Label htmlFor="fullName">Full name</Label>
-              <Input
-                id="fullName"
-                value={form.fullName}
-                onChange={(e) =>
-                  setForm({ ...form, fullName: e.target.value })
-                }
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="roll">Roll number</Label>
-              <Input
-                id="roll"
-                value={form.rollNumber}
-                onChange={(e) =>
-                  setForm({ ...form, rollNumber: e.target.value })
-                }
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone</Label>
-              <Input
-                id="phone"
-                value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="course">Course</Label>
-              <Input
-                id="course"
-                value={form.courseType}
-                onChange={(e) =>
-                  setForm({ ...form, courseType: e.target.value })
-                }
-                required
-              />
-            </div>
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="batch">Batch</Label>
-              <select
-                id="batch"
-                className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm"
-                value={form.batchId}
-                onChange={(e) => setForm({ ...form, batchId: e.target.value })}
-                required
-              >
-                <option value="">Select batch</option>
-                {batches.map((batch) => (
-                  <option key={batch.id} value={batch.id}>
-                    {batch.name} ({batch.courseType})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex items-end gap-3">
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={form.active}
-                  onChange={(e) =>
-                    setForm({ ...form, active: e.target.checked })
-                  }
-                />
-                Active
-              </label>
-              <Button type="submit" disabled={batches.length === 0}>
-                {editingId ? "Update" : "Add"}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Bulk CSV Import</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <textarea
-            className="min-h-28 w-full rounded-md border border-gray-300 p-3 font-mono text-xs"
-            value={csv}
-            onChange={(e) => setCsv(e.target.value)}
-            placeholder="fullName,email,phone,rollNumber,courseType,batch&#10;Anita Rao,anita@example.com,9876543210,JEE26001,JEE,JEE 2026 A"
-          />
-          <div className="flex gap-2">
-            <Button type="button" variant="outline" onClick={runPreview}>
-              Preview Import
-            </Button>
-            <Button
-              type="button"
-              onClick={commitImport}
-              disabled={!preview || preview.errorCount > 0}
-            >
-              Import Valid Rows
-            </Button>
-          </div>
-          {preview && (
-            <div className="rounded border border-gray-200 bg-gray-50 p-3 text-sm">
-              <p>
-                {preview.validCount} valid, {preview.duplicateCount} duplicate,{" "}
-                {preview.errorCount} with errors.
-              </p>
-              <div className="mt-2 max-h-48 overflow-auto">
-                {preview.rows.map((row) => (
-                  <p key={row.index} className="text-xs text-gray-700">
-                    Line {row.index}: {row.student.fullName || "Unnamed"} —{" "}
-                    {row.errors.length ? row.errors.join("; ") : "ready"}
-                  </p>
-                ))}
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <div className="overflow-hidden rounded border border-gray-200 bg-white">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-gray-50 text-xs uppercase text-gray-500">
-            <tr>
-              <th className="px-4 py-3">Student</th>
-              <th className="px-4 py-3">Roll</th>
-              <th className="px-4 py-3">Batch</th>
-              <th className="px-4 py-3">Contact</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
+      <div className="grid gap-6 xl:grid-cols-[1fr_400px]">
+        {/* Main Table Area */}
+        <div className="space-y-4">
+          <SectionHeader title="Student Roster" />
+          
+          {/* Mobile Card View (Hidden on sm+) */}
+          <div className="grid gap-4 sm:hidden">
             {visibleStudents.map((student) => (
-              <tr key={student.id}>
-                <td className="px-4 py-3">
-                  <p className="font-medium">{student.fullName}</p>
-                  <p className="text-xs text-gray-500">{student.courseType}</p>
-                </td>
-                <td className="px-4 py-3">{student.rollNumber}</td>
-                <td className="px-4 py-3">
-                  {batchById.get(student.batchId)?.name ?? "Unassigned"}
-                </td>
-                <td className="px-4 py-3 text-xs text-gray-600">
-                  <p>{student.email || "-"}</p>
-                  <p>{student.phone || "-"}</p>
-                </td>
-                <td className="px-4 py-3">
-                  {student.active ? "Active" : "Inactive"}
-                </td>
-                <td className="space-x-2 px-4 py-3 text-right">
-                  <Button size="sm" variant="outline" onClick={() => edit(student)}>
+              <div key={student.id} className="rounded-xl border border-border bg-card p-4 shadow-sm flex flex-col gap-3">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-semibold text-foreground">{student.fullName}</h3>
+                    <p className="text-xs font-mono text-muted-foreground mt-0.5">{student.rollNumber}</p>
+                  </div>
+                  <StatusBadge tone={student.active ? "green" : "neutral"}>
+                    {student.active ? "Active" : "Inactive"}
+                  </StatusBadge>
+                </div>
+                <div className="flex flex-wrap gap-2 text-xs">
+                  <span className="rounded-md bg-muted px-2 py-1 text-muted-foreground">
+                    {batchById.get(student.batchId)?.name ?? "Unassigned"}
+                  </span>
+                  <span className="rounded-md bg-muted px-2 py-1 text-muted-foreground">
+                    {student.courseType}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1.5 mt-1 text-xs text-muted-foreground">
+                  {student.email && (
+                    <div className="flex items-center gap-2"><Mail className="h-3.5 w-3.5" />{student.email}</div>
+                  )}
+                  {student.phone && (
+                    <div className="flex items-center gap-2"><Phone className="h-3.5 w-3.5" />{student.phone}</div>
+                  )}
+                </div>
+                <div className="mt-2 flex gap-2 border-t border-border pt-3">
+                  <Button size="sm" variant="outline" className="flex-1 h-8" onClick={() => edit(student)}>
                     Edit
                   </Button>
                   <Button
                     size="sm"
                     variant="outline"
+                    className="flex-1 h-8 text-destructive hover:bg-destructive/10"
                     onClick={() => deactivate(student.id)}
                     disabled={!student.active}
                   >
                     Deactivate
                   </Button>
-                </td>
-              </tr>
+                </div>
+              </div>
             ))}
-          </tbody>
-        </table>
+          </div>
+
+          {/* Desktop Table View (Hidden on mobile) */}
+          <div className="hidden sm:block overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead className="bg-muted/50 border-b border-border sticky top-0 z-10">
+                  <tr>
+                    <th className="px-5 py-3 text-meta text-muted-foreground font-medium">Student</th>
+                    <th className="px-5 py-3 text-meta text-muted-foreground font-medium">Roll</th>
+                    <th className="px-5 py-3 text-meta text-muted-foreground font-medium">Batch</th>
+                    <th className="px-5 py-3 text-meta text-muted-foreground font-medium">Contact</th>
+                    <th className="px-5 py-3 text-meta text-muted-foreground font-medium">Status</th>
+                    <th className="px-5 py-3 text-meta text-muted-foreground font-medium text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {visibleStudents.map((student) => (
+                    <tr key={student.id} className="transition-colors hover:bg-muted/30">
+                      <td className="px-5 py-4 text-table">
+                        <p className="font-medium text-foreground">{student.fullName}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{student.courseType}</p>
+                      </td>
+                      <td className="px-5 py-4 text-table font-mono text-muted-foreground">{student.rollNumber}</td>
+                      <td className="px-5 py-4 text-table text-foreground">
+                        {batchById.get(student.batchId)?.name ?? "Unassigned"}
+                      </td>
+                      <td className="px-5 py-4 text-table text-muted-foreground">
+                        <p>{student.email || "-"}</p>
+                        <p>{student.phone || "-"}</p>
+                      </td>
+                      <td className="px-5 py-4">
+                        <StatusBadge tone={student.active ? "green" : "neutral"}>
+                          {student.active ? "Active" : "Inactive"}
+                        </StatusBadge>
+                      </td>
+                      <td className="space-x-2 px-5 py-4 text-right">
+                        <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => edit(student)}>
+                          Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          onClick={() => deactivate(student.id)}
+                          disabled={!student.active}
+                        >
+                          Deactivate
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                  {visibleStudents.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="px-5 py-8 text-center text-sm text-muted-foreground">
+                        No students found matching your criteria.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        {/* Sidebar Actions */}
+        <div className="space-y-6">
+          <DashboardPanel>
+            <SectionHeader title={editingId ? "Edit Student" : "Add Student"} />
+            <form onSubmit={save} className="grid gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="fullName">Full name</Label>
+                <Input
+                  id="fullName"
+                  value={form.fullName}
+                  onChange={(e) =>
+                    setForm({ ...form, fullName: e.target.value })
+                  }
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="roll">Roll number</Label>
+                <Input
+                  id="roll"
+                  value={form.rollNumber}
+                  onChange={(e) =>
+                    setForm({ ...form, rollNumber: e.target.value })
+                  }
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone</Label>
+                  <Input
+                    id="phone"
+                    value={form.phone}
+                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="course">Course</Label>
+                  <Input
+                    id="course"
+                    value={form.courseType}
+                    onChange={(e) =>
+                      setForm({ ...form, courseType: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="batch">Batch</Label>
+                  <select
+                    id="batch"
+                    className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    value={form.batchId}
+                    onChange={(e) => setForm({ ...form, batchId: e.target.value })}
+                    required
+                  >
+                    <option value="">Select batch</option>
+                    {batches.map((batch) => (
+                      <option key={batch.id} value={batch.id}>
+                        {batch.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="flex items-center justify-between pt-2">
+                <label className="flex items-center gap-2 text-sm text-foreground">
+                  <input
+                    type="checkbox"
+                    className="rounded border-input text-primary focus:ring-primary"
+                    checked={form.active}
+                    onChange={(e) =>
+                      setForm({ ...form, active: e.target.checked })
+                    }
+                  />
+                  Active status
+                </label>
+                <Button type="submit" disabled={batches.length === 0}>
+                  {editingId ? "Update Student" : "Add Student"}
+                </Button>
+              </div>
+            </form>
+          </DashboardPanel>
+
+          <DashboardPanel>
+            <SectionHeader title="Bulk CSV Import" />
+            <div className="space-y-3">
+              <textarea
+                className="min-h-28 w-full rounded-md border border-input bg-background p-3 font-mono text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                value={csv}
+                onChange={(e) => setCsv(e.target.value)}
+                placeholder="fullName,email,phone,rollNumber,courseType,batch&#10;Anita Rao,anita@example.com,9876543210,JEE26001,JEE,JEE 2026 A"
+              />
+              <div className="flex gap-2">
+                <Button type="button" variant="secondary" className="w-full" onClick={runPreview}>
+                  Preview
+                </Button>
+                <Button
+                  type="button"
+                  className="w-full"
+                  onClick={commitImport}
+                  disabled={!preview || preview.errorCount > 0}
+                >
+                  Import
+                </Button>
+              </div>
+              {preview && (
+                <div className="rounded-lg border border-border bg-muted/50 p-3 text-sm">
+                  <div className="flex gap-2 mb-2">
+                    <StatusBadge tone="green">{preview.validCount} valid</StatusBadge>
+                    <StatusBadge tone={preview.duplicateCount > 0 ? "amber" : "neutral"}>{preview.duplicateCount} dupes</StatusBadge>
+                    <StatusBadge tone={preview.errorCount > 0 ? "red" : "neutral"}>{preview.errorCount} errors</StatusBadge>
+                  </div>
+                  <div className="max-h-48 overflow-y-auto space-y-1 mt-2 pr-2">
+                    {preview.rows.map((row) => (
+                      <p key={row.index} className="text-xs text-muted-foreground flex justify-between border-b border-border/50 pb-1 last:border-0">
+                        <span>L{row.index}: {row.student.fullName || "Unnamed"}</span>
+                        <span className={row.errors.length ? "text-destructive font-medium" : "text-emerald-600 dark:text-emerald-400"}>
+                          {row.errors.length ? row.errors.join("; ") : "Ready"}
+                        </span>
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </DashboardPanel>
+        </div>
       </div>
     </div>
   );

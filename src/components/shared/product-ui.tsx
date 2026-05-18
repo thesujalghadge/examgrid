@@ -103,9 +103,11 @@ export function MetricCard({
 export function StatusBadge({
   children,
   tone = "neutral",
+  className,
 }: {
   children: React.ReactNode;
   tone?: "neutral" | "green" | "amber" | "red" | "blue" | "violet";
+  className?: string;
 }) {
   return (
     <span
@@ -117,6 +119,7 @@ export function StatusBadge({
         tone === "blue" && "border-blue-200 bg-blue-50 text-blue-800",
         tone === "violet" && "border-violet-200 bg-violet-50 text-violet-800",
         tone === "neutral" && "border-slate-200 bg-slate-50 text-slate-700",
+        className
       )}
     >
       {children}

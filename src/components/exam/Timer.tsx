@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTimerStore } from "@/stores/timer-store";
 import { cn } from "@/lib/utils";
+import { Clock } from "lucide-react";
 
 interface TimerProps {
   onTimeUp?: () => void;
@@ -48,20 +49,21 @@ export function Timer({ onTimeUp }: TimerProps) {
     return () => window.clearInterval(interval);
   }, [isRunning, examEndsAt, getRemainingSeconds, onTimeUp]);
 
-  const isLow = remaining > 0 && remaining <= 300;
-  const isCritical = remaining > 0 && remaining <= 60;
+  const isLow = remaining > 0 && remaining <= 300; // 5 mins
+  const isCritical = remaining > 0 && remaining <= 60; // 1 min
 
   return (
     <div
       className={cn(
-        "mt-0.5 inline-block min-w-[6rem] rounded-md border-2 px-3 py-1.5 text-center font-mono text-xl font-bold tabular-nums tracking-tight shadow-sm",
+        "flex items-center gap-2 rounded-md border px-3 py-1 font-mono text-sm md:text-base font-medium tabular-nums tracking-tight transition-colors duration-500",
         isCritical
-          ? "animate-pulse border-red-900 bg-red-600 text-white"
+          ? "border-amber-500 bg-amber-50 text-amber-900 dark:bg-amber-950/30 dark:text-amber-400"
           : isLow
-            ? "border-red-700 bg-red-600 text-white"
-            : "border-[var(--eg-cbt)] bg-[var(--eg-cbt)] text-white",
+            ? "border-border bg-muted/50 text-foreground"
+            : "border-border bg-card text-foreground",
       )}
     >
+      <Clock className={cn("h-3.5 w-3.5", isCritical ? "text-amber-500" : "text-muted-foreground")} />
       <span className="sr-only">Time remaining: </span>
       {formatTime(remaining)}
     </div>

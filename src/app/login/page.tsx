@@ -47,22 +47,22 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[var(--eg-canvas)] p-4">
+    <div className="flex min-h-screen items-center justify-center bg-muted/20 p-4">
       <div className="w-full max-w-md">
         <div className="mb-8 flex justify-center">
           <ProductMark subtitle="Student examination portal" />
         </div>
-        <div className="eg-card overflow-hidden shadow-md">
-          <div className="border-b border-[var(--eg-cbt)]/20 bg-[var(--eg-cbt)] px-6 py-5 text-white">
-            <p className="text-xs font-semibold uppercase tracking-wide text-blue-100/90">
+        <div className="eg-card overflow-hidden shadow-xl border-border/50">
+          <div className="border-b border-primary/20 bg-gradient-to-r from-primary to-primary/80 px-6 py-6 text-primary-foreground">
+            <p className="text-xs font-semibold uppercase tracking-wide text-primary-foreground/80">
               {DEMO_INSTITUTE.name}
             </p>
-            <h1 className="mt-1 text-lg font-semibold">CBT Examination Login</h1>
-            <p className="mt-1 text-sm text-blue-100/90">
+            <h1 className="mt-1 text-xl font-semibold">CBT Examination Login</h1>
+            <p className="mt-1 text-sm text-primary-foreground/80">
               Enter your credentials to access assigned tests.
             </p>
           </div>
-          <div className="p-6">
+          <div className="p-6 bg-card">
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Candidate name</Label>
@@ -71,7 +71,7 @@ export default function LoginPage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
-                  className="h-10"
+                  className="h-10 bg-background"
                 />
               </div>
               <div className="space-y-2">
@@ -81,7 +81,7 @@ export default function LoginPage() {
                   value={rollNumber}
                   onChange={(e) => setRollNumber(e.target.value)}
                   required
-                  className="h-10"
+                  className="h-10 bg-background font-mono"
                 />
               </div>
               <div className="space-y-2">
@@ -91,29 +91,30 @@ export default function LoginPage() {
                   value={applicationNumber}
                   onChange={(e) => setApplicationNumber(e.target.value)}
                   required
-                  className="h-10"
+                  className="h-10 bg-background font-mono"
                 />
               </div>
               <Button
                 type="submit"
-                className="h-10 w-full bg-[var(--eg-cbt)] hover:bg-[var(--eg-cbt-hover)]"
+                className="h-10 w-full text-base font-medium mt-2"
               >
                 Login to examination system
               </Button>
-              {error && <p className="text-sm text-red-700">{error}</p>}
+              {error && <p className="text-sm font-medium text-destructive mt-2">{error}</p>}
             </form>
-            <p className="mt-5 text-center text-xs text-slate-500">
-              Demo roll: {DEMO_LOGIN.studentRoll}
-            </p>
-            <p className="mt-3 text-center text-xs">
-              <Link href="/" className="text-[var(--eg-cbt)] hover:underline">
-                ← Back to ExamGrid
-              </Link>
-            </p>
+            <div className="mt-6 border-t border-border pt-4">
+              <p className="text-center text-xs text-muted-foreground font-mono bg-muted/50 py-2 rounded-md">
+                Demo roll: {DEMO_LOGIN.studentRoll}
+              </p>
+              <p className="mt-4 text-center text-sm">
+                <Link href="/" className="text-primary font-medium hover:underline transition-all">
+                  ← Back to ExamGrid
+                </Link>
+              </p>
+            </div>
           </div>
         </div>
       </div>
     </div>
   );
 }
-

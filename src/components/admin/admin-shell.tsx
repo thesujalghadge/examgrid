@@ -16,6 +16,11 @@ import {
   ScrollText,
   Settings,
   Users,
+  Search,
+  Bell,
+  Command,
+  Menu,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DEMO_INSTITUTE } from "@/config/demo";
@@ -49,7 +54,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const touch = useAdminAuthStore((s) => s.touch);
   const expire = useAdminAuthStore((s) => s.expire);
   const logout = useAdminAuthStore((s) => s.logout);
+  
   const [sessionWarning, setSessionWarning] = useState<string | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const isLoginPage = pathname === "/admin/login";
 
@@ -63,6 +70,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   }, [admin, isHydrated, isLoginPage, router]);
 
   useEffect(() => {
+    // Close mobile menu on navigation
+    setMobileMenuOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
     if (!admin || isLoginPage) return;
     const markActivity = () => {
       touch();
@@ -71,10 +83,12 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     window.addEventListener("click", markActivity);
     window.addEventListener("keydown", markActivity);
     window.addEventListener("mousemove", markActivity);
+    window.addEventListener("touchstart", markActivity); // Added touch for mobile
     return () => {
       window.removeEventListener("click", markActivity);
       window.removeEventListener("keydown", markActivity);
       window.removeEventListener("mousemove", markActivity);
+      window.removeEventListener("touchstart", markActivity);
     };
   }, [admin, isLoginPage, touch]);
 
@@ -105,21 +119,34 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     return <LoadingState label="Loading operations console…" />;
   }
 
-  return (
-    <div className="flex min-h-screen bg-[var(--eg-canvas)]">
-      <aside className="hidden w-[17rem] shrink-0 flex-col border-r border-[var(--eg-border)] bg-[var(--eg-surface)] lg:flex">
-        <div className="border-b border-[var(--eg-border)] px-4 py-5">
-          <ProductMark subtitle="Operations console" />
-          <div className="mt-4 rounded-lg border border-[var(--eg-border)] bg-slate-50/80 px-3 py-2.5">
-            <p className="eg-section-title">Institute</p>
-            <p className="mt-1 text-sm font-semibold text-slate-950">
+  const SidebarContent = () => (
+    <>
+      <div className="flex h-16 items-center justify-between px-4">
+        <ProductMark subtitle="Operations Console" />
+        <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setMobileMenuOpen(false)}>
+          <X className="h-5 w-5" />
+        </Button>
+      </div>
+      
+      <div className="px-4 py-4">
+        <div className="flex items-center gap-3 rounded-lg border border-border bg-card p-3 shadow-sm">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-primary/10 text-primary font-medium">
+            {DEMO_INSTITUTE.name.charAt(0)}
+          </div>
+          <div className="overflow-hidden">
+            <p className="truncate text-sm font-medium text-foreground">
               {DEMO_INSTITUTE.name}
             </p>
-            <p className="mt-0.5 truncate text-xs text-slate-500">{admin.name}</p>
+            <p className="truncate text-xs text-muted-foreground">{admin.name}</p>
           </div>
         </div>
-        <nav className="flex-1 space-y-0.5 p-3">
-          <p className="px-3 pb-2 pt-1 eg-section-title">Operations</p>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-3 py-2 overscroll-contain">
+        <p className="mb-2 px-2 text-meta text-muted-foreground">
+          Platform
+        </p>
+        <nav className="space-y-1">
           {NAV.map((item) => {
             const Icon = item.icon;
             const active = pathname === item.href;
@@ -128,80 +155,112 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                  "flex items-center gap-3 rounded-md px-2.5 py-3 lg:py-2 text-sm font-medium transition-colors",
                   active
-                    ? "bg-[var(--eg-brand)] text-white shadow-sm"
-                    : "text-slate-700 hover:bg-slate-100",
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                 )}
               >
-                <Icon className="h-4 w-4 shrink-0 opacity-90" />
+                <Icon className="h-5 w-5 lg:h-4 lg:w-4 shrink-0" />
                 {item.label}
               </Link>
             );
           })}
         </nav>
-        <div className="space-y-2 border-t border-[var(--eg-border)] p-3">
-          <Link
-            href="/exams"
-            className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-[var(--eg-cbt)] transition hover:bg-slate-50"
-          >
-            <BarChart3 className="h-3.5 w-3.5" />
-            Student portal preview
-          </Link>
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full"
-            onClick={() => {
-              logout();
-              router.push("/admin/login");
-            }}
-          >
-            <LogOut className="mr-2 h-4 w-4" />
-            Logout
-          </Button>
-        </div>
+      </div>
+
+      <div className="space-y-2 border-t border-border p-4 pb-safe">
+        <Link
+          href="/exams"
+          className="flex w-full items-center gap-2 rounded-md px-2.5 py-3 lg:py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+        >
+          <BarChart3 className="h-5 w-5 lg:h-4 lg:w-4" />
+          Student Portal Preview
+        </Link>
+        <Button
+          variant="ghost"
+          className="w-full justify-start gap-2 py-6 lg:py-2 text-muted-foreground hover:text-foreground"
+          onClick={() => {
+            logout();
+            router.push("/admin/login");
+          }}
+        >
+          <LogOut className="h-5 w-5 lg:h-4 lg:w-4" />
+          Logout
+        </Button>
+      </div>
+    </>
+  );
+
+  return (
+    <div className="flex h-[100dvh] overflow-hidden bg-background">
+      {/* Desktop Sidebar */}
+      <aside className="hidden w-[260px] shrink-0 flex-col border-r border-border bg-sidebar lg:flex">
+        <SidebarContent />
       </aside>
-      <main className="min-w-0 flex-1 overflow-y-auto">
-        <header className="sticky top-0 z-10 border-b border-[var(--eg-border)] bg-[var(--eg-surface)]/95 px-4 py-3 backdrop-blur lg:hidden">
-          <div className="flex items-center justify-between">
-            <ProductMark compact />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                logout();
-                router.push("/admin/login");
-              }}
-            >
-              Logout
+
+      {/* Mobile Sidebar Overlay */}
+      {mobileMenuOpen && (
+        <div 
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden animate-in fade-in duration-200"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Mobile Sidebar Drawer */}
+      <aside className={cn(
+        "fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col bg-sidebar shadow-2xl transition-transform duration-300 ease-in-out lg:hidden",
+        mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+      )}>
+        <SidebarContent />
+      </aside>
+
+      {/* Main Content Area */}
+      <main className="flex min-w-0 flex-1 flex-col h-full">
+        {/* Global Topbar */}
+        <header className="flex h-14 lg:h-16 shrink-0 items-center justify-between border-b border-border bg-background/95 backdrop-blur px-4 sm:px-6 lg:px-8 z-30 sticky top-0">
+          <div className="flex flex-1 items-center gap-4">
+            {/* Mobile menu toggle */}
+            <Button variant="ghost" size="icon" className="lg:hidden -ml-2 text-foreground" onClick={() => setMobileMenuOpen(true)}>
+              <Menu className="h-6 w-6" />
             </Button>
+            
+            <div className="lg:hidden flex items-center">
+              <ProductMark compact />
+            </div>
+            
+            {/* Command Palette Placeholder */}
+            <button className="hidden w-full max-w-md items-center gap-2 rounded-md border border-border bg-muted/50 px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted md:flex lg:w-80">
+              <Search className="h-4 w-4 shrink-0" />
+              <span>Search platform...</span>
+              <kbd className="ml-auto inline-flex h-5 items-center gap-1 rounded border border-border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+                <Command className="h-3 w-3" /> K
+              </kbd>
+            </button>
           </div>
-          <nav className="mt-3 flex gap-2 overflow-x-auto pb-1">
-            {NAV.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium transition",
-                  pathname === item.href
-                    ? "bg-[var(--eg-brand)] text-white"
-                    : "bg-slate-100 text-slate-700",
-                )}
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
+          
+          <div className="flex items-center gap-3 lg:gap-4">
+            <button className="relative rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+              <Bell className="h-5 w-5 lg:h-5 lg:w-5" />
+              <span className="absolute right-1 top-1 flex h-2 w-2 rounded-full bg-primary ring-2 ring-background"></span>
+            </button>
+            <div className="h-7 w-7 lg:h-8 lg:w-8 rounded-full bg-gradient-to-tr from-primary to-primary/50 ring-2 ring-background ring-offset-1"></div>
+          </div>
         </header>
-        <div className="eg-container max-w-7xl py-6 sm:py-8">{children}</div>
+
+        {/* Scrollable Canvas */}
+        <div className="flex-1 overflow-y-auto bg-muted/20 overscroll-none">
+          <div className="eg-container py-4 sm:py-6 lg:py-8 min-h-full">
+            {children}
+          </div>
+        </div>
       </main>
+
       {sessionWarning && (
-        <div className="fixed bottom-4 right-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-lg">
+        <div className="fixed bottom-safe right-4 left-4 lg:left-auto lg:w-96 z-50 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900 shadow-lg mb-4">
           {sessionWarning}
         </div>
       )}
     </div>
   );
 }
-

@@ -2,6 +2,9 @@
 
 import type { Candidate } from "@/types/exam";
 import { Timer } from "./Timer";
+import { ProductMark } from "@/components/shared/product-ui";
+import { Smartphone } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface ExamHeaderProps {
   examTitle: string;
@@ -16,48 +19,59 @@ export function ExamHeader({
   violationCount = 0,
   onTimeUp,
 }: ExamHeaderProps) {
+  const [isPortrait, setIsPortrait] = useState(false);
+
+  useEffect(() => {
+    const checkOrientation = () => {
+      setIsPortrait(window.innerHeight > window.innerWidth && window.innerWidth < 768);
+    };
+    checkOrientation();
+    window.addEventListener("resize", checkOrientation);
+    return () => window.removeEventListener("resize", checkOrientation);
+  }, []);
+
   return (
-    <header className="flex items-stretch border-b-[3px] border-[var(--eg-cbt)] bg-white shadow-sm">
-      <div className="flex w-32 shrink-0 flex-col items-center justify-center bg-[var(--eg-cbt)] px-2 py-3 text-center text-[11px] font-bold leading-tight text-white">
-        <span className="text-sm tracking-wide">NTA</span>
-        <span className="mt-0.5 text-[10px] font-semibold opacity-90">
-          ExamGrid CBT
-        </span>
-      </div>
-
-      <div className="grid min-w-0 flex-1 grid-cols-[1fr_auto] items-center gap-4 px-5 py-2.5">
-        <div>
-          <h1 className="truncate text-base font-bold tracking-tight text-[var(--eg-cbt)] sm:text-lg">
-            {examTitle}
-          </h1>
-          <p className="mt-1 text-xs leading-relaxed text-slate-600">
-            <span className="font-semibold text-slate-800">{candidate.name}</span>
-            {" · "}Roll: {candidate.rollNumber}
-            {" · "}App: {candidate.applicationNumber}
-          </p>
-          {violationCount > 0 && (
-            <p className="mt-1 text-xs font-medium text-amber-700">
-              Integrity violations recorded: {violationCount}
-            </p>
-          )}
+    <>
+      {isPortrait && (
+        <div className="bg-primary text-primary-foreground px-4 py-2 text-xs font-medium flex items-center justify-center gap-2 md:hidden">
+          <Smartphone className="h-4 w-4 rotate-90" />
+          <span>Rotate device to landscape for optimal CBT experience</span>
+        </div>
+      )}
+      <header className="flex h-14 md:h-16 shrink-0 items-stretch border-b border-border bg-background shadow-sm sticky top-0 z-40">
+        <div className="hidden md:flex w-48 shrink-0 flex-col justify-center border-r border-border px-4 py-2">
+          <ProductMark compact />
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="text-right">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-              Time left
+        <div className="flex flex-1 items-center justify-between px-3 md:px-6">
+          <div className="min-w-0">
+            <h1 className="truncate text-sm font-semibold tracking-tight text-foreground md:text-base">
+              {examTitle}
+            </h1>
+            <p className="mt-0.5 hidden text-xs text-muted-foreground md:block">
+              <span className="font-medium text-foreground">{candidate.name}</span>
+              {" · "}Roll: {candidate.rollNumber}
+              {violationCount > 0 && (
+                <span className="ml-2 font-medium text-amber-600 dark:text-amber-400">
+                  · Violations: {violationCount}
+                </span>
+              )}
             </p>
-            <Timer onTimeUp={onTimeUp} />
           </div>
-          <div
-            className="flex h-14 w-12 flex-col items-center justify-center rounded border-2 border-slate-300 bg-slate-50 text-[9px] text-slate-500"
-            aria-hidden
-          >
-            <span>Candidate</span>
-            <span>Photo</span>
+
+          <div className="flex shrink-0 items-center gap-4 md:gap-6">
+            <div className="text-right">
+              <p className="hidden text-[10px] font-semibold uppercase tracking-wider text-muted-foreground md:block mb-0.5">
+                Time Remaining
+              </p>
+              <Timer onTimeUp={onTimeUp} />
+            </div>
+            <div className="hidden md:flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary ring-1 ring-primary/20">
+              {candidate.name.charAt(0)}
+            </div>
           </div>
         </div>
-      </div>
-    </header>
+      </header>
+    </>
   );
 }
