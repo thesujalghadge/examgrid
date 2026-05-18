@@ -37,16 +37,19 @@ export default function ResultPage() {
   const exam = getExamById(examId);
 
   useEffect(() => {
-    if (!candidate) {
-      router.replace("/login");
-      return;
-    }
-    const attempt = loadExamAttempt(examId, candidate.rollNumber);
-    if (attempt?.result) {
-      setResult(attempt.result);
-    } else {
-      router.replace(`/exam/${examId}/instructions`);
-    }
+    const timeout = window.setTimeout(() => {
+      if (!candidate) {
+        router.replace("/login");
+        return;
+      }
+      const attempt = loadExamAttempt(examId, candidate.rollNumber);
+      if (attempt?.result) {
+        setResult(attempt.result);
+      } else {
+        router.replace(`/exam/${examId}/instructions`);
+      }
+    }, 0);
+    return () => window.clearTimeout(timeout);
   }, [candidate, examId, router]);
 
   if (!candidate || !result || !exam) {

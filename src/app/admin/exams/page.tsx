@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { isBuiltinExam, listAllExams } from "@/lib/exam-catalog";
@@ -13,13 +13,9 @@ import { recordAuditEvent } from "@/services/audit-service";
 import type { ExamDefinition } from "@/types/exam";
 
 export default function AdminExamsPage() {
-  const [exams, setExams] = useState<ExamDefinition[]>([]);
+  const [exams, setExams] = useState<ExamDefinition[]>(() => listAllExams());
 
   const refresh = () => setExams(listAllExams());
-
-  useEffect(() => {
-    refresh();
-  }, []);
 
   const handleDelete = (examId: string) => {
     void (async () => {

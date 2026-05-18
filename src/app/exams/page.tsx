@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Clock, FileText } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import {
@@ -114,6 +114,13 @@ function ExamGroup({
   title: string;
   items: ScheduledExamView[];
 }) {
+  const [now, setNow] = useState(0);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setNow(Date.now()), 0);
+    return () => window.clearTimeout(timeout);
+  }, []);
+
   return (
     <section className="mb-10">
       <h2 className="eg-section-title mb-4">{title}</h2>
@@ -127,7 +134,7 @@ function ExamGroup({
           {items.map(({ exam, schedule }) => {
             const status = getScheduleStatus(schedule);
             const active = status === "active";
-            const startsIn = new Date(schedule.startAt).getTime() - Date.now();
+            const startsIn = new Date(schedule.startAt).getTime() - now;
             const hoursUntil =
               startsIn > 0 ? Math.max(1, Math.ceil(startsIn / 3600000)) : 0;
 
@@ -161,7 +168,7 @@ function ExamGroup({
                       <p className="mt-1 text-sm text-slate-600">{exam.subtitle}</p>
                     )}
                   </div>
-                  {status === "upcoming" && startsIn > 0 && (
+                  {status === "upcoming" && now > 0 && startsIn > 0 && (
                     <CountdownPill
                       label="Opens in"
                       value={`${hoursUntil}h`}

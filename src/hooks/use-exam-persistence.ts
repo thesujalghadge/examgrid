@@ -23,7 +23,7 @@ export function useExamPersistence() {
   const currentSectionId = useQuestionStore((s) => s.currentSectionId);
   const violations = useExamSessionStore((s) => s.violations);
   const examEndsAt = useTimerStore((s) => s.examEndsAt);
-  const startedAtRef = useRef<number>(Date.now());
+  const startedAtRef = useRef<number>(0);
   const resultRef = useRef<ExamResult | undefined>(undefined);
 
   const setStartedAt = useCallback((ts: number) => {
@@ -66,6 +66,10 @@ export function useExamPersistence() {
       submittedAt: phase === "submitted" ? Date.now() : undefined,
       result: resultRef.current,
     };
+
+    if (!startedAtRef.current) {
+      startedAtRef.current = attempt.submittedAt ?? examEndsAt;
+    }
 
     const valid = parsePersistedExamAttempt(attempt);
     if (!valid.success) {

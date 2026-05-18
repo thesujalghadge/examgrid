@@ -142,60 +142,64 @@ export function ExamInterface({ examId }: ExamInterfaceProps) {
   }, [candidate, exam, examId, persistNow, router, setResult]);
 
   useEffect(() => {
-    if (!candidate) {
-      router.replace("/login");
-      return;
-    }
+    const timeout = window.setTimeout(() => {
+      if (!candidate) {
+        router.replace("/login");
+        return;
+      }
 
-    const examDef = getExamById(examId);
-    if (
-      !examDef ||
-      !ensureExamReadyForCbt(examDef) ||
-      (isOperationalSchedulingActive() &&
-        !canCandidateAccessExam(candidate, examId))
-    ) {
-      router.replace("/exams");
-      return;
-    }
+      const examDef = getExamById(examId);
+      if (
+        !examDef ||
+        !ensureExamReadyForCbt(examDef) ||
+        (isOperationalSchedulingActive() &&
+          !canCandidateAccessExam(candidate, examId))
+      ) {
+        router.replace("/exams");
+        return;
+      }
 
-    const startedAt = Date.now();
-    const result = bootstrapExamSession(
-      examId,
-      candidate.rollNumber,
-      startedAt,
-    );
+      const startedAt = Date.now();
+      const result = bootstrapExamSession(
+        examId,
+        candidate.rollNumber,
+        startedAt,
+      );
 
-    if (result.status === "not_found") {
-      router.replace("/exams");
-      return;
-    }
+      if (result.status === "not_found") {
+        router.replace("/exams");
+        return;
+      }
 
-    if (result.status === "already_submitted") {
-      router.replace(`/exam/${examId}/result`);
-      return;
-    }
-
-    if (result.status === "resumed") {
-      setResumed(true);
-      setStartedAt(result.attempt.startedAt);
-      if (useTimerStore.getState().getRemainingSeconds() <= 0) {
+      if (result.status === "already_submitted") {
         router.replace(`/exam/${examId}/result`);
         return;
       }
-    } else {
-      setStartedAt(startedAt);
-      recordAuditEvent({
-        actorId: candidate.rollNumber,
-        actorRole: "student",
-        actionType: "exam_start",
-        resourceType: "exam",
-        resourceId: examId,
-        metadata: { startedAtUTC: new Date(startedAt).toISOString() },
-      });
-    }
 
-    void requestExamFullscreen();
-    setReady(true);
+      if (result.status === "resumed") {
+        setResumed(true);
+        setStartedAt(result.attempt.startedAt);
+        if (useTimerStore.getState().getRemainingSeconds() <= 0) {
+          router.replace(`/exam/${examId}/result`);
+          return;
+        }
+      } else {
+        setStartedAt(startedAt);
+        recordAuditEvent({
+          actorId: candidate.rollNumber,
+          actorRole: "student",
+          actionType: "exam_start",
+          resourceType: "exam",
+          resourceId: examId,
+          metadata: { startedAtUTC: new Date(startedAt).toISOString() },
+        });
+      }
+
+      void requestExamFullscreen();
+      setReady(true);
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
   }, [candidate, examId, router, setStartedAt]);
 
   const handleTimeUp = useCallback(() => {

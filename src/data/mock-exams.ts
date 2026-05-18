@@ -8,7 +8,7 @@ function buildMcqQuestion(
   num: number,
   correctIdx: number,
 ): ExamQuestion {
-  const options = OPTION_LABELS.map((label, idx) => ({
+  const options = OPTION_LABELS.map((label) => ({
     id: `${sectionId}-q${num}-opt${label}`,
     label,
     text: `Option ${label} for ${sectionPrefix} Question ${num}`,

@@ -20,7 +20,6 @@ import {
 } from "@/lib/supabase/supabase-verification";
 import {
   clearAllExamAttempts,
-  resetLocalEnvironment,
 } from "@/lib/test-helpers/dev-environment";
 import { cn } from "@/lib/utils";
 
@@ -114,7 +113,8 @@ export default function AdminSystemStatusPage() {
   }, [refreshDiagnostics]);
 
   useEffect(() => {
-    void refresh();
+    const timeout = window.setTimeout(() => void refresh(), 0);
+    return () => window.clearTimeout(timeout);
   }, [refresh]);
 
   const runVerification = async () => {

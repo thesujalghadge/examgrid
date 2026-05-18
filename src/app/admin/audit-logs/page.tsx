@@ -61,7 +61,8 @@ export default function AuditLogsPage() {
   };
 
   useEffect(() => {
-    void load(1);
+    const timeout = window.setTimeout(() => void load(1), 0);
+    return () => window.clearTimeout(timeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

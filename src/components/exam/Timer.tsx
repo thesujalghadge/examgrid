@@ -22,13 +22,14 @@ export function Timer({ onTimeUp }: TimerProps) {
   const isRunning = useTimerStore((s) => s.isRunning);
   const examEndsAt = useTimerStore((s) => s.examEndsAt);
   const getRemainingSeconds = useTimerStore((s) => s.getRemainingSeconds);
-  const [remaining, setRemaining] = useState(0);
+  const [remaining, setRemaining] = useState(() =>
+    useTimerStore.getState().getRemainingSeconds(),
+  );
   const timeUpFiredRef = useRef(false);
 
   useEffect(() => {
     timeUpFiredRef.current = false;
-    setRemaining(getRemainingSeconds());
-  }, [examEndsAt, getRemainingSeconds]);
+  }, [examEndsAt]);
 
   useEffect(() => {
     if (!isRunning || !examEndsAt) return;

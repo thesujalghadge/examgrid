@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { analyzeQuestionMetadataQuality } from "@/lib/question-intelligence/quality";
 import type { BankQuestion } from "@/types/question-bank";
-import type { QuestionType } from "@/types/exam";
 import { cn } from "@/lib/utils";
 
 interface QuestionBankListProps {

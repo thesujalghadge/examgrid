@@ -1,6 +1,6 @@
 export const DEMO_INSTITUTE = {
-  name: "CA Institute",
-  tagline: "Chartered Accountancy & competitive exam excellence",
+  name: "Cambridge Academy",
+  tagline: "JEE · NEET · CET · competitive exam excellence",
   city: "Mumbai",
-  adminEmail: "admin@cainstitute.demo",
+  adminEmail: "admin@cambridgeacademy.demo",
 } as const;

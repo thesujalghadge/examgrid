@@ -51,6 +51,9 @@ Desktop.ini
 !.vscode/extensions.json
 !.vscode/settings.json
 
+# Academic intelligence local storage (PYQ uploads, pipeline state)
+.data/
+
 # Misc
 *.pem
 .turbo

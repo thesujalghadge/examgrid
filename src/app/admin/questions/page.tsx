@@ -1,21 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { QuestionBankList } from "@/components/admin/question-bank-list";
 import { QuestionImportPanel } from "@/components/admin/question-import-panel";
 import { getQuestionBank } from "@/services/question-bank-service";
 import type { BankQuestion } from "@/types/question-bank";
 
 export default function AdminQuestionsPage() {
-  const [questions, setQuestions] = useState<BankQuestion[]>([]);
+  const [questions, setQuestions] = useState<BankQuestion[]>(() =>
+    getQuestionBank(),
+  );
 
   const refresh = useCallback(() => {
     setQuestions(getQuestionBank());
   }, []);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
 
   return (
     <div className="space-y-6">

@@ -45,7 +45,10 @@ export default function DeclarationPage() {
   }, [candidate, exam, examId, router]);
 
   useEffect(() => {
-    setFullscreenReady(isFullscreenActive());
+    const timeout = window.setTimeout(() => {
+      setFullscreenReady(isFullscreenActive());
+    }, 0);
+    return () => window.clearTimeout(timeout);
   }, []);
 
   const handleEnterFullscreen = async () => {

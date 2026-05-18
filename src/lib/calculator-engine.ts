@@ -9,7 +9,7 @@ export function evaluateCalculatorExpression(expr: string): string {
   if (!trimmed) return "0";
 
   try {
-    let js = trimmed
+    const js = trimmed
       .replace(/π/g, "Math.PI")
       .replace(/(\d+(?:\.\d+)?)\s*%/g, "($1/100)")
       .replace(/sin\(/g, "sinRad(")
@@ -27,7 +27,6 @@ export function evaluateCalculatorExpression(expr: string): string {
     const cosRad = (x: number) => Math.cos(toRadians(x));
     const tanRad = (x: number) => Math.tan(toRadians(x));
 
-    // eslint-disable-next-line no-new-func
     const fn = new Function(
       "sinRad",
       "cosRad",

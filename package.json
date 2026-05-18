@@ -11,11 +11,15 @@
     "db:push": "npx supabase db push",
     "db:verify": "node scripts/supabase/verify-remote.mjs",
     "db:setup": "npm run db:bootstrap && npm run db:verify",
-    "deploy:check": "node scripts/validate-deployment.mjs"
+    "deploy:check": "node scripts/validate-deployment.mjs",
+    "intelligence:worker": "tsx scripts/intelligence/worker.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
     "@supabase/supabase-js": "^2.105.4",
+    "bullmq": "^5.34.5",
+    "ioredis": "^5.4.2",
+    "pdf-parse": "^1.1.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.16.0",
@@ -35,6 +39,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
+    "tsx": "^4.19.2",
     "supabase": "^2.98.2",
     "tailwindcss": "^4",
     "typescript": "^5"
