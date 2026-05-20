@@ -3,7 +3,8 @@ export type LogCategory =
   | "persistence"
   | "recovery"
   | "validation"
-  | "cbt";
+  | "cbt"
+  | "session";
 
 const PREFIX = "[ExamGrid]";
 
@@ -77,4 +78,12 @@ export function logCbtGuard(event: string, detail?: unknown): void {
 
 export function logCbtWarning(event: string, detail?: unknown): void {
   emit("warn", "cbt", event, detail);
+}
+
+export function logSessionEvent(event: string, detail?: unknown): void {
+  emit("info", "session", event, detail);
+}
+
+export function logSessionWarning(event: string, detail?: unknown): void {
+  emit("warn", "session", event, detail);
 }

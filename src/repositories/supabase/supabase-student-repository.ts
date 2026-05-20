@@ -1,5 +1,4 @@
 import type { StudentRepository } from "@/repositories/interfaces/student-repository";
-import { DEFAULT_INSTITUTE_ID } from "@/config/institute";
 import { logRepositoryFailure } from "@/lib/logging/runtime-logger";
 import { assertInstituteStudent } from "@/lib/validation/institute-ops-schema";
 import {
@@ -99,7 +98,6 @@ export class SupabaseStudentRepository implements StudentRepository {
       const { data, error } = await client
         .from("students")
         .select("*")
-        .eq("institute_id", DEFAULT_INSTITUTE_ID)
         .order("full_name", { ascending: true });
       throwIfSupabaseError(error, "students", "list");
       this.cache = ((data ?? []) as StudentRow[]).map(rowToStudent);

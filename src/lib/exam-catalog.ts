@@ -1,5 +1,7 @@
 import { JEE_MAIN_MOCK } from "@/data/mock-exams";
 import { examCatalogRepository } from "@/repositories/exam-catalog-repository";
+import { cbtTestToExamDefinition } from "@/lib/cbt/cbt-to-exam";
+import { getRepositories } from "@/lib/repositories/provider";
 import type { ExamDefinition } from "@/types/exam";
 import { validateExamStructure } from "@/lib/validation/exam-integrity";
 import { logValidationFailure } from "@/lib/logging/runtime-logger";
@@ -35,6 +37,17 @@ export function listAllExams(): ExamDefinition[] {
 export function getExamById(examId: string): ExamDefinition | undefined {
   if (examId === JEE_MAIN_MOCK.id) return JEE_MAIN_MOCK;
   if (typeof window !== "undefined") {
+    const cbt = getRepositories().cbtTests.getById(examId);
+    if (cbt) {
+      const def = cbtTestToExamDefinition(cbt);
+      if (!def) return undefined;
+      const check = validateExamStructure(def);
+      if (!check.valid) {
+        logValidationFailure(`cbt:${examId}`, check.errors.join("; "));
+        return undefined;
+      }
+      return def;
+    }
     const custom = examCatalogRepository.getById(examId);
     if (custom) {
       const check = validateExamStructure(custom);

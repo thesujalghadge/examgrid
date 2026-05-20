@@ -49,7 +49,7 @@ export default function ExamsPage() {
   }, [candidate, opsActive, scheduledExams]);
 
   useEffect(() => {
-    if (!candidate) router.replace("/login");
+    if (!candidate) router.replace("/student/login");
   }, [candidate, router]);
 
   if (!candidate) return null;
@@ -70,7 +70,7 @@ export default function ExamsPage() {
             className="border-white/40 bg-transparent text-white hover:bg-white/10"
             onClick={() => {
               logout();
-              router.push("/login");
+              router.push("/student/login");
             }}
           >
             Logout

@@ -8,4 +8,8 @@ export const STORAGE_KEYS = {
   sessionMetrics: "examgrid:session-metrics",
   activeExamSessions: "examgrid:active-exam-sessions",
   adminSession: "examgrid:admin-session",
+  workspaceSession: "examgrid:workspace-session",
+  cbtTests: "examgrid:cbt-tests",
+  cbtFinalAttempts: "examgrid:cbt-final-attempts",
+  testSessions: "examgrid:test-sessions",
 } as const;

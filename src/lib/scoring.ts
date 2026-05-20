@@ -11,18 +11,20 @@ function isAnswerAttempted(
   question: ExamQuestion,
   answer: string | null,
 ): boolean {
-  if (!answer) return false;
+  const normalized = typeof answer === "string" ? answer.trim() : answer;
+  if (!normalized) return false;
   if (question.type === "NUMERICAL") {
-    return isNumericalAnswerAttempted(answer);
+    return isNumericalAnswerAttempted(normalized);
   }
-  return answer.length > 0;
+  return normalized.length > 0;
 }
 
 function isAnswerCorrect(question: ExamQuestion, answer: string): boolean {
+  const normalized = answer.trim();
   if (question.type === "NUMERICAL") {
-    return isNumericalAnswerCorrect(answer, question.correctNumericalAnswer);
+    return isNumericalAnswerCorrect(normalized, question.correctNumericalAnswer);
   }
-  return answer === question.correctOptionId;
+  return normalized === question.correctOptionId;
 }
 
 export function computeExamResult(
@@ -45,6 +47,7 @@ export function computeExamResult(
 
     for (const qId of section.questionIds) {
       const q = exam.questions[qId];
+      if (!q) continue;
       maxScore += q.marks;
       const answer = attempt.answers[qId] ?? null;
       if (isAnswerAttempted(q, answer)) {

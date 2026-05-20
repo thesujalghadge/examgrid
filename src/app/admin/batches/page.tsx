@@ -7,8 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { awaitRepositoryPersist } from "@/lib/repositories/await-persist";
 import { getRepositories } from "@/lib/repositories/provider";
+import { scopeByInstituteId, withInstituteId } from "@/lib/tenant-scope";
 import { recordAuditEvent } from "@/services/audit-service";
 import { createBatchInput } from "@/services/institute-ops-service";
+import { useWorkspaceAuthStore } from "@/stores/workspace-auth-store";
 import type { Batch } from "@/types/institute-ops";
 
 const blank = {
@@ -20,7 +22,10 @@ const blank = {
 
 export default function AdminBatchesPage() {
   const repos = getRepositories();
-  const [batches, setBatches] = useState<Batch[]>(() => repos.batches.list());
+  const tenantId = useWorkspaceAuthStore((s) => s.session?.instituteId ?? null);
+  const [batches, setBatches] = useState<Batch[]>(() =>
+    tenantId ? scopeByInstituteId(repos.batches.list(), tenantId) : repos.batches.list(),
+  );
   const [form, setForm] = useState(blank);
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -29,20 +34,23 @@ export default function AdminBatchesPage() {
     [batches],
   );
 
-  const refresh = () => setBatches(repos.batches.list());
+  const refresh = () =>
+    setBatches(
+      tenantId ? scopeByInstituteId(repos.batches.list(), tenantId) : repos.batches.list(),
+    );
 
   const save = async (event: React.FormEvent) => {
     event.preventDefault();
     const existing = editingId ? repos.batches.getById(editingId) : undefined;
     const now = Date.now();
-    repos.batches.save({
+    repos.batches.save(withInstituteId({
       ...(existing ?? createBatchInput(form)),
       name: form.name,
       courseType: form.courseType,
       academicYear: form.academicYear,
       active: form.active,
       updatedAt: now,
-    });
+    }, tenantId ?? "default-institute"));
     recordAuditEvent({
       actorRole: "admin",
       actionType: existing ? "batch_edit" : "batch_create",

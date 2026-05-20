@@ -4,6 +4,7 @@ export type CourseType = "JEE" | "NEET" | "CET" | "FOUNDATION" | string;
 
 export interface InstituteStudent {
   id: string;
+  instituteId?: string;
   fullName: string;
   email: string;
   phone: string;
@@ -17,6 +18,7 @@ export interface InstituteStudent {
 
 export interface Batch {
   id: string;
+  instituteId?: string;
   name: string;
   courseType: CourseType;
   academicYear: string;
@@ -29,6 +31,7 @@ export type ExamVisibilityRule = "assigned_batches" | "all_active_students";
 
 export interface ExamSchedule {
   id: string;
+  instituteId?: string;
   examId: string;
   batchIds: string[];
   startAt: string;

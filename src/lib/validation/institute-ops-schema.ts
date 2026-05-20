@@ -3,6 +3,7 @@ import type { Batch, ExamSchedule, InstituteStudent } from "@/types/institute-op
 
 export const instituteStudentSchema = z.object({
   id: z.string().min(1),
+  instituteId: z.string().min(1).optional(),
   fullName: z.string().min(1),
   email: z.string().email().or(z.literal("")),
   phone: z.string(),
@@ -16,6 +17,7 @@ export const instituteStudentSchema = z.object({
 
 export const batchSchema = z.object({
   id: z.string().min(1),
+  instituteId: z.string().min(1).optional(),
   name: z.string().min(1),
   courseType: z.string().min(1),
   academicYear: z.string().min(1),
@@ -27,6 +29,7 @@ export const batchSchema = z.object({
 export const examScheduleSchema = z
   .object({
     id: z.string().min(1),
+    instituteId: z.string().min(1).optional(),
     examId: z.string().min(1),
     batchIds: z.array(z.string().min(1)),
     startAt: z.string().min(1),

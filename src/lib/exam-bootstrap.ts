@@ -9,7 +9,7 @@ import {
   ensureExamReadyForCbt,
   prepareResumeAttempt,
 } from "@/lib/cbt/session-safety";
-import { logCbtGuard } from "@/lib/logging/runtime-logger";
+import { logCbtGuard, logCbtWarning } from "@/lib/logging/runtime-logger";
 import { useExamLifecycleStore } from "@/stores/exam-lifecycle-store";
 import { useExamSessionStore } from "@/stores/exam-session-store";
 import { useQuestionStore } from "@/stores/question-store";
@@ -85,6 +85,7 @@ export function bootstrapExamSession(
   registerActiveExamSession(examId, candidateRoll);
 
   if (existing?.lifecycle === "submitted") {
+    logCbtGuard("attempt already submitted", { examId, candidateRoll });
     return { status: "already_submitted", attempt: existing };
   }
 
@@ -108,6 +109,12 @@ export function bootstrapExamSession(
       useExamSessionStore
         .getState()
         .restoreViolations(sanitized.violations ?? []);
+      logCbtGuard("exam attempt resumed", {
+        examId,
+        candidateRoll,
+        startedAt: sanitized.startedAt,
+        examEndsAt: sanitized.examEndsAt,
+      });
       return { status: "resumed", attempt: sanitized };
     }
   }
@@ -137,7 +144,17 @@ export function bootstrapExamSession(
     markedForReview: {},
     violations: [],
   };
-  saveExamAttempt(attempt);
+  const saved = saveExamAttempt(attempt);
+  if (!saved) {
+    logCbtWarning("initial exam attempt save failed", { examId, candidateRoll });
+  } else {
+    logCbtGuard("exam attempt started", {
+      examId,
+      candidateRoll,
+      startedAt,
+      examEndsAt,
+    });
+  }
 
   return { status: "started" };
 }

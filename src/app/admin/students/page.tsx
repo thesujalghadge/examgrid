@@ -7,7 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { awaitRepositoryPersist } from "@/lib/repositories/await-persist";
 import { getRepositories } from "@/lib/repositories/provider";
+import { scopeByInstituteId, withInstituteId } from "@/lib/tenant-scope";
 import { recordAuditEvent } from "@/services/audit-service";
+import { useWorkspaceAuthStore } from "@/stores/workspace-auth-store";
 import {
   createStudentInput,
   importPreviewedStudents,
@@ -31,8 +33,9 @@ const blank = {
 
 export default function AdminStudentsPage() {
   const repos = getRepositories();
+  const tenantId = useWorkspaceAuthStore((s) => s.session?.instituteId ?? null);
   const [students, setStudents] = useState<InstituteStudent[]>(() =>
-    repos.students.list(),
+    tenantId ? scopeByInstituteId(repos.students.list(), tenantId) : repos.students.list(),
   );
   const [batches] = useState<Batch[]>(() => repos.batches.list());
   const [form, setForm] = useState({
@@ -59,12 +62,15 @@ export default function AdminStudentsPage() {
     );
   }, [search, students]);
 
-  const refresh = () => setStudents(repos.students.list());
+  const refresh = () =>
+    setStudents(
+      tenantId ? scopeByInstituteId(repos.students.list(), tenantId) : repos.students.list(),
+    );
 
   const save = async (event: React.FormEvent) => {
     event.preventDefault();
     const existing = editingId ? repos.students.getById(editingId) : undefined;
-    repos.students.save({
+    repos.students.save(withInstituteId({
       ...(existing ?? createStudentInput(form)),
       fullName: form.fullName.trim(),
       email: form.email.trim(),
@@ -74,7 +80,7 @@ export default function AdminStudentsPage() {
       batchId: form.batchId,
       active: form.active,
       updatedAt: Date.now(),
-    });
+    }, tenantId ?? "default-institute"));
     recordAuditEvent({
       actorRole: "admin",
       actionType: existing ? "student_edit" : "student_create",

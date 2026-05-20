@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { Candidate } from "@/types/exam";
+import { clearWorkspaceSession } from "@/lib/workspace-session";
 import { clearSession, loadSession, saveSession } from "@/lib/persistence";
 import {
   appendSessionMetric,
@@ -91,6 +92,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       });
     }
     clearSession();
+    clearWorkspaceSession();
     clearSessionId();
     set({ candidate: null });
   },
@@ -118,6 +120,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       });
     }
     clearSession();
+    clearWorkspaceSession();
     clearSessionId();
     set({ candidate: null });
   },

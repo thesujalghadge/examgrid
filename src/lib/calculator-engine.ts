@@ -9,7 +9,7 @@ export function evaluateCalculatorExpression(expr: string): string {
   if (!trimmed) return "0";
 
   try {
-    let js = trimmed
+    const js = trimmed
       .replace(/π/g, "Math.PI")
       .replace(/(\d+(?:\.\d+)?)\s*%/g, "($1/100)")
       .replace(/sin\(/g, "sinRad(")

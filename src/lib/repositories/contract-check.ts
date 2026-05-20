@@ -5,6 +5,9 @@ import type { ExamRepository } from "@/repositories/interfaces/exam-repository";
 import type { QuestionRepository } from "@/repositories/interfaces/question-repository";
 import type { ScheduleRepository } from "@/repositories/interfaces/schedule-repository";
 import type { StudentRepository } from "@/repositories/interfaces/student-repository";
+import type { CbtAttemptRepository } from "@/repositories/interfaces/cbt-attempt-repository";
+import type { CbtTestRepository } from "@/repositories/interfaces/cbt-test-repository";
+import type { TestSessionRepository } from "@/repositories/interfaces/test-session-repository";
 import { logValidationFailure } from "@/lib/logging/runtime-logger";
 
 const QUESTION_METHODS = [
@@ -63,6 +66,28 @@ const AUDIT_METHODS = [
   "clear",
 ] as const satisfies readonly (keyof AuditRepository)[];
 
+const CBT_TEST_METHODS = [
+  "list",
+  "getById",
+  "save",
+  "delete",
+] as const satisfies readonly (keyof CbtTestRepository)[];
+
+const CBT_ATTEMPT_METHODS = [
+  "save",
+  "listByTestId",
+  "listByStudentId",
+  "getLatest",
+] as const satisfies readonly (keyof CbtAttemptRepository)[];
+
+const TEST_SESSION_METHODS = [
+  "list",
+  "getById",
+  "getActive",
+  "save",
+  "delete",
+] as const satisfies readonly (keyof TestSessionRepository)[];
+
 function hasMethods(
   repo: object,
   methods: readonly string[],
@@ -89,6 +114,9 @@ export function validateRepositoryContracts(bundle: {
   schedules: ScheduleRepository;
   attempts: AttemptRepository;
   audit: AuditRepository;
+  cbtTests: CbtTestRepository;
+  cbtAttempts: CbtAttemptRepository;
+  testSessions: TestSessionRepository;
 }): ContractCheckResult {
   const issues: string[] = [];
 
@@ -100,6 +128,9 @@ export function validateRepositoryContracts(bundle: {
     ["ScheduleRepository", bundle.schedules, SCHEDULE_METHODS],
     ["AttemptRepository", bundle.attempts, ATTEMPT_METHODS],
     ["AuditRepository", bundle.audit, AUDIT_METHODS],
+    ["CbtTestRepository", bundle.cbtTests, CBT_TEST_METHODS],
+    ["CbtAttemptRepository", bundle.cbtAttempts, CBT_ATTEMPT_METHODS],
+    ["TestSessionRepository", bundle.testSessions, TEST_SESSION_METHODS],
   ];
 
   for (const [name, repo, methods] of checks) {

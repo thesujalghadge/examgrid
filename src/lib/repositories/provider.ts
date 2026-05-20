@@ -12,7 +12,13 @@ import type { ExamRepository } from "@/repositories/interfaces/exam-repository";
 import type { QuestionRepository } from "@/repositories/interfaces/question-repository";
 import type { ScheduleRepository } from "@/repositories/interfaces/schedule-repository";
 import type { StudentRepository } from "@/repositories/interfaces/student-repository";
+import type { CbtAttemptRepository } from "@/repositories/interfaces/cbt-attempt-repository";
+import type { CbtTestRepository } from "@/repositories/interfaces/cbt-test-repository";
 import { LocalAttemptRepository } from "@/repositories/local/local-attempt-repository";
+import { LocalCbtAttemptRepository } from "@/repositories/local/local-cbt-attempt-repository";
+import { LocalCbtTestRepository } from "@/repositories/local/local-cbt-test-repository";
+import { LocalTestSessionRepository } from "@/repositories/local/local-test-session-repository";
+import type { TestSessionRepository } from "@/repositories/interfaces/test-session-repository";
 import { LocalAuditRepository } from "@/repositories/local/local-audit-repository";
 import { LocalBatchRepository } from "@/repositories/local/local-batch-repository";
 import { LocalExamRepository } from "@/repositories/local/local-exam-repository";
@@ -35,6 +41,9 @@ export interface RepositoryBundle {
   schedules: ScheduleRepository;
   attempts: AttemptRepository;
   audit: AuditRepository;
+  cbtTests: CbtTestRepository;
+  cbtAttempts: CbtAttemptRepository;
+  testSessions: TestSessionRepository;
 }
 
 function buildBundle(mode: RepositoryMode): RepositoryBundle {
@@ -49,6 +58,9 @@ function buildBundle(mode: RepositoryMode): RepositoryBundle {
           schedules: new SupabaseScheduleRepository(),
           attempts: new LocalAttemptRepository(),
           audit: new SupabaseAuditRepository(),
+          cbtTests: new LocalCbtTestRepository(),
+          cbtAttempts: new LocalCbtAttemptRepository(),
+          testSessions: new LocalTestSessionRepository(),
         }
       : {
           mode: "local",
@@ -59,6 +71,9 @@ function buildBundle(mode: RepositoryMode): RepositoryBundle {
           schedules: new LocalScheduleRepository(),
           attempts: new LocalAttemptRepository(),
           audit: new LocalAuditRepository(),
+          cbtTests: new LocalCbtTestRepository(),
+          cbtAttempts: new LocalCbtAttemptRepository(),
+          testSessions: new LocalTestSessionRepository(),
         };
 
   const safe = wrapRepositoryBundle(inner);

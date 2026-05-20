@@ -9,6 +9,7 @@ import {
 } from "@/lib/supabase/startup-diagnostics";
 import { installDevHelpers } from "@/lib/test-helpers/dev-environment";
 import { useAuthStore } from "@/stores/auth-store";
+import { useWorkspaceAuthStore } from "@/stores/workspace-auth-store";
 
 const STUDENT_IDLE_TIMEOUT_MS = 45 * 60 * 1000;
 const STUDENT_ABSOLUTE_TIMEOUT_MS = 6 * 60 * 60 * 1000;
@@ -19,6 +20,8 @@ export function ClientProviders({ children }: { children: React.ReactNode }) {
   const candidate = useAuthStore((s) => s.candidate);
   const touchAuth = useAuthStore((s) => s.touch);
   const expireAuth = useAuthStore((s) => s.expire);
+  const hydrateWorkspaceAuth = useWorkspaceAuthStore((s) => s.hydrateSession);
+  const isWorkspaceHydrated = useWorkspaceAuthStore((s) => s.isHydrated);
   const [reposReady, setReposReady] = useState(false);
 
   useEffect(() => {
@@ -32,6 +35,7 @@ export function ClientProviders({ children }: { children: React.ReactNode }) {
       if (!cancelled) {
         logStartupSummary(startup);
         hydrateAuth();
+        await hydrateWorkspaceAuth();
         setReposReady(true);
       }
     }
@@ -40,7 +44,7 @@ export function ClientProviders({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [hydrateAuth]);
+  }, [hydrateAuth, hydrateWorkspaceAuth]);
 
   useEffect(() => {
     if (!candidate) return;
@@ -78,7 +82,7 @@ export function ClientProviders({ children }: { children: React.ReactNode }) {
     return () => window.clearInterval(timer);
   }, [candidate, expireAuth]);
 
-  if (!isAuthHydrated || !reposReady) {
+  if (!isAuthHydrated || !isWorkspaceHydrated || !reposReady) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-2 bg-gray-100 text-sm text-gray-600">
         <p>Loading…</p>
