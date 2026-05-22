@@ -9,10 +9,7 @@ export async function GET(
   context: { params: Promise<{ testId: string }> },
 ) {
   const ws = await readVerifiedWorkspaceSession();
-  if (
-    !ws ||
-    (ws.role !== "institute_admin" && ws.role !== "teacher" && ws.role !== "super_admin")
-  ) {
+  if (!ws || ws.role !== "institute") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   if (!ws.instituteId) {

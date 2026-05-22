@@ -9,30 +9,19 @@ import { useAuthStore } from "@/stores/auth-store";
 import { useWorkspaceAuthStore } from "@/stores/workspace-auth-store";
 
 const NAV = [
-  { href: "/student/dashboard", label: "Dashboard" },
-  { href: "/student/tests", label: "Tests" },
-  { href: "/student/practice", label: "Practice" },
-  { href: "/student/analytics", label: "Analytics" },
-  { href: "/student/revision", label: "Revision" },
-  { href: "/student/question-bank", label: "Question Bank" },
-  { href: "/student/profile", label: "Profile" },
+  { href: "/student/tests", label: "Upcoming Tests" },
+  { href: "/student/attempted", label: "Attempted Tests" },
+  { href: "/student/reports", label: "Reports & Analysis" },
+  { href: "/student/pyq", label: "PYQ Practice" },
 ];
 
 export function StudentShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const hydrate = useAuthStore((s) => s.hydrate);
-  const hydrateWorkspace = useWorkspaceAuthStore((s) => s.hydrateSession);
   const isHydrated = useAuthStore((s) => s.isHydrated);
   const candidate = useAuthStore((s) => s.candidate);
-  const workspaceSession = useWorkspaceAuthStore((s) => s.session);
   const workspaceLogout = useWorkspaceAuthStore((s) => s.logout);
   const logout = useAuthStore((s) => s.logout);
-
-  useEffect(() => {
-    hydrate();
-    void hydrateWorkspace();
-  }, [hydrate, hydrateWorkspace]);
 
   useEffect(() => {
     if (!isHydrated || pathname === "/student/login") return;
@@ -49,27 +38,23 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
 
   return (
     <WorkspaceShell
-      title="Student Experience"
+      title="Student Access"
       subtitle={DEMO_INSTITUTE.name}
-      identity={`${candidate.name} · ${candidate.rollNumber}`}
-      role={workspaceSession?.role ?? "student"}
-      instituteId={workspaceSession?.instituteId}
+      identity={`${candidate.name} | ${candidate.rollNumber}`}
       nav={NAV}
       footer={
-        <div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full"
-            onClick={() => {
-              logout();
-              workspaceLogout();
-              router.push("/student/login");
-            }}
-          >
-            Logout
-          </Button>
-        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full bg-white"
+          onClick={() => {
+            logout();
+            void workspaceLogout();
+            router.push("/student/login");
+          }}
+        >
+          Logout
+        </Button>
       }
     >
       {children}

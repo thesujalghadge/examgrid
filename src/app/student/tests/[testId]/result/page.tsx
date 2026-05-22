@@ -12,9 +12,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { getExamById } from "@/data/mock-exams";
+import { getExamById } from "@/lib/exam-catalog";
 import { loadExamAttempt } from "@/lib/persistence";
-import { TestLeaderboardPanel } from "@/components/student/test-leaderboard-panel";
 import { getRepositories } from "@/lib/repositories/provider";
 import { listTestSessionsForTest } from "@/services/test-session-engine";
 import { useAuthStore } from "@/stores/auth-store";
@@ -36,7 +35,6 @@ export default function StudentCbtResultPage() {
   const router = useRouter();
   const candidate = useAuthStore((s) => s.candidate);
   const hydrateWs = useWorkspaceAuthStore((s) => s.hydrate);
-  const wsSession = useWorkspaceAuthStore((s) => s.session);
   const [result, setResult] = useState<ExamResult | null>(null);
   const [integrityScore, setIntegrityScore] = useState<number | null>(null);
   const [flagged, setFlagged] = useState(false);
@@ -66,9 +64,9 @@ export default function StudentCbtResultPage() {
     }
     if (ws?.instituteId) {
       const session = listTestSessionsForTest(testId, ws.instituteId).find(
-        (s) =>
-          s.studentId === candidate.rollNumber &&
-          (s.status === "submitted" || s.status === "auto_submitted"),
+        (entry) =>
+          entry.studentId === candidate.rollNumber &&
+          (entry.status === "submitted" || entry.status === "auto_submitted"),
       );
       if (session) {
         setIntegrityScore(session.integrityScore ?? null);
@@ -80,7 +78,7 @@ export default function StudentCbtResultPage() {
   if (!candidate || !result || !exam) {
     return (
       <div className="flex min-h-screen items-center justify-center text-sm text-gray-500">
-        Loading result…
+        Loading result...
       </div>
     );
   }
@@ -88,16 +86,16 @@ export default function StudentCbtResultPage() {
   return (
     <div className="min-h-screen bg-gray-100">
       <header className="bg-[#1a3c6e] px-6 py-4 text-center text-white">
-        <h1 className="text-xl font-bold">Test Submitted</h1>
+        <h1 className="text-xl font-bold">Test submitted</h1>
         <p className="text-sm text-blue-100">{exam.title}</p>
       </header>
 
       <main className="mx-auto max-w-3xl space-y-6 p-6">
         <Card>
           <CardHeader>
-            <CardTitle className="text-[#1a3c6e]">Score Summary</CardTitle>
+            <CardTitle className="text-[#1a3c6e]">Score summary</CardTitle>
             <CardDescription>
-              {result.candidateName} · Roll {result.rollNumber}
+              {result.candidateName} | Roll {result.rollNumber}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -108,10 +106,10 @@ export default function StudentCbtResultPage() {
               <Stat label="Unattempted" value={String(result.unattempted)} />
             </div>
             <p className="text-sm text-gray-600">
-              Time used: {formatDuration(result.durationUsedSeconds)} · Submitted:{" "}
+              Time used: {formatDuration(result.durationUsedSeconds)} | Submitted:{" "}
               {new Date(result.submittedAt).toLocaleString("en-IN")}
             </p>
-            {integrityScore != null && (
+            {integrityScore != null ? (
               <p className="mt-2 text-sm text-gray-600">
                 Integrity score: {integrityScore}/100
                 {flagged ? (
@@ -120,17 +118,9 @@ export default function StudentCbtResultPage() {
                   </span>
                 ) : null}
               </p>
-            )}
+            ) : null}
           </CardContent>
         </Card>
-
-        {wsSession?.instituteId && (
-          <TestLeaderboardPanel
-            testId={testId}
-            instituteId={wsSession.instituteId}
-            studentId={candidate.rollNumber}
-          />
-        )}
 
         <Card>
           <CardHeader>
@@ -148,15 +138,15 @@ export default function StudentCbtResultPage() {
                 </tr>
               </thead>
               <tbody>
-                {result.sectionScores.map((s) => (
-                  <tr key={s.sectionId} className="border-b border-gray-100">
-                    <td className="py-2 font-medium">{s.sectionName}</td>
+                {result.sectionScores.map((section) => (
+                  <tr key={section.sectionId} className="border-b border-gray-100">
+                    <td className="py-2 font-medium">{section.sectionName}</td>
                     <td className="py-2">
-                      {s.attempted}/{s.total}
+                      {section.attempted}/{section.total}
                     </td>
-                    <td className="py-2 text-green-700">{s.correct}</td>
-                    <td className="py-2 text-red-700">{s.incorrect}</td>
-                    <td className="py-2 font-semibold">{s.score}</td>
+                    <td className="py-2 text-green-700">{section.correct}</td>
+                    <td className="py-2 text-red-700">{section.incorrect}</td>
+                    <td className="py-2 font-semibold">{section.score}</td>
                   </tr>
                 ))}
               </tbody>
@@ -165,14 +155,11 @@ export default function StudentCbtResultPage() {
         </Card>
 
         <div className="flex flex-wrap justify-center gap-3">
-          <Link
-            href="/student/tests"
-            className={cn(buttonVariants({ variant: "outline" }))}
-          >
+          <Link href="/student/tests" className={cn(buttonVariants({ variant: "outline" }))}>
             Back to tests
           </Link>
-          <Button className="bg-[#1a3c6e]" onClick={() => router.push("/student/dashboard")}>
-            Dashboard
+          <Button className="bg-[#1a3c6e]" onClick={() => router.push("/student/reports")}>
+            View analysis
           </Button>
         </div>
       </main>

@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { SessionDebugPanel } from "@/components/debug/session-debug-panel";
 import { cn } from "@/lib/utils";
 
 export interface WorkspaceNavItem {
@@ -14,8 +13,6 @@ export function WorkspaceShell({
   title,
   subtitle,
   identity,
-  role,
-  instituteId,
   nav,
   footer,
   children,
@@ -23,8 +20,6 @@ export function WorkspaceShell({
   title: string;
   subtitle: string;
   identity: string;
-  role: string;
-  instituteId?: string;
   nav: WorkspaceNavItem[];
   footer?: React.ReactNode;
   children: React.ReactNode;
@@ -32,35 +27,43 @@ export function WorkspaceShell({
   const pathname = usePathname();
 
   return (
-    <div className="flex min-h-screen bg-gray-100">
-      <aside className="flex w-64 shrink-0 flex-col border-r border-gray-300 bg-white">
-        <div className="border-b border-gray-200 px-4 py-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-            {title}
-          </p>
-          <p className="text-sm font-medium text-gray-900">{subtitle}</p>
-          <p className="mt-1 truncate text-xs text-gray-500">{identity}</p>
+    <div className="min-h-screen bg-[linear-gradient(180deg,#f5f1e8_0%,#fbf9f4_18%,#f7f4ee_100%)] text-[#1f2933]">
+      <header className="border-b border-[#d8d2c7] bg-[#fbf9f4]/95 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 md:px-6">
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+            <div className="space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8a6f3e]">
+                {title}
+              </p>
+              <div>
+                <h1 className="text-xl font-semibold text-[#14213d] md:text-2xl">{subtitle}</h1>
+                <p className="text-sm text-[#5e5a52]">{identity}</p>
+              </div>
+            </div>
+            {footer ? <div className="md:min-w-[220px]">{footer}</div> : null}
+          </div>
+          <nav className="flex flex-wrap gap-2">
+            {nav.map((item) => {
+              const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "rounded-full border px-4 py-2 text-sm font-medium transition",
+                    active
+                      ? "border-[#14213d] bg-[#14213d] text-white"
+                      : "border-[#d8d2c7] bg-white text-[#4a5565] hover:border-[#8a6f3e] hover:text-[#14213d]",
+                  )}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
         </div>
-        <nav className="flex-1 space-y-0.5 p-2">
-          {nav.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "block rounded px-3 py-2 text-sm font-medium",
-                pathname === item.href
-                  ? "bg-[#1a3c6e] text-white"
-                  : "text-gray-700 hover:bg-gray-100",
-              )}
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-        {footer && <div className="border-t border-gray-200 p-3">{footer}</div>}
-      </aside>
-      <main className="min-w-0 flex-1 overflow-y-auto p-6">{children}</main>
-      <SessionDebugPanel role={role} instituteId={instituteId} />
+      </header>
+      <main className="mx-auto max-w-7xl px-4 py-6 md:px-6 md:py-8">{children}</main>
     </div>
   );
 }

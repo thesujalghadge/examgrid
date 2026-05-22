@@ -1,53 +1,52 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useWorkspaceAuthStore } from "@/stores/workspace-auth-store";
 
 export default function PlatformLoginPage() {
   const router = useRouter();
-  const session = useWorkspaceAuthStore((s) => s.session);
-  const hydrateSession = useWorkspaceAuthStore((s) => s.hydrateSession);
   const login = useWorkspaceAuthStore((s) => s.login);
-  const [userId, setUserId] = useState("platform@examgrid.ai");
-  const [password, setPassword] = useState("1234");
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    void hydrateSession();
-  }, [hydrateSession]);
-
-  useEffect(() => {
-    if (session?.role === "super_admin") router.replace("/platform");
-  }, [router, session]);
+  const [userId, setUserId] = useState<string>("ops@examgrid.local");
+  const [password, setPassword] = useState<string>("1234");
+  const [error, setError] = useState<string>("");
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Super Admin Platform Access</CardTitle>
+    <div className="flex min-h-screen items-center justify-center bg-[linear-gradient(180deg,#f5f1e8_0%,#fbf9f4_100%)] p-4">
+      <Card className="w-full max-w-md border-[#d8d2c7]">
+        <CardHeader className="border-b border-[#ece6da] bg-[#fbf9f4]">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8a6f3e]">
+            Platform Admin
+          </p>
+          <CardTitle className="text-2xl text-[#14213d]">Operational console login</CardTitle>
+          <CardDescription className="text-[#5e5a52]">
+            Use this access for institute management, onboarding support, and system monitoring.
+          </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           <form
             className="space-y-4"
             onSubmit={(event) => {
               event.preventDefault();
               void (async () => {
-                const ok = await login({ role: "super_admin", userId, password });
+                const ok = await login({
+                  role: "platform_admin",
+                  userId,
+                  password,
+                });
                 if (ok) router.push("/platform");
-                else setError("Invalid credentials.");
+                else setError("Provide valid platform credentials.");
               })();
             }}
           >
             <div className="space-y-2">
-              <Label htmlFor="email">User ID</Label>
+              <Label htmlFor="user">User ID</Label>
               <Input
-                id="email"
-                type="email"
+                id="user"
                 value={userId}
                 onChange={(event) => setUserId(event.target.value)}
                 required
@@ -63,9 +62,9 @@ export default function PlatformLoginPage() {
                 required
               />
             </div>
-            {error && <p className="text-sm text-red-600">{error}</p>}
-            <Button type="submit" className="w-full bg-[#1a3c6e]">
-              Enter Platform Layer
+            {error ? <p className="text-sm text-red-700">{error}</p> : null}
+            <Button type="submit" className="w-full bg-[#14213d] hover:bg-[#0f1a31]">
+              Enter platform console
             </Button>
           </form>
         </CardContent>

@@ -12,7 +12,7 @@ export function getScopedQuery<T extends { instituteId?: string }>(
   session: WorkspaceSession | null,
 ) {
   if (!session) return [];
-  if (session.role === "super_admin") return rows;
+  if (session.role === "platform_admin") return rows;
   if (!session.instituteId) return [];
   return rows.filter((row) => row.instituteId === session.instituteId);
 }
@@ -32,7 +32,6 @@ export function guardTenantWrite<T extends { instituteId?: string }>(
   session: WorkspaceSession | null,
 ) {
   if (!session) throw new Error("Unauthenticated tenant write denied.");
-  if (session.role === "super_admin") return payload;
   if (!session.instituteId) throw new Error("Institute context required.");
   if (payload.instituteId && payload.instituteId !== session.instituteId) {
     throw new Error("Cross-institute write blocked.");

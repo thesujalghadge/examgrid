@@ -9,13 +9,11 @@ import { WorkspaceShell } from "@/components/shells/workspace-shell";
 import { useWorkspaceAuthStore } from "@/stores/workspace-auth-store";
 
 const NAV = [
-  { href: "/institute/dashboard", label: "Dashboard" },
+  { href: "/institute", label: "Overview" },
   { href: "/institute/students", label: "Students" },
   { href: "/institute/batches", label: "Batches" },
-  { href: "/institute/tests", label: "Tests" },
-  { href: "/institute/analytics", label: "Analytics" },
-  { href: "/institute/question-bank", label: "Question Bank" },
-  { href: "/institute/settings", label: "Settings" },
+  { href: "/institute/tests", label: "Test Operations" },
+  { href: "/institute/reports", label: "Reports" },
 ];
 
 export function InstituteShell({ children }: { children: React.ReactNode }) {
@@ -27,18 +25,9 @@ export function InstituteShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!isHydrated || pathname === "/institute/login") return;
-    const invalidRole =
-      !session ||
-      (session.role !== "institute_admin" && session.role !== "teacher");
-    const missingTenant =
-      session &&
-      session.role !== "super_admin" &&
-      !session.instituteId;
-    if (invalidRole) {
-      router.replace("/institute/login");
-      return;
-    }
-    if (missingTenant) {
+    const invalidRole = !session || session.role !== "institute";
+    const missingTenant = session && !session.instituteId;
+    if (invalidRole || missingTenant) {
       void logout();
       router.replace("/institute/login");
     }
@@ -46,39 +35,32 @@ export function InstituteShell({ children }: { children: React.ReactNode }) {
 
   if (pathname === "/institute/login") return <>{children}</>;
 
-  const ready =
-    session &&
-    (session.role === "institute_admin" || session.role === "teacher") &&
-    Boolean(session.instituteId);
+  const ready = session && session.role === "institute" && Boolean(session.instituteId);
 
   return (
     <SessionHydrationGate loginPath="/institute/login">
       {!ready ? (
-        <div className="flex min-h-screen items-center justify-center bg-gray-100 text-sm text-gray-600">
-          Validating institute workspace…
+        <div className="flex min-h-screen items-center justify-center bg-[#f5f1e8] text-sm text-[#5e5a52]">
+          Validating institute workspace...
         </div>
       ) : (
         <WorkspaceShell
-          title="Institute Workspace"
+          title="Institute Operations"
           subtitle={DEMO_INSTITUTE.name}
-          identity={`${session.userId} · tenant ${session.instituteId}`}
-          role={session.role}
-          instituteId={session.instituteId}
+          identity={`${session.userId} | ${session.instituteId}`}
           nav={NAV}
           footer={
-            <div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full"
-                onClick={() => {
-                  void logout();
-                  router.push("/institute/login");
-                }}
-              >
-                Logout
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full bg-white"
+              onClick={() => {
+                void logout();
+                router.push("/institute/login");
+              }}
+            >
+              Logout
+            </Button>
           }
         >
           {children}

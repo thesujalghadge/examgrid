@@ -1,14 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getRepositoryMode } from "@/lib/repositories/provider";
-import { getRepositories } from "@/lib/repositories/provider";
+import { getRepositoryMode, getRepositories } from "@/lib/repositories/provider";
 import {
   logStartupSummary,
   runStartupDiagnostics,
 } from "@/lib/supabase/startup-diagnostics";
-import { installDevHelpers } from "@/lib/test-helpers/dev-environment";
 import { useAuthStore } from "@/stores/auth-store";
+import { useParentAccessStore } from "@/stores/parent-access-store";
 import { useWorkspaceAuthStore } from "@/stores/workspace-auth-store";
 
 const STUDENT_IDLE_TIMEOUT_MS = 45 * 60 * 1000;
@@ -20,6 +19,8 @@ export function ClientProviders({ children }: { children: React.ReactNode }) {
   const candidate = useAuthStore((s) => s.candidate);
   const touchAuth = useAuthStore((s) => s.touch);
   const expireAuth = useAuthStore((s) => s.expire);
+  const hydrateParentAccess = useParentAccessStore((s) => s.hydrate);
+  const isParentHydrated = useParentAccessStore((s) => s.isHydrated);
   const hydrateWorkspaceAuth = useWorkspaceAuthStore((s) => s.hydrateSession);
   const isWorkspaceHydrated = useWorkspaceAuthStore((s) => s.isHydrated);
   const [reposReady, setReposReady] = useState(false);
@@ -29,12 +30,12 @@ export function ClientProviders({ children }: { children: React.ReactNode }) {
 
     async function init() {
       getRepositories();
-      installDevHelpers();
 
       const startup = await runStartupDiagnostics();
       if (!cancelled) {
         logStartupSummary(startup);
         hydrateAuth();
+        hydrateParentAccess();
         await hydrateWorkspaceAuth();
         setReposReady(true);
       }
@@ -44,7 +45,7 @@ export function ClientProviders({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [hydrateAuth, hydrateWorkspaceAuth]);
+  }, [hydrateAuth, hydrateParentAccess, hydrateWorkspaceAuth]);
 
   useEffect(() => {
     if (!candidate) return;
@@ -82,13 +83,13 @@ export function ClientProviders({ children }: { children: React.ReactNode }) {
     return () => window.clearInterval(timer);
   }, [candidate, expireAuth]);
 
-  if (!isAuthHydrated || !isWorkspaceHydrated || !reposReady) {
+  if (!isAuthHydrated || !isParentHydrated || !isWorkspaceHydrated || !reposReady) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-2 bg-gray-100 text-sm text-gray-600">
-        <p>Loading…</p>
+      <div className="flex min-h-screen flex-col items-center justify-center gap-2 bg-[#f5f1e8] text-sm text-[#5e5a52]">
+        <p>Loading operational workspace...</p>
         {getRepositoryMode() === "supabase" && (
-          <p className="text-xs text-gray-400">
-            Connecting to Supabase and hydrating repositories…
+          <p className="text-xs text-[#8a857c]">
+            Connecting to Supabase and hydrating repositories...
           </p>
         )}
       </div>

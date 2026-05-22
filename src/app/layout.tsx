@@ -3,9 +3,9 @@ import { ClientProviders } from "@/components/providers/client-providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "ExamGrid · Institute CBT Operations",
+  title: "ExamGrid | Coaching Institute CBT Operations",
   description:
-    "Operational CBT platform for institute exam scheduling, delivery, and audit readiness.",
+    "Workflow-first CBT operations for coaching institutes, students, parents, and platform teams.",
 };
 
 export default function RootLayout({
@@ -15,7 +15,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-full">
-      <body className="min-h-full bg-gray-100 font-sans antialiased">
+      <body className="min-h-full bg-[#f5f1e8] font-sans antialiased">
         <ClientProviders>{children}</ClientProviders>
       </body>
     </html>

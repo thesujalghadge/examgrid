@@ -11,14 +11,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ExamInterface } from "@/components/exam/ExamInterface";
-import { getExamById } from "@/data/mock-exams";
+import { getExamById } from "@/lib/exam-catalog";
 import { ensureExamReadyForCbt } from "@/lib/cbt/session-safety";
 import { useAuthStore } from "@/stores/auth-store";
 import { useWorkspaceAuthStore } from "@/stores/workspace-auth-store";
 import { getRepositories } from "@/lib/repositories/provider";
 import {
   canCandidateAccessExam,
-  findStudentForCandidate,
   isOperationalSchedulingActive,
 } from "@/services/institute-ops-service";
 
@@ -61,7 +60,7 @@ export default function StudentCbtTestTakePage() {
   if (!candidate || allowed === null) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-200 text-sm text-gray-600">
-        Checking access…
+        Checking access...
       </div>
     );
   }
@@ -71,22 +70,21 @@ export default function StudentCbtTestTakePage() {
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-gray-200 p-4">
         <p className="text-sm text-gray-700">You cannot access this test.</p>
         <Button variant="outline" onClick={() => router.replace("/student/tests")}>
-              Back
-            </Button>
+          Back
+        </Button>
       </div>
     );
   }
 
   if (!started) {
     const test = getRepositories().cbtTests.getById(testId);
-    const student = findStudentForCandidate(candidate);
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-200 p-4">
-        <Card className="max-w-lg w-full">
+        <Card className="w-full max-w-lg">
           <CardHeader>
             <CardTitle>{test?.title ?? "CBT Test"}</CardTitle>
             <CardDescription>
-              {test?.durationMinutes} minutes · timer runs in fullscreen. Do not refresh; answers
+              {test?.durationMinutes} minutes | timer runs in fullscreen. Do not refresh; answers
               autosave.
             </CardDescription>
           </CardHeader>

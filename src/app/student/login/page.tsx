@@ -23,7 +23,6 @@ export default function StudentLoginPage() {
   const login = useAuthStore((s) => s.login);
   const workspaceLogin = useWorkspaceAuthStore((s) => s.login);
   const workspaceLogout = useWorkspaceAuthStore((s) => s.logout);
-  const [name, setName] = useState<string>(DEMO_LOGIN.studentName);
   const [rollNumber, setRollNumber] = useState<string>(DEMO_LOGIN.studentRoll);
   const [applicationNumber, setApplicationNumber] = useState<string>(
     DEMO_LOGIN.applicationNumber,
@@ -31,68 +30,65 @@ export default function StudentLoginPage() {
   const [instituteId, setInstituteId] = useState<string>(DEMO_INSTITUTE.id);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     setError(null);
-    const workspaceOk = workspaceLogin({
+
+    const workspaceOk = await workspaceLogin({
       userId: rollNumber,
       role: "student",
       password: "student-session",
       instituteId,
     });
     if (!workspaceOk) {
-      setError("Enter a valid institute tenant ID.");
+      setError("Enter a valid institute ID.");
       return;
     }
-    const roster = getRepositories().students.list();
+
     const matched = getRepositories().students.getByRollNumber(rollNumber);
-    if (roster.length > 0 && !matched) {
-      workspaceLogout();
-      setError("No active institute student found for this roll number.");
+    if (!matched) {
+      await workspaceLogout();
+      setError("No active student record was found for this roll number.");
       return;
     }
-    if (matched && !matched.active) {
-      workspaceLogout();
-      setError("This student account is inactive. Contact the institute admin.");
+
+    if (!matched.active) {
+      await workspaceLogout();
+      setError("This student account is inactive. Contact the institute office.");
       return;
     }
+
     login({
-      name: matched?.fullName ?? name,
+      name: matched.fullName,
       rollNumber,
       applicationNumber,
-      studentId: matched?.id,
-      batchId: matched?.batchId,
-      courseType: matched?.courseType,
+      studentId: matched.id,
+      batchId: matched.batchId,
+      courseType: matched.courseType,
     });
-    router.push("/student/dashboard");
+    router.push("/student/tests");
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-[#eef3f8] to-gray-200 p-4">
-      <Card className="w-full max-w-md border-[#1a3c6e]/20 shadow-lg">
-        <CardHeader className="border-b bg-[#1a3c6e] text-white">
-          <CardTitle className="text-lg">{DEMO_INSTITUTE.name}</CardTitle>
-          <CardDescription className="text-blue-100">
-            Student Experience Layer
+    <div className="flex min-h-screen items-center justify-center bg-[linear-gradient(180deg,#f5f1e8_0%,#fbf9f4_100%)] p-4">
+      <Card className="w-full max-w-md border-[#d8d2c7] bg-white shadow-[0_18px_40px_rgba(20,33,61,0.08)]">
+        <CardHeader className="space-y-2 border-b border-[#ece6da] bg-[#fbf9f4]">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8a6f3e]">
+            Student Login
+          </p>
+          <CardTitle className="text-2xl text-[#14213d]">{DEMO_INSTITUTE.name}</CardTitle>
+          <CardDescription className="text-[#5e5a52]">
+            Open your upcoming CBTs, resume attempts, and review your performance quickly.
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Candidate Name</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
               <Label htmlFor="roll">Roll Number</Label>
               <Input
                 id="roll"
                 value={rollNumber}
-                onChange={(e) => setRollNumber(e.target.value)}
+                onChange={(event) => setRollNumber(event.target.value)}
                 required
               />
             </div>
@@ -101,23 +97,23 @@ export default function StudentLoginPage() {
               <Input
                 id="app"
                 value={applicationNumber}
-                onChange={(e) => setApplicationNumber(e.target.value)}
+                onChange={(event) => setApplicationNumber(event.target.value)}
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="tenant">Institute Tenant ID</Label>
+              <Label htmlFor="tenant">Institute ID</Label>
               <Input
                 id="tenant"
                 value={instituteId}
-                onChange={(e) => setInstituteId(e.target.value)}
+                onChange={(event) => setInstituteId(event.target.value)}
                 required
               />
             </div>
-            <Button type="submit" className="w-full bg-[#1a3c6e] hover:bg-[#152d52]">
-              Login to Student Layer
+            {error ? <p className="text-sm text-red-700">{error}</p> : null}
+            <Button type="submit" className="w-full bg-[#14213d] hover:bg-[#0f1a31]">
+              Enter student workspace
             </Button>
-            {error && <p className="text-sm text-red-700">{error}</p>}
           </form>
         </CardContent>
       </Card>

@@ -5,6 +5,7 @@ import {
   getSessionSecret,
   signSessionToken,
 } from "@/lib/session-crypto";
+import { isInstituteScopedRole } from "@/lib/access-control";
 import { WORKSPACE_SESSION_COOKIE } from "@/lib/workspace-session";
 import {
   logSessionCreated,
@@ -21,9 +22,9 @@ const COOKIE_OPTS = {
 
 function validRole(role: unknown): role is UserRole {
   return (
-    role === "super_admin" ||
-    role === "institute_admin" ||
-    role === "teacher" ||
+    role === "platform_admin" ||
+    role === "institute" ||
+    role === "parent" ||
     role === "student"
   );
 }
@@ -48,15 +49,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid session" }, { status: 400 });
   }
 
-  if (body.role !== "super_admin" && !body.instituteId?.trim()) {
+  if (isInstituteScopedRole(body.role) && !body.instituteId?.trim()) {
     return NextResponse.json({ error: "instituteId required" }, { status: 400 });
   }
 
   const session: WorkspaceSession = {
     userId: body.userId.trim(),
     role: body.role,
-    instituteId:
-      body.role === "super_admin" ? undefined : body.instituteId?.trim(),
+    instituteId: body.instituteId?.trim() || undefined,
     expiresAt: createSessionExpiry(),
   };
 
