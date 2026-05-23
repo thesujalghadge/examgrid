@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { getExamById } from "@/data/mock-exams";
+import { getExamById } from "@/lib/exam-catalog";
 import { useExamPersistence } from "@/hooks/use-exam-persistence";
 import { useExamGuard } from "@/hooks/useExamGuard";
 import { bootstrapExamSession } from "@/lib/exam-bootstrap";
@@ -43,9 +43,9 @@ export type ExamInterfaceNavigate = {
 };
 
 const DEFAULT_EXAM_NAV: ExamInterfaceNavigate = {
-  result: (id) => `/exam/${id}/result`,
-  unauthorized: "/exams",
-  login: "/login",
+  result: (id) => `/student/tests/${id}/result`,
+  unauthorized: "/student/tests",
+  login: "/student/login",
 };
 
 interface ExamInterfaceProps {

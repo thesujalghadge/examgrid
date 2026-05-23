@@ -19,20 +19,45 @@ export default function InstituteOverviewPage() {
         batches: 0,
         liveTests: 0,
         reportsReady: 0,
+        recentActivity: [] as { label: string; at: string }[],
       };
     }
 
     const repos = getRepositories();
     const tests = repos.cbtTests.list();
     const schedules = repos.schedules.list();
+    const students = scopeByInstituteId(repos.students.list(), instituteId);
+    const nameByRoll = new Map(students.map((s) => [s.rollNumber, s.fullName]));
+
+    const recentActivity = tests
+      .flatMap((test) =>
+        repos.cbtAttempts.listByTestId(test.id).map((row) => ({ row, test })),
+      )
+      .filter(
+        ({ row }) =>
+          row.attempt.instituteId === instituteId && row.attempt.submittedAt,
+      )
+      .sort((a, b) => (b.row.attempt.submittedAt ?? 0) - (a.row.attempt.submittedAt ?? 0))
+      .slice(0, 6)
+      .map(({ row, test }) => {
+        const name = nameByRoll.get(row.attempt.studentId) ?? row.attempt.studentId;
+        return {
+          label: `${name} submitted ${test.title} — score ${row.attempt.score ?? 0}`,
+          at: new Date(row.attempt.submittedAt!).toLocaleString("en-IN", {
+            dateStyle: "medium",
+            timeStyle: "short",
+          }),
+        };
+      });
 
     return {
-      students: scopeByInstituteId(repos.students.list(), instituteId).length,
+      students: students.length,
       batches: scopeByInstituteId(repos.batches.list(), instituteId).length,
       liveTests: schedules.filter((schedule) => getScheduleStatus(schedule) === "active").length,
       reportsReady: tests.filter(
         (test) => getLocalTestAnalytics(test.id, instituteId).attemptCount > 0,
       ).length,
+      recentActivity,
     };
   }, [instituteId]);
 
@@ -52,17 +77,37 @@ export default function InstituteOverviewPage() {
         <MetricCard label="Reports ready" value={String(overview.reportsReady)} />
       </div>
 
-      <Card className="border-[#d8d2c7]">
-        <CardHeader>
-          <CardTitle className="text-base text-[#14213d]">Primary workflow</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-4">
-          <FlowLink href="/institute/students" title="1. Add students" />
-          <FlowLink href="/institute/batches" title="2. Organize batches" />
-          <FlowLink href="/institute/tests" title="3. Configure and publish CBTs" />
-          <FlowLink href="/institute/reports" title="4. Review reports" />
-        </CardContent>
-      </Card>
+      <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+        <Card className="border-[#d8d2c7]">
+          <CardHeader>
+            <CardTitle className="text-base text-[#14213d]">Primary workflow</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3 md:grid-cols-2">
+            <FlowLink href="/institute/tests" title="1. Upload paper & publish CBT" />
+            <FlowLink href="/institute/students" title="2. Students & batches" />
+            <FlowLink href="/institute/analysis" title="3. Analysis" />
+            <FlowLink href="/institute/tests" title="4. Live test monitoring" />
+          </CardContent>
+        </Card>
+
+        <Card className="border-[#d8d2c7]">
+          <CardHeader>
+            <CardTitle className="text-base text-[#14213d]">Recent activity</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            {overview.recentActivity.length === 0 ? (
+              <p className="text-[#5e5a52]">Submissions will appear here.</p>
+            ) : (
+              overview.recentActivity.map((item, i) => (
+                <div key={i} className="rounded-xl border border-[#ece6da] p-3">
+                  <p className="text-[#14213d]">{item.label}</p>
+                  <p className="text-xs text-[#5e5a52]">{item.at}</p>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

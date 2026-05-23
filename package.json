@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint src middleware.ts",
+    "lint": "eslint src proxy.ts",
     "db:bootstrap": "node scripts/supabase/bootstrap-db.mjs",
     "db:push": "npx supabase db push",
     "db:verify": "node scripts/supabase/verify-remote.mjs",

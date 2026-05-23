@@ -4,9 +4,12 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { DEMO_INSTITUTE } from "@/config/demo";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  getPlatformInstitute,
+  listPlatformInstitutes,
+} from "@/lib/platform-institute-registry";
 import { useWorkspaceAuthStore } from "@/stores/workspace-auth-store";
 
 export default function InstituteLoginPage() {
@@ -14,31 +17,32 @@ export default function InstituteLoginPage() {
   const session = useWorkspaceAuthStore((s) => s.session);
   const hydrateSession = useWorkspaceAuthStore((s) => s.hydrateSession);
   const login = useWorkspaceAuthStore((s) => s.login);
-  const [userId, setUserId] = useState<string>("admin@apexjee.ac.in");
-  const [password, setPassword] = useState<string>("1234");
-  const [instituteId, setInstituteId] = useState<string>(DEMO_INSTITUTE.id);
-  const [error, setError] = useState<string>("");
+  const [userId, setUserId] = useState("institute-admin");
+  const [instituteId, setInstituteId] = useState("");
+  const [error, setError] = useState("");
+
+  const institutes = listPlatformInstitutes();
 
   useEffect(() => {
     void hydrateSession();
-  }, [hydrateSession]);
+    if (institutes.length > 0 && !instituteId) {
+      setInstituteId(institutes[0].id);
+    }
+  }, [hydrateSession, institutes, instituteId]);
 
   useEffect(() => {
-    if (session?.role === "institute") {
-      router.replace("/institute");
-    }
+    if (session?.role === "institute") router.replace("/institute");
   }, [router, session]);
+
+  const selected = getPlatformInstitute(instituteId);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[linear-gradient(180deg,#f5f1e8_0%,#fbf9f4_100%)] p-4">
       <Card className="w-full max-w-md border-[#d8d2c7]">
         <CardHeader className="border-b border-[#ece6da] bg-[#fbf9f4]">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8a6f3e]">
-            Institute Login
-          </p>
-          <CardTitle className="text-2xl text-[#14213d]">{DEMO_INSTITUTE.name}</CardTitle>
+          <CardTitle className="text-2xl text-[#14213d]">Institute workspace</CardTitle>
           <CardDescription className="text-[#5e5a52]">
-            Manage students, batches, tests, and reports from one operational workspace.
+            Select your institute and continue. Add institutes from platform admin first.
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-6">
@@ -46,50 +50,53 @@ export default function InstituteLoginPage() {
             className="space-y-4"
             onSubmit={(event) => {
               event.preventDefault();
+              if (!instituteId) {
+                setError("Create an institute in platform admin, then select it here.");
+                return;
+              }
+              if (selected?.status === "inactive") {
+                setError("This institute is deactivated.");
+                return;
+              }
               void (async () => {
                 const ok = await login({
                   role: "institute",
-                  userId,
-                  password,
+                  userId: userId.trim() || selected?.adminEmail || "institute-admin",
+                  password: "dev",
                   instituteId,
                 });
                 if (ok) router.push("/institute");
-                else setError("Provide valid credentials and institute ID.");
+                else setError("Could not start session.");
               })();
             }}
           >
             <div className="space-y-2">
-              <Label htmlFor="email">User ID</Label>
-              <Input
-                id="email"
-                type="email"
-                value={userId}
-                onChange={(event) => setUserId(event.target.value)}
-                required
-              />
+              <Label>Institute</Label>
+              {institutes.length === 0 ? (
+                <p className="text-sm text-amber-800">
+                  No institutes registered. Log in as platform admin and add one.
+                </p>
+              ) : (
+                <select
+                  className="w-full rounded-md border border-[#ece6da] px-3 py-2 text-sm"
+                  value={instituteId}
+                  onChange={(e) => setInstituteId(e.target.value)}
+                >
+                  {institutes.map((i) => (
+                    <option key={i.id} value={i.id}>
+                      {i.name} ({i.status})
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="tenant">Institute ID</Label>
-              <Input
-                id="tenant"
-                value={instituteId}
-                onChange={(event) => setInstituteId(event.target.value)}
-                required
-              />
+              <Label htmlFor="user">Staff ID</Label>
+              <Input id="user" value={userId} onChange={(e) => setUserId(e.target.value)} />
             </div>
             {error ? <p className="text-sm text-red-700">{error}</p> : null}
-            <Button type="submit" className="w-full bg-[#14213d] hover:bg-[#0f1a31]">
-              Enter institute workspace
+            <Button type="submit" className="w-full bg-[#14213d]" disabled={institutes.length === 0}>
+              Enter institute
             </Button>
           </form>
         </CardContent>

@@ -1,8 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo } from "react";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { buildStudentInsights } from "@/lib/student-insights";
+import { getRepositories } from "@/lib/repositories/provider";
 import { useAuthStore } from "@/stores/auth-store";
 import { useWorkspaceAuthStore } from "@/stores/workspace-auth-store";
 
@@ -15,99 +19,87 @@ export default function StudentReportsPage() {
     return buildStudentInsights(candidate.rollNumber, instituteId);
   }, [candidate, instituteId]);
 
+  const rankByTest = useMemo(() => {
+    if (!candidate || !instituteId) return new Map<string, number>();
+    const repos = getRepositories();
+    const map = new Map<string, number>();
+    for (const result of insights?.recentResults ?? []) {
+      const sessions = repos.testSessions
+        .list()
+        .filter(
+          (s) =>
+            s.testId === result.testId &&
+            s.instituteId === instituteId &&
+            (s.status === "submitted" || s.status === "auto_submitted"),
+        )
+        .sort(
+          (a, b) =>
+            (b.resultBreakdown?.finalScore ?? 0) - (a.resultBreakdown?.finalScore ?? 0),
+        );
+      const idx = sessions.findIndex((s) => s.studentId === candidate.rollNumber);
+      if (idx >= 0) map.set(result.testId, idx + 1);
+    }
+    return map;
+  }, [candidate, instituteId, insights]);
+
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold text-[#14213d]">Reports & analysis</h2>
+        <h2 className="text-2xl font-semibold text-[#14213d]">Reports</h2>
         <p className="text-sm text-[#5e5a52]">
-          See your scoring trend, time usage, and the topics that need the next revision pass.
+          Score, rank, marks, and subject breakdown from submitted tests.
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <MetricCard
-          label="Completed tests"
-          value={String(insights?.completedCount ?? 0)}
-        />
-        <MetricCard
-          label="Average score"
-          value={insights ? insights.averageScore.toFixed(1) : "-"}
-        />
-        <MetricCard
-          label="Best score"
-          value={insights ? insights.bestScore.toFixed(1) : "-"}
-        />
-        <MetricCard
-          label="Average time"
-          value={insights ? `${Math.round(insights.averageDurationMinutes)} min` : "-"}
-        />
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+      {!insights || insights.recentResults.length === 0 ? (
         <Card className="border-[#d8d2c7]">
-          <CardHeader>
-            <CardTitle className="text-base text-[#14213d]">Recent performance</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {!insights || insights.recentResults.length === 0 ? (
-              <p className="text-sm text-[#5e5a52]">Submit a test to unlock analysis.</p>
-            ) : (
-              insights.recentResults.slice(0, 4).map((result) => (
-                <div
-                  key={result.testId}
-                  className="rounded-2xl border border-[#ece6da] bg-[#fbf9f4] p-4"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <p className="font-medium text-[#14213d]">{result.title}</p>
-                      <p className="text-sm text-[#5e5a52]">
-                        {result.correct} correct out of {result.attempted} attempted
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-lg font-semibold text-[#14213d]">
-                        {result.score.toFixed(1)}
-                      </p>
-                      <p className="text-xs text-[#5e5a52]">
-                        {Math.round(result.durationSeconds / 60)} min
-                      </p>
-                    </div>
+          <CardContent className="py-8 text-sm text-[#5e5a52]">
+            Complete a test to see your report here.
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {insights.recentResults.map((result) => (
+            <Card key={result.testId} className="border-[#d8d2c7]">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base text-[#14213d]">{result.title}</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-wrap items-center justify-between gap-4">
+                <div className="grid gap-2 text-sm sm:grid-cols-4">
+                  <div>
+                    <p className="text-[#5e5a52]">Score</p>
+                    <p className="text-lg font-semibold text-[#14213d]">
+                      {result.score.toFixed(1)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[#5e5a52]">Correct</p>
+                    <p className="text-lg font-semibold text-green-800">{result.correct}</p>
+                  </div>
+                  <div>
+                    <p className="text-[#5e5a52]">Rank</p>
+                    <p className="text-lg font-semibold text-[#14213d]">
+                      {rankByTest.get(result.testId) ?? "—"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[#5e5a52]">Time</p>
+                    <p className="text-lg font-semibold text-[#14213d]">
+                      {Math.round(result.durationSeconds / 60)} min
+                    </p>
                   </div>
                 </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="border-[#d8d2c7]">
-          <CardHeader>
-            <CardTitle className="text-base text-[#14213d]">Weak areas</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {!insights || insights.weakAreas.length === 0 ? (
-              <p className="text-sm text-[#5e5a52]">Weak-topic insights will appear after attempts.</p>
-            ) : (
-              insights.weakAreas.map((area) => (
-                <div key={area.label} className="rounded-2xl border border-[#ece6da] p-4">
-                  <p className="font-medium text-[#14213d]">{area.label}</p>
-                  <p className="text-sm text-[#5e5a52]">{area.misses} incorrect responses</p>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                <Link
+                  href={`/student/tests/${result.testId}/result`}
+                  className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+                >
+                  Solutions & breakdown
+                </Link>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
-  );
-}
-
-function MetricCard({ label, value }: { label: string; value: string }) {
-  return (
-    <Card className="border-[#d8d2c7] bg-white">
-      <CardHeader>
-        <CardTitle className="text-sm font-medium text-[#5e5a52]">{label}</CardTitle>
-      </CardHeader>
-      <CardContent className="text-2xl font-semibold text-[#14213d]">{value}</CardContent>
-    </Card>
   );
 }

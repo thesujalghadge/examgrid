@@ -24,16 +24,17 @@ function bankToExamQuestion(
       negativeMarks,
     };
   }
-  const options = bank.options.map((opt) => ({
-    id: `${examQuestionId}-opt-${opt.label}`,
-    label: opt.label,
-    text: opt.text,
+
+  const options = bank.options.map((option) => ({
+    id: `${examQuestionId}-opt-${option.label}`,
+    label: option.label,
+    text: option.text,
   }));
   const correctOption =
     options.find(
-      (o) =>
-        o.label === bank.correctAnswer || o.id === bank.correctAnswer,
+      (option) => option.label === bank.correctAnswer || option.id === bank.correctAnswer,
     ) ?? options[0];
+
   return {
     id: examQuestionId,
     sectionId,
@@ -55,12 +56,13 @@ function manualToExamQuestion(
   marks: number,
   negativeMarks: number,
 ): ExamQuestion {
-  const options = manual.options.map((opt) => ({
-    id: `${examQuestionId}-opt-${opt.label}`,
-    label: opt.label,
-    text: opt.text,
+  const options = manual.options.map((option) => ({
+    id: `${examQuestionId}-opt-${option.label}`,
+    label: option.label,
+    text: option.text,
   }));
-  const correct = options.find((o) => o.label === manual.correctLabel) ?? options[0];
+  const correctOption = options.find((option) => option.label === manual.correctLabel) ?? options[0];
+
   return {
     id: examQuestionId,
     sectionId,
@@ -68,66 +70,69 @@ function manualToExamQuestion(
     type: "MCQ_SINGLE",
     text: manual.text,
     options,
-    correctOptionId: correct?.id,
+    correctOptionId: correctOption?.id,
     marks,
     negativeMarks,
   };
 }
 
 export function cbtTestToExamDefinition(test: CBTTest): ExamDefinition | null {
-  const bankById = new Map(getQuestionBank().map((q) => [q.id, q]));
+  const bankById = new Map(getQuestionBank().map((question) => [question.id, question]));
   const orderedSections = [...test.sections].sort((a, b) => a.order - b.order);
   if (orderedSections.length === 0 || test.questions.length === 0) return null;
 
   const questions: Record<string, ExamQuestion> = {};
-  const sections: ExamSection[] = orderedSections.map((sec) => ({
-    id: sec.id,
-    name: sec.name,
-    questionIds: [] as string[],
+  const sections: ExamSection[] = orderedSections.map((section) => ({
+    id: section.id,
+    name: section.name,
+    questionIds: [],
   }));
-  const sectionIndex = new Map(sections.map((s) => [s.id, s]));
+  const sectionIndex = new Map(sections.map((section) => [section.id, section]));
 
-  const bySection = new Map<string, CBTTestQuestion[]>();
-  for (const q of test.questions) {
-    const list = bySection.get(q.sectionId) ?? [];
-    list.push(q);
-    bySection.set(q.sectionId, list);
+  const questionsBySection = new Map<string, CBTTestQuestion[]>();
+  for (const question of test.questions) {
+    const rows = questionsBySection.get(question.sectionId) ?? [];
+    rows.push(question);
+    questionsBySection.set(question.sectionId, rows);
   }
 
-  for (const sec of orderedSections) {
-    const examSec = sectionIndex.get(sec.id);
-    if (!examSec) continue;
-    const rows = (bySection.get(sec.id) ?? []).slice();
+  for (const section of orderedSections) {
+    const examSection = sectionIndex.get(section.id);
+    if (!examSection) continue;
+
+    const rows = (questionsBySection.get(section.id) ?? []).slice();
     rows.sort((a, b) => a.questionId.localeCompare(b.questionId));
-    let num = 0;
+
+    let number = 0;
     for (const row of rows) {
-      num += 1;
-      let examQ: ExamQuestion | null = null;
+      number += 1;
+      let examQuestion: ExamQuestion | null = null;
+
       if (row.source === "bank" && row.bankQuestionId) {
-        const bank = bankById.get(row.bankQuestionId);
-        if (!bank) continue;
-        examQ = bankToExamQuestion(
-          bank,
-          sec.id,
+        const bankQuestion = bankById.get(row.bankQuestionId);
+        if (!bankQuestion) continue;
+        examQuestion = bankToExamQuestion(
+          bankQuestion,
+          section.id,
           row.questionId,
-          num,
+          number,
           row.marks,
           row.negativeMarks,
         );
       } else if (row.source === "manual" && row.manual) {
-        examQ = manualToExamQuestion(
+        examQuestion = manualToExamQuestion(
           row.manual,
-          sec.id,
+          section.id,
           row.questionId,
-          num,
+          number,
           row.marks,
           row.negativeMarks,
         );
       }
-      if (examQ) {
-        questions[row.questionId] = examQ;
-        examSec.questionIds.push(row.questionId);
-      }
+
+      if (!examQuestion) continue;
+      questions[row.questionId] = examQuestion;
+      examSection.questionIds.push(row.questionId);
     }
   }
 
@@ -137,13 +142,16 @@ export function cbtTestToExamDefinition(test: CBTTest): ExamDefinition | null {
   return {
     id: test.id,
     title: test.title,
-    subtitle: `Institute test · ${test.instituteId}`,
-    examType: "CET",
+    subtitle: `${test.sourceFileName ?? "Institute test"} | ${test.instituteId}`,
+    examType: "JEE_MAIN",
     durationMinutes: test.durationMinutes,
     totalQuestions,
     sections,
     questions,
-    instructions: ["Answer all questions within the time limit.", "Rough work is allowed."],
+    instructions:
+      test.instructions && test.instructions.length > 0
+        ? test.instructions
+        : ["Answer all questions within the time limit.", "Rough work is allowed."],
     scheduledAt: new Date(test.createdAt).toISOString(),
   };
 }

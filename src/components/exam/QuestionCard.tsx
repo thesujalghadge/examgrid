@@ -1,9 +1,12 @@
 "use client";
 
-import { getQuestionTypeLabel } from "@/data/mock-exams";
 import { cn } from "@/lib/utils";
 import { useQuestionStore } from "@/stores/question-store";
 import { NumericalAnswerInput } from "./NumericalAnswerInput";
+
+function getQuestionTypeLabel(type: string) {
+  return type === "NUMERICAL" ? "Numerical Value" : "Single Correct MCQ";
+}
 
 export function QuestionCard() {
   const exam = useQuestionStore((s) => s.exam);

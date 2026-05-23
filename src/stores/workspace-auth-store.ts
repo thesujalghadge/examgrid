@@ -85,8 +85,8 @@ export const useWorkspaceAuthStore = create<WorkspaceAuthState>((set, get) => ({
     return false;
   },
 
-  login: async ({ userId, role, password, instituteId }) => {
-    if (!userId.trim() || password.length < 4) return false;
+  login: async ({ userId, role, password: _password, instituteId }) => {
+    if (!userId.trim()) return false;
     if (isInstituteScopedRole(role) && !instituteId?.trim()) return false;
 
     const ok = await persistWorkspaceSessionRemote({

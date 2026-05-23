@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { DEMO_INSTITUTE } from "@/config/demo";
+import { getInstituteDisplayName } from "@/lib/platform-institute-registry";
 import { WorkspaceShell } from "@/components/shells/workspace-shell";
 import { useParentAccessStore } from "@/stores/parent-access-store";
 import { useWorkspaceAuthStore } from "@/stores/workspace-auth-store";
@@ -47,7 +47,7 @@ export function ParentShell({ children }: { children: React.ReactNode }) {
   return (
     <WorkspaceShell
       title="Parent Access"
-      subtitle={DEMO_INSTITUTE.name}
+      subtitle={getInstituteDisplayName(session.instituteId)}
       identity={`${linkedStudent.fullName} | ${linkedStudent.rollNumber}`}
       nav={NAV}
       footer={

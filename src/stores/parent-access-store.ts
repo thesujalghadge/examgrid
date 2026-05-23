@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 
-const STORAGE_KEY = "examgrid:parent-access";
+export const PARENT_ACCESS_STORAGE_KEY = "examgrid:parent-access";
 
 export interface ParentLinkedStudent {
   fullName: string;
@@ -30,7 +30,7 @@ export const useParentAccessStore = create<ParentAccessState>((set) => ({
     }
 
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = localStorage.getItem(PARENT_ACCESS_STORAGE_KEY);
       set({
         linkedStudent: raw ? (JSON.parse(raw) as ParentLinkedStudent) : null,
         isHydrated: true,
@@ -42,14 +42,14 @@ export const useParentAccessStore = create<ParentAccessState>((set) => ({
 
   linkStudent: (student) => {
     if (typeof window !== "undefined") {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(student));
+      localStorage.setItem(PARENT_ACCESS_STORAGE_KEY, JSON.stringify(student));
     }
     set({ linkedStudent: student });
   },
 
   logout: () => {
     if (typeof window !== "undefined") {
-      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(PARENT_ACCESS_STORAGE_KEY);
     }
     set({ linkedStudent: null });
   },

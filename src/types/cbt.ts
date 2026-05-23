@@ -8,6 +8,10 @@ export interface CBTTest {
   durationMinutes: number;
   totalMarks: number;
   createdBy: string;
+  instructions?: string[];
+  sourceFileName?: string;
+  sourceFileType?: "pdf" | "doc" | "docx";
+  sourceImportedAt?: number;
   sections: CBTTestSection[];
   questions: CBTTestQuestion[];
   /** Target batches (used with schedules). */

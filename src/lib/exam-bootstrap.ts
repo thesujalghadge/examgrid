@@ -1,5 +1,4 @@
 import { getExamById } from "@/lib/exam-catalog";
-import { getFirstQuestionId } from "@/data/mock-exams";
 import {
   clearExamAttempt,
   loadExamAttempt,
@@ -21,6 +20,7 @@ import {
 } from "@/services/institute-ops-service";
 import { getOrCreateSessionId, recordAuditEvent } from "@/services/audit-service";
 import { STORAGE_KEYS } from "@/repositories/storage-keys";
+import { getSafeFirstQuestionId } from "@/lib/validation/exam-integrity";
 
 const ACTIVE_EXAM_SESSION_TTL_MS = 6 * 60 * 60 * 1000;
 
@@ -121,7 +121,10 @@ export function bootstrapExamSession(
 
   useExamSessionStore.getState().reset();
 
-  const firstQuestionId = getFirstQuestionId(exam);
+  const firstQuestionId = getSafeFirstQuestionId(exam);
+  if (!firstQuestionId) {
+    return { status: "not_found" };
+  }
   useQuestionStore.getState().loadExam(exam, firstQuestionId);
   useTimerStore
     .getState()

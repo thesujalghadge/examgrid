@@ -11,6 +11,10 @@ const cbtTestSchema = z.object({
   durationMinutes: z.number().int().positive(),
   totalMarks: z.number().nonnegative(),
   createdBy: z.string(),
+  instructions: z.array(z.string()).optional(),
+  sourceFileName: z.string().optional(),
+  sourceFileType: z.enum(["pdf", "doc", "docx"]).optional(),
+  sourceImportedAt: z.number().optional(),
   sections: z.array(
     z.object({
       id: z.string(),

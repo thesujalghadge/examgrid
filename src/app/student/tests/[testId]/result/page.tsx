@@ -15,6 +15,7 @@ import {
 import { getExamById } from "@/lib/exam-catalog";
 import { loadExamAttempt } from "@/lib/persistence";
 import { getRepositories } from "@/lib/repositories/provider";
+import { getQuestionBank } from "@/services/question-bank-service";
 import { listTestSessionsForTest } from "@/services/test-session-engine";
 import { useAuthStore } from "@/stores/auth-store";
 import { useWorkspaceAuthStore } from "@/stores/workspace-auth-store";
@@ -154,6 +155,8 @@ export default function StudentCbtResultPage() {
           </CardContent>
         </Card>
 
+        <SolutionsPanel testId={testId} />
+
         <div className="flex flex-wrap justify-center gap-3">
           <Link href="/student/tests" className={cn(buttonVariants({ variant: "outline" }))}>
             Back to tests
@@ -164,6 +167,57 @@ export default function StudentCbtResultPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+function SolutionsPanel({ testId }: { testId: string }) {
+  const test = getRepositories().cbtTests.getById(testId);
+  const bank = new Map(getQuestionBank().map((q) => [q.id, q]));
+  if (!test) return null;
+
+  const rows = test.questions
+    .map((row, index) => {
+      const bankQ = row.bankQuestionId ? bank.get(row.bankQuestionId) : null;
+      if (!bankQ?.solution) return null;
+      return {
+        key: row.questionId,
+        index: index + 1,
+        subject: bankQ.subject,
+        text: bankQ.questionText.slice(0, 120),
+        solution: bankQ.solution,
+        correct: bankQ.correctAnswer,
+      };
+    })
+    .filter(Boolean) as Array<{
+    key: string;
+    index: number;
+    subject: string;
+    text: string;
+    solution: string;
+    correct: string;
+  }>;
+
+  if (rows.length === 0) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Solutions & review</CardTitle>
+        <CardDescription>Official solutions for this paper (PYQ-style review).</CardDescription>
+      </CardHeader>
+      <CardContent className="max-h-96 space-y-3 overflow-y-auto text-sm">
+        {rows.map((row) => (
+          <div key={row.key} className="rounded border border-gray-100 p-3">
+            <p className="font-medium text-[#1a3c6e]">
+              Q{row.index} · {row.subject}
+            </p>
+            <p className="text-gray-600">{row.text}…</p>
+            <p className="mt-1 text-green-800">Answer: {row.correct}</p>
+            <p className="mt-1 text-gray-700">{row.solution}</p>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
   );
 }
 

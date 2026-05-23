@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { DEMO_INSTITUTE } from "@/config/demo";
+import { getInstituteDisplayName } from "@/lib/platform-institute-registry";
 import { SessionHydrationGate } from "@/components/auth/session-hydration-gate";
 import { WorkspaceShell } from "@/components/shells/workspace-shell";
 import { useWorkspaceAuthStore } from "@/stores/workspace-auth-store";
@@ -12,7 +12,8 @@ const NAV = [
   { href: "/institute", label: "Overview" },
   { href: "/institute/students", label: "Students" },
   { href: "/institute/batches", label: "Batches" },
-  { href: "/institute/tests", label: "Test Operations" },
+  { href: "/institute/tests", label: "Conduct CBT" },
+  { href: "/institute/analysis", label: "Analysis" },
   { href: "/institute/reports", label: "Reports" },
 ];
 
@@ -46,7 +47,7 @@ export function InstituteShell({ children }: { children: React.ReactNode }) {
       ) : (
         <WorkspaceShell
           title="Institute Operations"
-          subtitle={DEMO_INSTITUTE.name}
+          subtitle={getInstituteDisplayName(session.instituteId)}
           identity={`${session.userId} | ${session.instituteId}`}
           nav={NAV}
           footer={
