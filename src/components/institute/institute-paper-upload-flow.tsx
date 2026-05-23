@@ -13,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { buildCbtTestFromProcessedPaper } from "@/lib/cbt/build-test-from-processing";
+import { cbtTestToExamDefinition } from "@/lib/cbt/cbt-to-exam";
 import {
   detectFileType,
   isLikelyReadableText,
@@ -328,6 +329,10 @@ export function InstitutePaperUploadFlow() {
 
     const repos = getRepositories();
     repos.cbtTests.save(test);
+    const examDefinition = cbtTestToExamDefinition(test);
+    if (examDefinition) {
+      repos.exams.save(examDefinition);
+    }
     const schedule = {
       ...createScheduleInput({
         examId: test.id,

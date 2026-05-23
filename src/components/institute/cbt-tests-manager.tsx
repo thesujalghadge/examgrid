@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { cbtTestToExamDefinition } from "@/lib/cbt/cbt-to-exam";
 import { awaitRepositoryPersist } from "@/lib/repositories/await-persist";
 import { getRepositories } from "@/lib/repositories/provider";
 import { makeCbtId } from "@/lib/cbt/cbt-ids";
@@ -209,6 +210,10 @@ export function CbtTestsManager() {
     }
 
     getRepositories().cbtTests.save(test);
+    const examDefinition = cbtTestToExamDefinition(test);
+    if (examDefinition) {
+      getRepositories().exams.save(examDefinition);
+    }
 
     if (selectedBatchIds.length > 0 && scheduleStart && scheduleEnd) {
       const schedule = createScheduleInput({
