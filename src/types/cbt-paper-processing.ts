@@ -1,22 +1,36 @@
-/** Prepared during paper processing — groundwork for future L1/L2/L3 analytics. */
+/** Prepared during paper processing. */
 export type PreparedDifficulty = "L1" | "L2" | "L3";
+export type UploadExtractionMode = "file" | "manual" | "hybrid";
+
+export interface ProcessedPaperValidationIssue {
+  level: "warning" | "error";
+  message: string;
+  questionId?: string;
+  section?: string;
+}
 
 export interface PreparedQuestionMeta {
   questionId: string;
+  sequence: number;
   subject: string;
-  chapter: string;
-  topic: string;
-  difficulty: PreparedDifficulty;
+  section: string;
+  chapter?: string;
+  topic?: string;
+  difficulty?: PreparedDifficulty;
   questionType: "MCQ_SINGLE" | "NUMERICAL";
   questionText: string;
   correctAnswer: string;
-  solution: string;
+  solution?: string;
   marks: number;
   negativeMarks: number;
-  optionLabels?: string[];
+  optionLabels: string[];
+  images: string[];
+  explanation?: string;
+  metadata: Record<string, string | number | boolean | null>;
 }
 
 export interface PreparedSectionMeta {
+  id: string;
   name: string;
   questions: PreparedQuestionMeta[];
 }
@@ -33,6 +47,8 @@ export interface ProcessedPaperPackage {
   instructions: string[];
   sections: PreparedSectionMeta[];
   processingLog: string[];
+  validationIssues: ProcessedPaperValidationIssue[];
+  extractionMode: UploadExtractionMode;
   preparedAt: number;
   totalMarks: number;
   totalQuestions: number;

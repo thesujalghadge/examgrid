@@ -3,10 +3,6 @@ import type { ProcessedPaperPackage } from "@/types/cbt-paper-processing";
 import type { CBTTest, CBTTestQuestion, CBTTestSection } from "@/types/cbt";
 import type { BankQuestion } from "@/types/question-bank";
 
-function slug(text: string): string {
-  return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-}
-
 export function buildCbtTestFromProcessedPaper(
   pkg: ProcessedPaperPackage,
   testId: string,
@@ -17,11 +13,10 @@ export function buildCbtTestFromProcessedPaper(
   const bankQuestions: BankQuestion[] = [];
   const sections: CBTTestSection[] = [];
   const questions: CBTTestQuestion[] = [];
-  let order = 0;
   let qIndex = 0;
 
   pkg.sections.forEach((section, sectionIndex) => {
-    const sectionId = `${testId}-${slug(section.name)}`;
+    const sectionId = `${testId}-${section.id}`;
     sections.push({
       id: sectionId,
       testId,
@@ -45,7 +40,6 @@ export function buildCbtTestFromProcessedPaper(
         negativeMarks: bankQ.negativeMarks,
       });
     });
-    order = sectionIndex;
   });
 
   const test: CBTTest = {
@@ -65,7 +59,5 @@ export function buildCbtTestFromProcessedPaper(
     sourceFileType: pkg.paperFileType,
     sourceImportedAt: pkg.preparedAt,
   };
-
-  void order;
   return { test, bankQuestions };
 }
