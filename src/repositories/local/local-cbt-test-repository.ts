@@ -13,7 +13,7 @@ const cbtTestSchema = z.object({
   createdBy: z.string(),
   instructions: z.array(z.string()).optional(),
   sourceFileName: z.string().optional(),
-  sourceFileType: z.enum(["pdf", "doc", "docx"]).optional(),
+  sourceFileType: z.enum(["pdf", "doc", "docx", "csv", "xlsx", "txt"]).optional(),
   sourceImportedAt: z.number().optional(),
   sections: z.array(
     z.object({

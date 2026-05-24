@@ -10,7 +10,7 @@ export interface CBTTest {
   createdBy: string;
   instructions?: string[];
   sourceFileName?: string;
-  sourceFileType?: "pdf" | "doc" | "docx";
+  sourceFileType?: "pdf" | "doc" | "docx" | "csv" | "xlsx" | "txt";
   sourceImportedAt?: number;
   sections: CBTTestSection[];
   questions: CBTTestQuestion[];

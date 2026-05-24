@@ -5,10 +5,12 @@ import {
   logValidationFailure,
 } from "@/lib/logging/runtime-logger";
 import type {
+  PaperExtractionSummary,
   PaperProcessingStage,
   PreparedQuestionMeta,
   ProcessedPaperPackage,
   ProcessedPaperValidationIssue,
+  SupportedPaperFileType,
   UploadExtractionMode,
 } from "@/types/cbt-paper-processing";
 import type { BankQuestion } from "@/types/question-bank";
@@ -24,36 +26,18 @@ const STAGE_LABELS: Record<PaperProcessingStage, string> = {
 
 export const MAX_PAPER_UPLOAD_BYTES = 10 * 1024 * 1024;
 export const MAX_ANSWER_KEY_UPLOAD_BYTES = 2 * 1024 * 1024;
+export const SCANNED_DOCUMENT_WARNING =
+  "We detected a scanned or complex document. Please review extracted content before publishing.";
 const DEFAULT_DURATION_MINUTES = 60;
 const SUBJECTS = ["Physics", "Chemistry", "Mathematics", "Biology"] as const;
 const SUBJECT_KEYWORDS: Array<{ subject: string; keywords: string[] }> = [
-  {
-    subject: "Physics",
-    keywords: ["velocity", "force", "current", "acceleration", "newton", "motion"],
-  },
-  {
-    subject: "Chemistry",
-    keywords: ["mole", "reaction", "equilibrium", "acid", "base", "atom"],
-  },
-  {
-    subject: "Mathematics",
-    keywords: ["integral", "derivative", "quadratic", "triangle", "probability", "matrix"],
-  },
-  {
-    subject: "Biology",
-    keywords: ["cell", "organism", "enzyme", "genetics", "photosynthesis"],
-  },
+  { subject: "Physics", keywords: ["velocity", "force", "current", "acceleration", "newton"] },
+  { subject: "Chemistry", keywords: ["mole", "reaction", "equilibrium", "acid", "atom"] },
+  { subject: "Mathematics", keywords: ["integral", "derivative", "quadratic", "matrix", "triangle"] },
+  { subject: "Biology", keywords: ["cell", "organism", "enzyme", "genetics"] },
 ];
 
-function mapDifficulty(
-  difficulty: "L1" | "L2" | "L3" | undefined,
-): "easy" | "medium" | "hard" {
-  if (difficulty === "L1") return "easy";
-  if (difficulty === "L3") return "hard";
-  return "medium";
-}
-
-type SupportedFileType = "pdf" | "doc" | "docx" | "csv";
+type SupportedFileType = SupportedPaperFileType;
 
 interface QuestionBlock {
   questionNumber: number;
@@ -69,13 +53,22 @@ interface ParsedOption {
 interface ParsePaperInput {
   instituteId: string;
   paperFileName: string;
-  paperFileType: "pdf" | "doc" | "docx";
+  paperFileType: SupportedPaperFileType;
   paperText: string;
   answerKeyFileName?: string;
-  answerKeyFileType?: "csv" | "doc" | "docx";
+  answerKeyFileType?: SupportedPaperFileType;
   answerKeyText?: string;
   extractionMode: UploadExtractionMode;
+  extractionSummary: Omit<PaperExtractionSummary, "questionsDetected">;
   onStage?: (stage: PaperProcessingStage, log: string[]) => void;
+}
+
+function mapDifficulty(
+  difficulty: "L1" | "L2" | "L3" | undefined,
+): "easy" | "medium" | "hard" {
+  if (difficulty === "L1") return "easy";
+  if (difficulty === "L3") return "hard";
+  return "medium";
 }
 
 function slug(text: string): string {
@@ -94,18 +87,24 @@ function normalizeText(text: string): string {
     .trim();
 }
 
+function sanitizeLine(text: string): string {
+  return text.replace(/\s+/g, " ").trim();
+}
+
 function makeLog(log: string[], message: string): string[] {
   const entry = `${new Date().toISOString()} ${message}`;
   log.push(entry);
   return [...log];
 }
 
-function sanitizeLine(text: string): string {
-  return text.replace(/\s+/g, " ").trim();
-}
-
 function looksLikeQuestionStart(line: string): RegExpMatchArray | null {
-  return line.match(/^(?:q(?:uestion)?\s*)?(\d{1,3})[\).:-]\s*(.+)$/i);
+  return (
+    line.match(/^\(?(\d{1,3})\)\s+(.+)$/i) ??
+    line.match(/^(\d{1,3})\.\s+(.+)$/i) ??
+    line.match(/^(\d{1,3})\)\s+(.+)$/i) ??
+    line.match(/^q(?:uestion)?\s*(\d{1,3})[:.)\-\s]+\s*(.+)$/i) ??
+    line.match(/^que\.?\s*(\d{1,3})[:.)\-\s]+\s*(.+)$/i)
+  );
 }
 
 function looksLikeSectionHeader(line: string): string | null {
@@ -121,7 +120,7 @@ function parseQuestionBlocks(text: string): QuestionBlock[] {
     .map((line) => sanitizeLine(line))
     .filter(Boolean);
   const blocks: QuestionBlock[] = [];
-  let currentSection = "General";
+  let currentSection = "Imported Questions";
   let active: QuestionBlock | null = null;
 
   for (const line of lines) {
@@ -150,7 +149,10 @@ function parseQuestionBlocks(text: string): QuestionBlock[] {
 }
 
 function parseInlineOptions(text: string): ParsedOption[] {
-  const matches = [...text.matchAll(/(?:^|\s)([A-D])[\).:-]\s*(.+?)(?=(?:\s+[A-D][\).:-]\s+)|$)/g)];
+  const matches = [
+    ...text.matchAll(/(?:^|\s)([A-D])[\).:-]\s*(.+?)(?=(?:\s+[A-D][\).:-]\s+)|$)/g),
+    ...text.matchAll(/(?:^|\s)\(([A-D])\)\s*(.+?)(?=(?:\s+\([A-D]\)\s+)|$)/g),
+  ];
   return matches.map((match) => ({
     label: match[1].toUpperCase(),
     text: sanitizeLine(match[2]),
@@ -162,7 +164,9 @@ function parseOptions(lines: string[]): { options: ParsedOption[]; remaining: st
   const remaining: string[] = [];
 
   for (const line of lines) {
-    const direct = line.match(/^[\(\[]?([A-D])[\)\].:-]\s*(.+)$/i);
+    const direct =
+      line.match(/^[\(\[]?([A-D])[\)\].:-]\s*(.+)$/i) ??
+      line.match(/^option\s+([A-D])[:.)\-\s]+\s*(.+)$/i);
     if (direct) {
       options.push({
         label: direct[1].toUpperCase(),
@@ -180,7 +184,20 @@ function parseOptions(lines: string[]): { options: ParsedOption[]; remaining: st
     remaining.push(line);
   }
 
-  return { options, remaining };
+  return {
+    options: dedupeOptions(options),
+    remaining,
+  };
+}
+
+function dedupeOptions(options: ParsedOption[]): ParsedOption[] {
+  const byLabel = new Map<string, ParsedOption>();
+  for (const option of options) {
+    byLabel.set(option.label, option);
+  }
+  return ["A", "B", "C", "D"]
+    .map((label) => byLabel.get(label))
+    .filter((option): option is ParsedOption => Boolean(option));
 }
 
 function detectSubject(section: string, text: string): string {
@@ -190,16 +207,21 @@ function detectSubject(section: string, text: string): string {
   for (const { subject, keywords } of SUBJECT_KEYWORDS) {
     if (keywords.some((keyword) => lowered.includes(keyword))) return subject;
   }
-  return section === "General" ? "General" : section;
+  return section;
 }
 
 function parseAnswerKey(text?: string): Map<number, string> {
   const mapping = new Map<number, string>();
   if (!text) return mapping;
   const normalized = normalizeText(text);
-  const compactMatches = [...normalized.matchAll(/(\d{1,3})\s*[-:=]?\s*([A-D]|-?\d+(?:\.\d+)?)/gi)];
-  for (const match of compactMatches) {
-    mapping.set(Number(match[1]), match[2].toUpperCase());
+  const patterns = [
+    /(?:^|\n)\s*(?:q(?:uestion)?|que\.?)?\s*(\d{1,3})\s*(?:->|[-.:])\s*([A-D]|-?\d+(?:\.\d+)?)/gi,
+    /(?:^|\n)\s*(\d{1,3})\s+([A-D]|-?\d+(?:\.\d+)?)/gi,
+  ];
+  for (const pattern of patterns) {
+    for (const match of normalized.matchAll(pattern)) {
+      mapping.set(Number(match[1]), match[2].toUpperCase());
+    }
   }
   return mapping;
 }
@@ -214,19 +236,44 @@ function parseInlineAnswer(lines: string[]): string {
   return "";
 }
 
+function computeConfidence(input: {
+  questionText: string;
+  optionCount: number;
+  correctAnswer: string;
+  extractionMode: UploadExtractionMode;
+  usedOCR: boolean;
+}): number {
+  let confidence = 0.25;
+  if (input.questionText.length > 20) confidence += 0.25;
+  if (input.optionCount >= 4) confidence += 0.25;
+  if (input.correctAnswer.trim()) confidence += 0.15;
+  if (input.extractionMode === "file") confidence += 0.05;
+  if (input.extractionMode === "hybrid") confidence += 0.02;
+  if (input.usedOCR) confidence -= 0.12;
+  return Number(Math.max(0.1, Math.min(0.99, confidence)).toFixed(2));
+}
+
 function buildQuestionMeta(
   pkgId: string,
   block: QuestionBlock,
   answerKey: Map<number, string>,
+  extractionMode: UploadExtractionMode,
+  usedOCR: boolean,
 ): PreparedQuestionMeta {
   const { options, remaining } = parseOptions(block.lines);
-  const linesWithoutAnswers = remaining.filter(
-    (line) => !/^(?:answer|ans)\s*[:.-]/i.test(line),
-  );
+  const linesWithoutAnswers = remaining.filter((line) => !/^(?:answer|ans)\s*[:.-]/i.test(line));
   const questionText = sanitizeLine(linesWithoutAnswers.join(" "));
   const inlineAnswer = parseInlineAnswer(block.lines);
   const correctAnswer = answerKey.get(block.questionNumber) ?? inlineAnswer;
   const subject = detectSubject(block.section, questionText);
+  const questionType = options.length > 0 ? "MCQ_SINGLE" : "NUMERICAL";
+  const confidence = computeConfidence({
+    questionText,
+    optionCount: options.length,
+    correctAnswer,
+    extractionMode,
+    usedOCR,
+  });
 
   return {
     questionId: `${pkgId}-q-${block.questionNumber}`,
@@ -236,7 +283,8 @@ function buildQuestionMeta(
     chapter: undefined,
     topic: undefined,
     difficulty: undefined,
-    questionType: options.length > 0 ? "MCQ_SINGLE" : "NUMERICAL",
+    confidence,
+    questionType,
     questionText,
     correctAnswer,
     solution: undefined,
@@ -246,7 +294,7 @@ function buildQuestionMeta(
     images: [],
     explanation: undefined,
     metadata: {
-      parser: "deterministic_v1",
+      parser: "deterministic_v2",
       sourceQuestionNumber: block.questionNumber,
       answerKeySource: answerKey.has(block.questionNumber)
         ? "answer_key_file"
@@ -265,8 +313,12 @@ function buildSections(questions: PreparedQuestionMeta[]) {
     sectionMap.set(question.section, list);
   }
 
+  if (sectionMap.size === 0) {
+    return [{ id: "section-imported-questions", name: "Imported Questions", questions: [] }];
+  }
+
   return [...sectionMap.entries()].map(([name, rows]) => ({
-    id: `section-${slug(name) || "general"}`,
+    id: `section-${slug(name) || "imported-questions"}`,
     name,
     questions: rows.sort((a, b) => a.sequence - b.sequence),
   }));
@@ -286,9 +338,13 @@ export function detectFileType(name: string, allowed: readonly SupportedFileType
     ? "docx"
     : lower.endsWith(".doc")
       ? "doc"
-      : lower.endsWith(".csv")
-        ? "csv"
-        : "pdf";
+      : lower.endsWith(".xlsx")
+        ? "xlsx"
+        : lower.endsWith(".csv")
+          ? "csv"
+          : lower.endsWith(".txt")
+            ? "txt"
+            : "pdf";
   if (!allowed.includes(type)) {
     throw new Error(`Unsupported file type for ${name}.`);
   }
@@ -314,9 +370,36 @@ export function validateUploadFile(input: {
 
 export function isLikelyReadableText(text: string): boolean {
   const normalized = normalizeText(text);
-  if (normalized.length < 80) return false;
+  if (normalized.length < 40) return false;
   const printable = normalized.replace(/[\sA-Za-z0-9,.;:(){}\[\]<>!?'"%+\-/*=&]/g, "");
   return printable.length / normalized.length < 0.15;
+}
+
+export function createBlankPreparedQuestion(sequence: number, section = "Imported Questions"): PreparedQuestionMeta {
+  return {
+    questionId: `manual-q-${Date.now()}-${sequence}`,
+    sequence,
+    subject: section,
+    section,
+    chapter: undefined,
+    topic: undefined,
+    difficulty: undefined,
+    confidence: 0.2,
+    questionType: "MCQ_SINGLE",
+    questionText: "",
+    correctAnswer: "",
+    solution: undefined,
+    marks: 4,
+    negativeMarks: 1,
+    optionLabels: ["", "", "", ""],
+    images: [],
+    explanation: undefined,
+    metadata: {
+      parser: "manual_draft",
+      sourceQuestionNumber: sequence,
+      answerKeySource: "manual",
+    },
+  };
 }
 
 export function validateProcessedPaper(pkg: ProcessedPaperPackage): ProcessedPaperValidationIssue[] {
@@ -326,6 +409,15 @@ export function validateProcessedPaper(pkg: ProcessedPaperPackage): ProcessedPap
   }
   if (pkg.sections.length === 0) {
     issues.push({ level: "error", message: "No sections were created from the uploaded paper." });
+  }
+  if (pkg.totalQuestions === 0) {
+    issues.push({
+      level: "warning",
+      message: SCANNED_DOCUMENT_WARNING,
+    });
+  }
+  for (const warning of pkg.extractionSummary.warnings) {
+    issues.push({ level: "warning", message: warning });
   }
 
   for (const section of pkg.sections) {
@@ -350,8 +442,7 @@ export function validateProcessedPaper(pkg: ProcessedPaperPackage): ProcessedPap
             message: `Question ${question.sequence} needs at least two options.`,
           });
         }
-        const validLabel = /^[A-D]$/i.test(question.correctAnswer);
-        if (!validLabel) {
+        if (!/^[A-D]$/i.test(question.correctAnswer)) {
           issues.push({
             level: "error",
             questionId: question.questionId,
@@ -367,8 +458,7 @@ export function validateProcessedPaper(pkg: ProcessedPaperPackage): ProcessedPap
           message: `Question ${question.sequence} is missing a numerical answer.`,
         });
       }
-
-      if (!question.subject.trim() || question.subject === "General") {
+      if (!question.subject.trim() || question.subject === "Imported Questions") {
         issues.push({
           level: "warning",
           questionId: question.questionId,
@@ -376,10 +466,27 @@ export function validateProcessedPaper(pkg: ProcessedPaperPackage): ProcessedPap
           message: `Question ${question.sequence} needs subject review.`,
         });
       }
+      if (question.confidence < 0.45) {
+        issues.push({
+          level: "warning",
+          questionId: question.questionId,
+          section: section.name,
+          message: `Question ${question.sequence} has low parser confidence and should be reviewed.`,
+        });
+      }
     }
   }
+  return dedupeIssues(issues);
+}
 
-  return issues;
+function dedupeIssues(issues: ProcessedPaperValidationIssue[]): ProcessedPaperValidationIssue[] {
+  const seen = new Set<string>();
+  return issues.filter((issue) => {
+    const key = `${issue.level}:${issue.section ?? ""}:${issue.questionId ?? ""}:${issue.message}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 export function normalizeProcessedPaper(pkg: ProcessedPaperPackage): ProcessedPaperPackage {
@@ -395,7 +502,7 @@ export function normalizeProcessedPaper(pkg: ProcessedPaperPackage): ProcessedPa
         optionLabels: question.optionLabels.map((option) => sanitizeLine(option)),
       })),
     }))
-    .filter((section) => section.questions.length > 0);
+    .filter((section) => section.questions.length > 0 || sectionIndexIsFirst(section, pkg.sections));
   const totalQuestions = sections.reduce((count, section) => count + section.questions.length, 0);
   const totalMarks = sections.reduce(
     (count, section) =>
@@ -407,11 +514,22 @@ export function normalizeProcessedPaper(pkg: ProcessedPaperPackage): ProcessedPa
     sections,
     totalQuestions,
     totalMarks,
+    extractionSummary: {
+      ...pkg.extractionSummary,
+      questionsDetected: totalQuestions,
+    },
   };
   return {
     ...normalized,
     validationIssues: validateProcessedPaper(normalized),
   };
+}
+
+function sectionIndexIsFirst(
+  section: ProcessedPaperPackage["sections"][number],
+  all: ProcessedPaperPackage["sections"],
+): boolean {
+  return all[0]?.id === section.id;
 }
 
 export async function runPaperProcessing(input: ParsePaperInput): Promise<ProcessedPaperPackage> {
@@ -434,18 +552,16 @@ export async function runPaperProcessing(input: ParsePaperInput): Promise<Proces
   }
 
   const questionBlocks = parseQuestionBlocks(input.paperText);
-  if (questionBlocks.length === 0) {
-    logParsingWarning("paper_parse_no_questions", {
-      instituteId: input.instituteId,
-      paperFileName: input.paperFileName,
-    });
-    throw new Error(
-      "No numbered questions were found. Paste extracted text with lines like '1.' or 'Q1.' before processing.",
-    );
-  }
-
   const answerKey = parseAnswerKey(input.answerKeyText);
-  const questions = questionBlocks.map((block) => buildQuestionMeta(id, block, answerKey));
+  const questions = questionBlocks.map((block) =>
+    buildQuestionMeta(
+      id,
+      block,
+      answerKey,
+      input.extractionMode,
+      input.extractionSummary.usedOCR,
+    ),
+  );
   const sections = buildSections(questions);
 
   const initialPackage: ProcessedPaperPackage = {
@@ -463,16 +579,42 @@ export async function runPaperProcessing(input: ParsePaperInput): Promise<Proces
       "Submit before the timer ends.",
     ],
     sections,
-    processingLog: makeLog(
-      log,
-      `Detected ${questions.length} questions across ${sections.length} section(s).`,
-    ),
+    processingLog: log,
     validationIssues: [],
     extractionMode: input.extractionMode,
+    extractionSummary: {
+      ...input.extractionSummary,
+      questionsDetected: questions.length,
+    },
     preparedAt: Date.now(),
     totalMarks: 0,
     totalQuestions: 0,
   };
+
+  makeLog(
+    initialPackage.processingLog,
+    JSON.stringify({
+      pages: initialPackage.extractionSummary.pages,
+      extractedChars: initialPackage.extractionSummary.extractedChars,
+      usedOCR: initialPackage.extractionSummary.usedOCR,
+      questionsDetected: questions.length,
+      warnings: initialPackage.extractionSummary.warnings,
+    }),
+  );
+
+  if (questionBlocks.length === 0) {
+    logParsingWarning("paper_parse_no_questions", {
+      instituteId: input.instituteId,
+      paperFileName: input.paperFileName,
+      pages: input.extractionSummary.pages,
+      extractedChars: input.extractionSummary.extractedChars,
+      usedOCR: input.extractionSummary.usedOCR,
+    });
+    makeLog(
+      initialPackage.processingLog,
+      "No numbered questions were detected automatically. Review the extracted content and add questions manually in the draft preview.",
+    );
+  }
 
   const normalized = normalizeProcessedPaper(initialPackage);
   const errorCount = normalized.validationIssues.filter((issue) => issue.level === "error").length;
@@ -488,11 +630,14 @@ export async function runPaperProcessing(input: ParsePaperInput): Promise<Proces
   logParsingEvent("paper_processing_completed", {
     instituteId: input.instituteId,
     paperFileName: input.paperFileName,
+    pages: normalized.extractionSummary.pages,
+    extractedChars: normalized.extractionSummary.extractedChars,
+    usedOCR: normalized.extractionSummary.usedOCR,
     totalQuestions: normalized.totalQuestions,
     totalSections: normalized.sections.length,
     answerMappings: answerKey.size,
+    warnings: normalized.extractionSummary.warnings,
     errors: errorCount,
-    warnings: warningCount,
   });
 
   return {

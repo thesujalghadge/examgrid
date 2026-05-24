@@ -1,6 +1,15 @@
 /** Prepared during paper processing. */
 export type PreparedDifficulty = "L1" | "L2" | "L3";
 export type UploadExtractionMode = "file" | "manual" | "hybrid";
+export type SupportedPaperFileType = "pdf" | "doc" | "docx" | "csv" | "xlsx" | "txt";
+
+export interface PaperExtractionSummary {
+  pages: number;
+  extractedChars: number;
+  usedOCR: boolean;
+  questionsDetected: number;
+  warnings: string[];
+}
 
 export interface ProcessedPaperValidationIssue {
   level: "warning" | "error";
@@ -17,6 +26,7 @@ export interface PreparedQuestionMeta {
   chapter?: string;
   topic?: string;
   difficulty?: PreparedDifficulty;
+  confidence: number;
   questionType: "MCQ_SINGLE" | "NUMERICAL";
   questionText: string;
   correctAnswer: string;
@@ -40,15 +50,16 @@ export interface ProcessedPaperPackage {
   title: string;
   instituteId: string;
   paperFileName: string;
-  paperFileType: "pdf" | "doc" | "docx";
+  paperFileType: SupportedPaperFileType;
   answerKeyFileName?: string;
-  answerKeyFileType?: "csv" | "doc" | "docx";
+  answerKeyFileType?: SupportedPaperFileType;
   durationMinutes: number;
   instructions: string[];
   sections: PreparedSectionMeta[];
   processingLog: string[];
   validationIssues: ProcessedPaperValidationIssue[];
   extractionMode: UploadExtractionMode;
+  extractionSummary: PaperExtractionSummary;
   preparedAt: number;
   totalMarks: number;
   totalQuestions: number;

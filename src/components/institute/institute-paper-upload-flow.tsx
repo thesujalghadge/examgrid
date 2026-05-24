@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { buildCbtTestFromProcessedPaper } from "@/lib/cbt/build-test-from-processing";
 import { cbtTestToExamDefinition } from "@/lib/cbt/cbt-to-exam";
 import {
+  createBlankPreparedQuestion,
   detectFileType,
   isLikelyReadableText,
   MAX_ANSWER_KEY_UPLOAD_BYTES,
@@ -34,12 +35,14 @@ import {
 } from "@/services/institute-ops-service";
 import { getQuestionBank, saveQuestionBank } from "@/services/question-bank-service";
 import { useWorkspaceAuthStore } from "@/stores/workspace-auth-store";
-import type { Batch } from "@/types/institute-ops";
 import type { CBTTest } from "@/types/cbt";
+import type { Batch } from "@/types/institute-ops";
 import type {
+  PaperExtractionSummary,
   PaperProcessingStage,
   PreparedQuestionMeta,
   ProcessedPaperPackage,
+  SupportedPaperFileType,
   UploadExtractionMode,
 } from "@/types/cbt-paper-processing";
 
@@ -51,14 +54,14 @@ type WizardStep =
   | "configure"
   | "done";
 
-const ACCEPT_PAPER = ".pdf,.doc,.docx";
-const ACCEPT_KEY = ".csv,.doc,.docx";
-const PAPER_FILE_TYPES = ["pdf", "doc", "docx"] as const;
-const ANSWER_KEY_FILE_TYPES = ["csv", "doc", "docx"] as const;
+const ACCEPT_PAPER = ".pdf,.doc,.docx,.csv,.xlsx,.txt";
+const ACCEPT_KEY = ".csv,.xlsx,.txt,.doc,.docx";
+const PAPER_FILE_TYPES = ["pdf", "doc", "docx", "csv", "xlsx", "txt"] as const;
+const ANSWER_KEY_FILE_TYPES = ["csv", "xlsx", "txt", "doc", "docx"] as const;
 
 export function InstitutePaperUploadFlow() {
-  const session = useWorkspaceAuthStore((s) => s.session);
-  const hydrate = useWorkspaceAuthStore((s) => s.hydrate);
+  const session = useWorkspaceAuthStore((state) => state.session);
+  const hydrate = useWorkspaceAuthStore((state) => state.hydrate);
   const instituteId = session?.instituteId ?? "";
   const createdBy = session?.userId ?? "institute-admin";
 
@@ -114,7 +117,7 @@ export function InstitutePaperUploadFlow() {
       selectedBatchIds.length ? selectedBatchIds : batches.map((batch) => batch.id),
       createdBy,
     ).test;
-  }, [pkg, duration, selectedBatchIds, batches, createdBy]);
+  }, [batches, createdBy, duration, pkg, selectedBatchIds]);
 
   const blockingIssues = useMemo(
     () => pkg?.validationIssues.filter((issue) => issue.level === "error") ?? [],
@@ -125,12 +128,15 @@ export function InstitutePaperUploadFlow() {
     [pkg],
   );
 
-  const applyPackageUpdate = useCallback((updater: (current: ProcessedPaperPackage) => ProcessedPaperPackage) => {
-    setPkg((current) => {
-      if (!current) return current;
-      return normalizeProcessedPaper(updater(current));
-    });
-  }, []);
+  const applyPackageUpdate = useCallback(
+    (updater: (current: ProcessedPaperPackage) => ProcessedPaperPackage) => {
+      setPkg((current) => {
+        if (!current) return current;
+        return normalizeProcessedPaper(updater(current));
+      });
+    },
+    [],
+  );
 
   const updateQuestion = useCallback(
     (
@@ -140,13 +146,13 @@ export function InstitutePaperUploadFlow() {
     ) => {
       applyPackageUpdate((current) => ({
         ...current,
-        sections: current.sections.map((section, sIndex) =>
-          sIndex !== sectionIndex
+        sections: current.sections.map((section, currentSectionIndex) =>
+          currentSectionIndex !== sectionIndex
             ? section
             : {
                 ...section,
-                questions: section.questions.map((question, qIndex) =>
-                  qIndex === questionIndex ? updater(question) : question,
+                questions: section.questions.map((question, currentQuestionIndex) =>
+                  currentQuestionIndex === questionIndex ? updater(question) : question,
                 ),
               },
         ),
@@ -159,14 +165,18 @@ export function InstitutePaperUploadFlow() {
     (sectionIndex: number, name: string) => {
       applyPackageUpdate((current) => ({
         ...current,
-        sections: current.sections.map((section, index) =>
-          index === sectionIndex
+        sections: current.sections.map((section, currentSectionIndex) =>
+          currentSectionIndex === sectionIndex
             ? {
                 ...section,
                 name,
                 questions: section.questions.map((question) => ({
                   ...question,
                   section: name,
+                  subject:
+                    question.subject === section.name || question.subject === "Imported Questions"
+                      ? name
+                      : question.subject,
                 })),
               }
             : section,
@@ -176,15 +186,53 @@ export function InstitutePaperUploadFlow() {
     [applyPackageUpdate],
   );
 
+  const addQuestion = useCallback(
+    (sectionIndex: number) => {
+      applyPackageUpdate((current) => ({
+        ...current,
+        sections: current.sections.map((section, currentSectionIndex) =>
+          currentSectionIndex === sectionIndex
+            ? {
+                ...section,
+                questions: [
+                  ...section.questions,
+                  createBlankPreparedQuestion(section.questions.length + 1, section.name),
+                ],
+              }
+            : section,
+        ),
+      }));
+    },
+    [applyPackageUpdate],
+  );
+
+  const addSection = useCallback(() => {
+    applyPackageUpdate((current) => {
+      const nextIndex = current.sections.length + 1;
+      const name = `Section ${nextIndex}`;
+      return {
+        ...current,
+        sections: [
+          ...current.sections,
+          {
+            id: `section-manual-${Date.now()}-${nextIndex}`,
+            name,
+            questions: [createBlankPreparedQuestion(1, name)],
+          },
+        ],
+      };
+    });
+  }, [applyPackageUpdate]);
+
   const deleteQuestion = useCallback(
     (sectionIndex: number, questionIndex: number) => {
       applyPackageUpdate((current) => ({
         ...current,
-        sections: current.sections.map((section, index) =>
-          index === sectionIndex
+        sections: current.sections.map((section, currentSectionIndex) =>
+          currentSectionIndex === sectionIndex
             ? {
                 ...section,
-                questions: section.questions.filter((_, qIndex) => qIndex !== questionIndex),
+                questions: section.questions.filter((_, currentQuestionIndex) => currentQuestionIndex !== questionIndex),
               }
             : section,
         ),
@@ -197,8 +245,8 @@ export function InstitutePaperUploadFlow() {
     (sectionIndex: number, questionIndex: number, delta: -1 | 1) => {
       applyPackageUpdate((current) => ({
         ...current,
-        sections: current.sections.map((section, index) => {
-          if (index !== sectionIndex) return section;
+        sections: current.sections.map((section, currentSectionIndex) => {
+          if (currentSectionIndex !== sectionIndex) return section;
           const nextQuestions = [...section.questions];
           const swapIndex = questionIndex + delta;
           if (swapIndex < 0 || swapIndex >= nextQuestions.length) return section;
@@ -240,19 +288,21 @@ export function InstitutePaperUploadFlow() {
         file: paperFile,
         manualText: paperTextOverride,
         label: "question paper",
+        kind: "paper",
       });
       const answerKeySource = keyFile
         ? await resolveUploadText({
             file: keyFile,
             manualText: answerKeyTextOverride,
             label: "answer key",
+            kind: "answer_key",
             optional: true,
           })
         : null;
 
-      const paperType = detectFileType(paperFile.name, PAPER_FILE_TYPES) as "pdf" | "doc" | "docx";
+      const paperType = detectFileType(paperFile.name, PAPER_FILE_TYPES) as SupportedPaperFileType;
       const keyType = keyFile
-        ? (detectFileType(keyFile.name, ANSWER_KEY_FILE_TYPES) as "csv" | "doc" | "docx")
+        ? (detectFileType(keyFile.name, ANSWER_KEY_FILE_TYPES) as SupportedPaperFileType)
         : undefined;
       const extractionMode = mergeExtractionMode(
         paperSource.mode,
@@ -269,11 +319,13 @@ export function InstitutePaperUploadFlow() {
         answerKeyFileType: keyType,
         answerKeyText: answerKeySource?.text,
         extractionMode,
+        extractionSummary: paperSource.summary,
         onStage: (_stage: PaperProcessingStage, log) => setProcessLog(log),
       });
 
       setPkg(result);
       setDuration(String(result.durationMinutes));
+      setProcessLog(result.processingLog);
       setStep("preview");
     } catch (error) {
       const message = getErrorMessage(error);
@@ -301,7 +353,6 @@ export function InstitutePaperUploadFlow() {
       return;
     }
 
-    const testId = makeCbtId("cbt");
     const finalPkg = normalizeProcessedPaper({
       ...pkg,
       durationMinutes: Math.max(1, parseInt(duration, 10) || 60),
@@ -313,6 +364,7 @@ export function InstitutePaperUploadFlow() {
       return;
     }
 
+    const testId = makeCbtId("cbt");
     const { test, bankQuestions } = buildCbtTestFromProcessedPaper(
       finalPkg,
       testId,
@@ -321,19 +373,19 @@ export function InstitutePaperUploadFlow() {
     );
 
     const existingBank = getQuestionBank();
-    const merged = [...existingBank];
+    const mergedBank = [...existingBank];
     for (const question of bankQuestions) {
-      if (!merged.some((row) => row.id === question.id)) merged.push(question);
+      if (!mergedBank.some((row) => row.id === question.id)) mergedBank.push(question);
     }
-    saveQuestionBank(merged);
+    saveQuestionBank(mergedBank);
 
-    const repos = getRepositories();
-    repos.cbtTests.save(test);
+    const repositories = getRepositories();
+    repositories.cbtTests.save(test);
     const examDefinition = cbtTestToExamDefinition(test);
     if (examDefinition) {
-      repos.exams.save(examDefinition);
+      repositories.exams.save(examDefinition);
     }
-    const schedule = {
+    repositories.schedules.save({
       ...createScheduleInput({
         examId: test.id,
         batchIds: selectedBatchIds,
@@ -343,14 +395,15 @@ export function InstitutePaperUploadFlow() {
         visibilityRule: "assigned_batches",
       }),
       instituteId,
-    };
-    repos.schedules.save(schedule);
+    });
+
     await awaitRepositoryPersist();
     logUploadEvent("paper_processing_published", {
       instituteId,
       testId,
       totalQuestions: finalPkg.totalQuestions,
       totalMarks: finalPkg.totalMarks,
+      usedOCR: finalPkg.extractionSummary.usedOCR,
     });
     refresh();
     setStep("done");
@@ -437,7 +490,7 @@ export function InstitutePaperUploadFlow() {
           <CardHeader>
             <CardTitle className="text-lg text-[#14213d]">Step 1 - Upload question paper</CardTitle>
             <CardDescription>
-              PDF, DOC, or DOCX. For scanned or formatted documents, paste extracted text below.
+              PDF, DOC, DOCX, CSV, XLSX, or TXT. For scanned or heavily formatted papers, you can also paste extracted text below.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -450,16 +503,12 @@ export function InstitutePaperUploadFlow() {
               <Label>Extraction fallback text</Label>
               <textarea
                 className="min-h-[160px] w-full rounded-md border border-[#ece6da] p-3 text-sm"
-                placeholder="Paste numbered questions here when the uploaded file is scanned or heavily formatted. Example: 1. Question text..."
+                placeholder="Paste numbered questions here when the uploaded file is scanned or heavily formatted. Example: 1) Question text..."
                 value={paperTextOverride}
                 onChange={(event) => setPaperTextOverride(event.target.value)}
               />
             </div>
-            <Button
-              className="bg-[#14213d]"
-              disabled={!paperFile}
-              onClick={() => setStep("answer_key")}
-            >
+            <Button className="bg-[#14213d]" disabled={!paperFile} onClick={() => setStep("answer_key")}>
               Continue to answer key
             </Button>
           </CardContent>
@@ -470,7 +519,7 @@ export function InstitutePaperUploadFlow() {
         <Card className="border-[#d8d2c7]">
           <CardHeader>
             <CardTitle className="text-lg text-[#14213d]">Step 2 - Upload answer key</CardTitle>
-            <CardDescription>CSV, DOC, or DOCX. Optional, but required for scored publishing.</CardDescription>
+            <CardDescription>CSV, XLSX, TXT, DOC, or DOCX. Optional, but required for scored publishing.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Input
@@ -482,7 +531,7 @@ export function InstitutePaperUploadFlow() {
               <Label>Answer key fallback text</Label>
               <textarea
                 className="min-h-[120px] w-full rounded-md border border-[#ece6da] p-3 text-sm"
-                placeholder="Example: 1 A, 2 C, 3 B"
+                placeholder="Example: 1-A, 2. B, Q3 -> C"
                 value={answerKeyTextOverride}
                 onChange={(event) => setAnswerKeyTextOverride(event.target.value)}
               />
@@ -490,7 +539,7 @@ export function InstitutePaperUploadFlow() {
             <p className="text-xs text-[#5e5a52]">
               Use one line per answer or a compact list. The preview will block publish until unresolved answers are fixed.
             </p>
-            {processingError ? <p className="text-sm text-red-700">{processingError}</p> : null}
+            {processingError ? <p className="text-sm text-amber-800">{processingError}</p> : null}
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setStep("paper")}>
                 Back
@@ -520,7 +569,7 @@ export function InstitutePaperUploadFlow() {
       {step === "preview" && pkg && previewTest && (
         <Card className="border-[#d8d2c7]">
           <CardHeader>
-            <CardTitle className="text-lg text-[#14213d]">Step 4 - CBT preview and correction</CardTitle>
+            <CardTitle className="text-lg text-[#14213d]">Step 4 - CBT draft preview</CardTitle>
             <CardDescription>
               {pkg.paperFileName}
               {pkg.answerKeyFileName ? ` + ${pkg.answerKeyFileName}` : ""}
@@ -532,6 +581,18 @@ export function InstitutePaperUploadFlow() {
               <SummaryStat label="Questions" value={String(pkg.totalQuestions)} />
               <SummaryStat label="Marks" value={String(pkg.totalMarks)} />
               <SummaryStat label="Extraction" value={pkg.extractionMode} />
+            </div>
+            <div className="grid gap-3 sm:grid-cols-4">
+              <SummaryStat label="Pages" value={String(pkg.extractionSummary.pages)} />
+              <SummaryStat label="Chars" value={String(pkg.extractionSummary.extractedChars)} />
+              <SummaryStat
+                label="OCR Fallback"
+                value={pkg.extractionSummary.usedOCR ? "Yes" : "No"}
+              />
+              <SummaryStat
+                label="Detected"
+                value={String(pkg.extractionSummary.questionsDetected)}
+              />
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
@@ -545,8 +606,14 @@ export function InstitutePaperUploadFlow() {
                 title="Review warnings"
                 tone="warning"
                 items={warningIssues.map((issue) => issue.message)}
-                emptyMessage="No subject or review warnings."
+                emptyMessage="No subject or extraction warnings."
               />
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="outline" onClick={() => addSection()}>
+                Add section
+              </Button>
             </div>
 
             <div className="space-y-4">
@@ -560,9 +627,19 @@ export function InstitutePaperUploadFlow() {
                         onChange={(event) => renameSection(sectionIndex, event.target.value)}
                       />
                     </div>
-                    <CardDescription>
-                      {section.questions.length} question(s) in this section.
-                    </CardDescription>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <CardDescription>
+                        {section.questions.length} question(s) in this section.
+                      </CardDescription>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => addQuestion(sectionIndex)}
+                      >
+                        Add question
+                      </Button>
+                    </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {section.questions.map((question, questionIndex) => (
@@ -625,6 +702,9 @@ export function InstitutePaperUploadFlow() {
                             />
                           </div>
                         </div>
+                        <p className="mt-2 text-xs text-[#5e5a52]">
+                          Parser confidence: {Math.round(question.confidence * 100)}%
+                        </p>
 
                         <div className="mt-3 space-y-2">
                           <Label>Question text</Label>
@@ -877,27 +957,98 @@ async function resolveUploadText(input: {
   file: File;
   manualText: string;
   label: string;
+  kind: "paper" | "answer_key";
   optional?: boolean;
-}): Promise<{ text: string; mode: UploadExtractionMode }> {
+}): Promise<{
+  text: string;
+  mode: UploadExtractionMode;
+  summary: Omit<PaperExtractionSummary, "questionsDetected">;
+}> {
   const manual = input.manualText.trim();
-  const fileText = (await input.file.text()).trim();
+  const extracted = await extractUploadTextFromServer(input.file, input.kind);
+  const fileText = extracted.text.trim();
   const readable = isLikelyReadableText(fileText);
 
   if (readable && manual) {
-    return { text: `${fileText}\n\n${manual}`, mode: "hybrid" };
+    return {
+      text: `${fileText}\n\n${manual}`,
+      mode: "hybrid",
+      summary: extracted.summary,
+    };
   }
   if (readable) {
-    return { text: fileText, mode: "file" };
+    return { text: fileText, mode: "file", summary: extracted.summary };
   }
   if (manual) {
-    return { text: manual, mode: "manual" };
+    return {
+      text: manual,
+      mode: "manual",
+      summary: {
+        ...extracted.summary,
+        usedOCR: true,
+        warnings: [
+          ...extracted.summary.warnings,
+          "We detected a scanned or complex document. Please review extracted content before publishing.",
+        ],
+      },
+    };
   }
   if (input.optional) {
-    return { text: "", mode: "file" };
+    return { text: "", mode: "file", summary: extracted.summary };
   }
-  throw new Error(
-    `Readable ${input.label} text was not detected in ${input.file.name}. Paste extracted text to continue.`,
-  );
+  return {
+    text: fileText,
+    mode: "file",
+    summary: {
+      ...extracted.summary,
+      usedOCR: true,
+      warnings: [
+        ...extracted.summary.warnings,
+        "We detected a scanned or complex document. Please review extracted content before publishing.",
+      ],
+    },
+  };
+}
+
+async function extractUploadTextFromServer(
+  file: File,
+  kind: "paper" | "answer_key",
+): Promise<{
+  text: string;
+  summary: Omit<PaperExtractionSummary, "questionsDetected">;
+}> {
+  const fileType = detectFileType(
+    file.name,
+    kind === "paper" ? PAPER_FILE_TYPES : ANSWER_KEY_FILE_TYPES,
+  ) as SupportedPaperFileType;
+  const formData = new FormData();
+  formData.set("kind", kind);
+  formData.set("fileType", fileType);
+  formData.set("file", file);
+
+  const response = await fetch("/api/institute/paper-extract", {
+    method: "POST",
+    body: formData,
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    const plainText = (await file.text()).trim();
+    return {
+      text: plainText,
+      summary: {
+        pages: 1,
+        extractedChars: plainText.length,
+        usedOCR: false,
+        warnings: response.status >= 500 ? ["Server extraction fallback used. Review the draft carefully."] : [],
+      },
+    };
+  }
+
+  return (await response.json()) as {
+    text: string;
+    summary: Omit<PaperExtractionSummary, "questionsDetected">;
+  };
 }
 
 function mergeExtractionMode(
