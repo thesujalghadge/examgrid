@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -27,7 +27,7 @@ export default function StudentLoginPage() {
   const [instituteId, setInstituteId] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const institutes = listPlatformInstitutes();
+  const institutes = useMemo(() => listPlatformInstitutes(), []);
 
   useEffect(() => {
     if (institutes.length > 0 && !instituteId) setInstituteId(institutes[0].id);

@@ -57,13 +57,12 @@ function emptySection(): SectionDraft {
 
 export function CbtTestsManager() {
   const session = useWorkspaceAuthStore((s) => s.session);
-  const hydrate = useWorkspaceAuthStore((s) => s.hydrate);
+  const hydrateSession = useWorkspaceAuthStore((s) => s.hydrateSession);
   const [tests, setTests] = useState<CBTTest[]>([]);
 
   useEffect(() => {
-    hydrate();
-    setTests(getRepositories().cbtTests.list());
-  }, [hydrate]);
+    void hydrateSession();
+  }, [hydrateSession]);
 
   const [batches] = useState<Batch[]>(() =>
     typeof window === "undefined" ? [] : getRepositories().batches.list(),
@@ -82,9 +81,12 @@ export function CbtTestsManager() {
   const [selectedTestId, setSelectedTestId] = useState<string | null>(null);
 
   const refresh = useCallback(() => {
-    hydrate();
     setTests(getRepositories().cbtTests.list());
-  }, [hydrate]);
+  }, []);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   const instituteId = session?.instituteId ?? "";
   const createdBy = session?.userId ?? "unknown";

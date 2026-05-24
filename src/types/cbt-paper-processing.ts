@@ -11,6 +11,20 @@ export interface PaperExtractionSummary {
   warnings: string[];
 }
 
+export interface AnswerKeyReviewItem {
+  questionNumber: number;
+  answer: string;
+  reason: "duplicate" | "unmatched";
+}
+
+export interface PaperParsingDiagnostics {
+  rawTextPreview: string;
+  parsedQuestionCount: number;
+  unmatchedAnswerCount: number;
+  unmatchedAnswers: AnswerKeyReviewItem[];
+  duplicateAnswers: AnswerKeyReviewItem[];
+}
+
 export interface ProcessedPaperValidationIssue {
   level: "warning" | "error";
   message: string;
@@ -60,6 +74,7 @@ export interface ProcessedPaperPackage {
   validationIssues: ProcessedPaperValidationIssue[];
   extractionMode: UploadExtractionMode;
   extractionSummary: PaperExtractionSummary;
+  parsingDiagnostics: PaperParsingDiagnostics;
   preparedAt: number;
   totalMarks: number;
   totalQuestions: number;

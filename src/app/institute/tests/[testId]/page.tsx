@@ -21,23 +21,23 @@ export default function InstituteTestDetailPage() {
   const params = useParams();
   const testId = params.testId as string;
   const router = useRouter();
-  const hydrate = useWorkspaceAuthStore((s) => s.hydrate);
+  const hydrateSession = useWorkspaceAuthStore((s) => s.hydrateSession);
   const instituteId = useWorkspaceAuthStore((s) => s.session?.instituteId);
   const [students, setStudents] = useState<InstituteStudent[]>([]);
 
   useEffect(() => {
-    hydrate();
-  }, [hydrate]);
+    void hydrateSession();
+  }, [hydrateSession]);
 
   useEffect(() => {
     setStudents(getRepositories().students.list());
-  }, [testId, hydrate]);
+  }, [testId, instituteId]);
 
-  const test = useMemo(() => getRepositories().cbtTests.getById(testId), [testId, students]);
+  const test = useMemo(() => getRepositories().cbtTests.getById(testId), [testId]);
 
   const attempts = useMemo(
     () => (test ? getRepositories().cbtAttempts.listByTestId(test.id) : []),
-    [test, students],
+    [test],
   );
 
   const nameByRoll = useMemo(() => {

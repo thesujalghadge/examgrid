@@ -61,7 +61,7 @@ const ANSWER_KEY_FILE_TYPES = ["csv", "xlsx", "txt", "doc", "docx"] as const;
 
 export function InstitutePaperUploadFlow() {
   const session = useWorkspaceAuthStore((state) => state.session);
-  const hydrate = useWorkspaceAuthStore((state) => state.hydrate);
+  const hydrateSession = useWorkspaceAuthStore((state) => state.hydrateSession);
   const instituteId = session?.instituteId ?? "";
   const createdBy = session?.userId ?? "institute-admin";
 
@@ -82,7 +82,6 @@ export function InstitutePaperUploadFlow() {
   const [processingError, setProcessingError] = useState("");
 
   const refresh = useCallback(() => {
-    hydrate();
     setTests(
       getRepositories()
         .cbtTests.list()
@@ -93,7 +92,11 @@ export function InstitutePaperUploadFlow() {
         .batches.list()
         .filter((batch) => !instituteId || batch.instituteId === instituteId),
     );
-  }, [hydrate, instituteId]);
+  }, [instituteId]);
+
+  useEffect(() => {
+    void hydrateSession();
+  }, [hydrateSession]);
 
   useEffect(() => {
     refresh();
@@ -594,6 +597,33 @@ export function InstitutePaperUploadFlow() {
                 value={String(pkg.extractionSummary.questionsDetected)}
               />
             </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <IssuePanel
+                title="Answer key review"
+                tone="warning"
+                items={[
+                  ...pkg.parsingDiagnostics.duplicateAnswers.map(
+                    (item) => `Duplicate mapping for Q${item.questionNumber}: ${item.answer}`,
+                  ),
+                  ...pkg.parsingDiagnostics.unmatchedAnswers.map(
+                    (item) => `Unmatched answer for Q${item.questionNumber}: ${item.answer}`,
+                  ),
+                ]}
+                emptyMessage="All parsed answer key entries matched a detected question."
+              />
+              <div className="rounded-xl border border-[#ece6da] p-4">
+                <p className="font-medium text-[#14213d]">Parsing diagnostics</p>
+                <p className="mt-2 text-sm text-[#5e5a52]">
+                  Parsed questions: {pkg.parsingDiagnostics.parsedQuestionCount}
+                </p>
+                <p className="text-sm text-[#5e5a52]">
+                  Unmatched answers: {pkg.parsingDiagnostics.unmatchedAnswerCount}
+                </p>
+                <p className="text-sm text-[#5e5a52]">
+                  OCR used: {pkg.extractionSummary.usedOCR ? "Yes" : "No"}
+                </p>
+              </div>
+            </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
               <IssuePanel
@@ -784,6 +814,14 @@ export function InstitutePaperUploadFlow() {
                   <li key={line}>{line}</li>
                 ))}
               </ul>
+            </details>
+            <details className="text-sm">
+              <summary className="cursor-pointer font-medium text-[#8a6f3e]">
+                Extracted raw text preview
+              </summary>
+              <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap rounded-lg border border-[#ece6da] bg-[#fbf9f4] p-3 text-xs text-[#5e5a52]">
+                {pkg.parsingDiagnostics.rawTextPreview || "No extracted text available."}
+              </pre>
             </details>
 
             <div className="flex flex-wrap gap-2">

@@ -5,6 +5,7 @@ import {
   logValidationFailure,
 } from "@/lib/logging/runtime-logger";
 import type {
+  AnswerKeyReviewItem,
   PaperExtractionSummary,
   PaperProcessingStage,
   PreparedQuestionMeta,
@@ -48,6 +49,12 @@ interface QuestionBlock {
 interface ParsedOption {
   label: string;
   text: string;
+}
+
+interface ParsedAnswerEntry {
+  questionNumber: number;
+  answer: string;
+  raw: string;
 }
 
 interface ParsePaperInput {
@@ -99,11 +106,11 @@ function makeLog(log: string[], message: string): string[] {
 
 function looksLikeQuestionStart(line: string): RegExpMatchArray | null {
   return (
-    line.match(/^\(?(\d{1,3})\)\s+(.+)$/i) ??
-    line.match(/^(\d{1,3})\.\s+(.+)$/i) ??
-    line.match(/^(\d{1,3})\)\s+(.+)$/i) ??
-    line.match(/^q(?:uestion)?\s*(\d{1,3})[:.)\-\s]+\s*(.+)$/i) ??
-    line.match(/^que\.?\s*(\d{1,3})[:.)\-\s]+\s*(.+)$/i)
+    line.match(/^\(?(\d{1,3})\)\s*(.*)$/i) ??
+    line.match(/^(\d{1,3})\.\s*(.*)$/i) ??
+    line.match(/^(\d{1,3})\)\s*(.*)$/i) ??
+    line.match(/^q(?:uestion)?\s*(\d{1,3})[:.)\-\s]*\s*(.*)$/i) ??
+    line.match(/^que\.?\s*(\d{1,3})[:.)\-\s]*\s*(.*)$/i)
   );
 }
 
@@ -162,27 +169,49 @@ function parseInlineOptions(text: string): ParsedOption[] {
 function parseOptions(lines: string[]): { options: ParsedOption[]; remaining: string[] } {
   const options: ParsedOption[] = [];
   const remaining: string[] = [];
+  let activeOption: ParsedOption | null = null;
+
+  const flushActiveOption = () => {
+    if (!activeOption) return;
+    options.push({
+      label: activeOption.label,
+      text: sanitizeLine(activeOption.text),
+    });
+    activeOption = null;
+  };
 
   for (const line of lines) {
     const direct =
       line.match(/^[\(\[]?([A-D])[\)\].:-]\s*(.+)$/i) ??
       line.match(/^option\s+([A-D])[:.)\-\s]+\s*(.+)$/i);
     if (direct) {
-      options.push({
+      flushActiveOption();
+      activeOption = {
         label: direct[1].toUpperCase(),
         text: sanitizeLine(direct[2]),
-      });
+      };
       continue;
     }
 
     const inline = parseInlineOptions(line);
     if (inline.length >= 2) {
+      flushActiveOption();
       options.push(...inline);
+      continue;
+    }
+
+    if (activeOption && line.length > 0 && !looksLikeQuestionStart(line)) {
+      activeOption = {
+        ...activeOption,
+        text: `${activeOption.text} ${sanitizeLine(line)}`,
+      };
       continue;
     }
 
     remaining.push(line);
   }
+
+  flushActiveOption();
 
   return {
     options: dedupeOptions(options),
@@ -210,20 +239,60 @@ function detectSubject(section: string, text: string): string {
   return section;
 }
 
-function parseAnswerKey(text?: string): Map<number, string> {
-  const mapping = new Map<number, string>();
-  if (!text) return mapping;
+function parseAnswerKeyEntries(text?: string): ParsedAnswerEntry[] {
+  if (!text) return [];
   const normalized = normalizeText(text);
+  const entries: ParsedAnswerEntry[] = [];
   const patterns = [
     /(?:^|\n)\s*(?:q(?:uestion)?|que\.?)?\s*(\d{1,3})\s*(?:->|[-.:])\s*([A-D]|-?\d+(?:\.\d+)?)/gi,
     /(?:^|\n)\s*(\d{1,3})\s+([A-D]|-?\d+(?:\.\d+)?)/gi,
   ];
   for (const pattern of patterns) {
     for (const match of normalized.matchAll(pattern)) {
-      mapping.set(Number(match[1]), match[2].toUpperCase());
+      entries.push({
+        questionNumber: Number(match[1]),
+        answer: match[2].toUpperCase(),
+        raw: sanitizeLine(match[0]),
+      });
     }
   }
-  return mapping;
+  return entries;
+}
+
+function mapAnswerEntries(
+  entries: ParsedAnswerEntry[],
+  blocks: QuestionBlock[],
+): {
+  mappedAnswers: Map<number, string>;
+  unmatchedAnswers: AnswerKeyReviewItem[];
+  duplicateAnswers: AnswerKeyReviewItem[];
+} {
+  const mappedAnswers = new Map<number, string>();
+  const unmatchedAnswers: AnswerKeyReviewItem[] = [];
+  const duplicateAnswers: AnswerKeyReviewItem[] = [];
+  const questionNumbers = new Set(blocks.map((block) => block.questionNumber));
+
+  for (const entry of entries) {
+    if (!questionNumbers.has(entry.questionNumber)) {
+      unmatchedAnswers.push({
+        questionNumber: entry.questionNumber,
+        answer: entry.answer,
+        reason: "unmatched",
+      });
+      continue;
+    }
+    if (mappedAnswers.has(entry.questionNumber)) {
+      duplicateAnswers.push({
+        questionNumber: entry.questionNumber,
+        answer: entry.answer,
+        reason: "duplicate",
+      });
+      continue;
+    }
+    mappedAnswers.set(entry.questionNumber, entry.answer);
+  }
+
+  return { mappedAnswers, unmatchedAnswers, duplicateAnswers };
 }
 
 function parseInlineAnswer(lines: string[]): string {
@@ -324,6 +393,10 @@ function buildSections(questions: PreparedQuestionMeta[]) {
   }));
 }
 
+function buildRawTextPreview(text: string): string {
+  return normalizeText(text).slice(0, 4000);
+}
+
 export function getProcessingStageLabels(): PaperProcessingStage[] {
   return Object.keys(STAGE_LABELS) as PaperProcessingStage[];
 }
@@ -418,6 +491,18 @@ export function validateProcessedPaper(pkg: ProcessedPaperPackage): ProcessedPap
   }
   for (const warning of pkg.extractionSummary.warnings) {
     issues.push({ level: "warning", message: warning });
+  }
+  for (const duplicate of pkg.parsingDiagnostics.duplicateAnswers) {
+    issues.push({
+      level: "warning",
+      message: `Duplicate answer mapping detected for Q${duplicate.questionNumber}.`,
+    });
+  }
+  for (const unmatched of pkg.parsingDiagnostics.unmatchedAnswers) {
+    issues.push({
+      level: "warning",
+      message: `Answer key entry for Q${unmatched.questionNumber} did not match any parsed question.`,
+    });
   }
 
   for (const section of pkg.sections) {
@@ -552,7 +637,11 @@ export async function runPaperProcessing(input: ParsePaperInput): Promise<Proces
   }
 
   const questionBlocks = parseQuestionBlocks(input.paperText);
-  const answerKey = parseAnswerKey(input.answerKeyText);
+  const answerEntries = parseAnswerKeyEntries(input.answerKeyText);
+  const { mappedAnswers: answerKey, unmatchedAnswers, duplicateAnswers } = mapAnswerEntries(
+    answerEntries,
+    questionBlocks,
+  );
   const questions = questionBlocks.map((block) =>
     buildQuestionMeta(
       id,
@@ -585,6 +674,13 @@ export async function runPaperProcessing(input: ParsePaperInput): Promise<Proces
     extractionSummary: {
       ...input.extractionSummary,
       questionsDetected: questions.length,
+    },
+    parsingDiagnostics: {
+      rawTextPreview: buildRawTextPreview(input.paperText),
+      parsedQuestionCount: questions.length,
+      unmatchedAnswerCount: unmatchedAnswers.length,
+      unmatchedAnswers,
+      duplicateAnswers,
     },
     preparedAt: Date.now(),
     totalMarks: 0,
@@ -636,6 +732,8 @@ export async function runPaperProcessing(input: ParsePaperInput): Promise<Proces
     totalQuestions: normalized.totalQuestions,
     totalSections: normalized.sections.length,
     answerMappings: answerKey.size,
+    unmatchedAnswerCount: unmatchedAnswers.length,
+    duplicateAnswerCount: duplicateAnswers.length,
     warnings: normalized.extractionSummary.warnings,
     errors: errorCount,
   });
