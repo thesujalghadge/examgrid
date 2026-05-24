@@ -477,6 +477,7 @@ export function createBlankPreparedQuestion(sequence: number, section = "Importe
 
 export function validateProcessedPaper(pkg: ProcessedPaperPackage): ProcessedPaperValidationIssue[] {
   const issues: ProcessedPaperValidationIssue[] = [];
+  const seenQuestionIds = new Set<string>();
   if (!pkg.title.trim()) {
     issues.push({ level: "error", message: "Test title is required." });
   }
@@ -510,6 +511,22 @@ export function validateProcessedPaper(pkg: ProcessedPaperPackage): ProcessedPap
       issues.push({ level: "error", section: section.name, message: "Section name is required." });
     }
     for (const question of section.questions) {
+      if (!question.questionId.trim()) {
+        issues.push({
+          level: "error",
+          section: section.name,
+          message: `Question ${question.sequence} is missing a stable question id.`,
+        });
+      } else if (seenQuestionIds.has(question.questionId)) {
+        issues.push({
+          level: "error",
+          questionId: question.questionId,
+          section: section.name,
+          message: `Question ${question.sequence} has a duplicate question id.`,
+        });
+      } else {
+        seenQuestionIds.add(question.questionId);
+      }
       if (!question.questionText.trim()) {
         issues.push({
           level: "error",
@@ -519,6 +536,16 @@ export function validateProcessedPaper(pkg: ProcessedPaperPackage): ProcessedPap
         });
       }
       if (question.questionType === "MCQ_SINGLE") {
+        for (const [optionIndex, option] of question.optionLabels.entries()) {
+          if (!option.trim()) {
+            issues.push({
+              level: "error",
+              questionId: question.questionId,
+              section: section.name,
+              message: `Question ${question.sequence} has an empty option ${String.fromCharCode(65 + optionIndex)}.`,
+            });
+          }
+        }
         if (question.optionLabels.filter((option) => option.trim()).length < 2) {
           issues.push({
             level: "error",
@@ -596,6 +623,7 @@ export function normalizeProcessedPaper(pkg: ProcessedPaperPackage): ProcessedPa
   );
   const normalized = {
     ...pkg,
+    status: "DRAFT_REVIEW" as const,
     sections,
     totalQuestions,
     totalMarks,
@@ -655,6 +683,7 @@ export async function runPaperProcessing(input: ParsePaperInput): Promise<Proces
 
   const initialPackage: ProcessedPaperPackage = {
     id,
+    status: "DRAFT_REVIEW",
     title,
     instituteId: input.instituteId,
     paperFileName: input.paperFileName,

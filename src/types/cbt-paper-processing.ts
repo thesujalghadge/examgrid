@@ -32,6 +32,8 @@ export interface ProcessedPaperValidationIssue {
   section?: string;
 }
 
+export type ProcessedPaperStatus = "DRAFT_REVIEW" | "READY_TO_PUBLISH" | "PUBLISHED";
+
 export interface PreparedQuestionMeta {
   questionId: string;
   sequence: number;
@@ -61,6 +63,7 @@ export interface PreparedSectionMeta {
 
 export interface ProcessedPaperPackage {
   id: string;
+  status: ProcessedPaperStatus;
   title: string;
   instituteId: string;
   paperFileName: string;

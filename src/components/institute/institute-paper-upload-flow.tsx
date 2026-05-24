@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ExamInterface } from "@/components/exam/ExamInterface";
 import { buildCbtTestFromProcessedPaper } from "@/lib/cbt/build-test-from-processing";
 import { cbtTestToExamDefinition } from "@/lib/cbt/cbt-to-exam";
 import {
@@ -111,15 +112,18 @@ export function InstitutePaperUploadFlow() {
     }
   }, [batches, selectedBatchIds.length]);
 
-  const previewTest = useMemo(() => {
+  const previewBundle = useMemo(() => {
     if (!pkg) return null;
     const testId = `${pkg.id}-preview`;
-    return buildCbtTestFromProcessedPaper(
+    const built = buildCbtTestFromProcessedPaper(
       { ...pkg, durationMinutes: Math.max(1, parseInt(duration, 10) || 60) },
       testId,
       selectedBatchIds.length ? selectedBatchIds : batches.map((batch) => batch.id),
       createdBy,
-    ).test;
+    );
+    const exam = cbtTestToExamDefinition(built.test, built.bankQuestions);
+    if (!exam) return null;
+    return { ...built, exam };
   }, [batches, createdBy, duration, pkg, selectedBatchIds]);
 
   const blockingIssues = useMemo(
@@ -140,6 +144,66 @@ export function InstitutePaperUploadFlow() {
     },
     [],
   );
+
+  const reviewQuestionLocations = useMemo(() => {
+    const locations = new Map<string, { sectionIndex: number; questionIndex: number }>();
+    if (!pkg || !previewBundle) return locations;
+    let questionNumber = 0;
+    pkg.sections.forEach((section, sectionIndex) => {
+      section.questions.forEach((_, questionIndex) => {
+        questionNumber += 1;
+        locations.set(`${previewBundle.test.id}-question-${questionNumber}`, {
+          sectionIndex,
+          questionIndex,
+        });
+      });
+    });
+    return locations;
+  }, [pkg, previewBundle]);
+
+  const reviewSectionLocations = useMemo(() => {
+    const locations = new Map<string, number>();
+    previewBundle?.test.sections.forEach((section, sectionIndex) => {
+      locations.set(section.id, sectionIndex);
+    });
+    return locations;
+  }, [previewBundle]);
+
+  const questionIssues = useMemo(() => {
+    const grouped: Record<string, string[]> = {};
+    if (!previewBundle || !pkg) return grouped;
+
+    for (const issue of pkg.validationIssues) {
+      if (!issue.questionId) continue;
+      const messages = grouped[issue.questionId] ?? [];
+      messages.push(issue.message);
+      grouped[issue.questionId] = messages;
+    }
+
+    let questionNumber = 0;
+    for (const section of pkg.sections) {
+      for (const question of section.questions) {
+        questionNumber += 1;
+        grouped[`${previewBundle.test.id}-question-${questionNumber}`] = grouped[question.questionId] ?? [];
+      }
+    }
+    return grouped;
+  }, [pkg, previewBundle]);
+
+  const flaggedQuestionIds = useMemo(() => {
+    const ids: string[] = [];
+    if (!previewBundle || !pkg) return ids;
+    let questionNumber = 0;
+    for (const section of pkg.sections) {
+      for (const question of section.questions) {
+        questionNumber += 1;
+        if (question.metadata.teacherFlagged === true) {
+          ids.push(`${previewBundle.test.id}-question-${questionNumber}`);
+        }
+      }
+    }
+    return ids;
+  }, [pkg, previewBundle]);
 
   const updateQuestion = useCallback(
     (
@@ -162,6 +226,18 @@ export function InstitutePaperUploadFlow() {
       }));
     },
     [applyPackageUpdate],
+  );
+
+  const updateReviewQuestion = useCallback(
+    (
+      reviewQuestionId: string,
+      updater: (question: PreparedQuestionMeta) => PreparedQuestionMeta,
+    ) => {
+      const location = reviewQuestionLocations.get(reviewQuestionId);
+      if (!location) return;
+      updateQuestion(location.sectionIndex, location.questionIndex, updater);
+    },
+    [reviewQuestionLocations, updateQuestion],
   );
 
   const renameSection = useCallback(
@@ -227,6 +303,15 @@ export function InstitutePaperUploadFlow() {
     });
   }, [applyPackageUpdate]);
 
+  const addQuestionBySectionId = useCallback(
+    (sectionId: string) => {
+      const sectionIndex = reviewSectionLocations.get(sectionId);
+      if (sectionIndex === undefined) return;
+      addQuestion(sectionIndex);
+    },
+    [addQuestion, reviewSectionLocations],
+  );
+
   const deleteQuestion = useCallback(
     (sectionIndex: number, questionIndex: number) => {
       applyPackageUpdate((current) => ({
@@ -262,6 +347,37 @@ export function InstitutePaperUploadFlow() {
       }));
     },
     [applyPackageUpdate],
+  );
+
+  const moveReviewQuestion = useCallback(
+    (reviewQuestionId: string, delta: -1 | 1) => {
+      const location = reviewQuestionLocations.get(reviewQuestionId);
+      if (!location) return;
+      moveQuestion(location.sectionIndex, location.questionIndex, delta);
+    },
+    [moveQuestion, reviewQuestionLocations],
+  );
+
+  const deleteReviewQuestion = useCallback(
+    (reviewQuestionId: string) => {
+      const location = reviewQuestionLocations.get(reviewQuestionId);
+      if (!location) return;
+      deleteQuestion(location.sectionIndex, location.questionIndex);
+    },
+    [deleteQuestion, reviewQuestionLocations],
+  );
+
+  const toggleReviewFlag = useCallback(
+    (reviewQuestionId: string) => {
+      updateReviewQuestion(reviewQuestionId, (current) => ({
+        ...current,
+        metadata: {
+          ...current.metadata,
+          teacherFlagged: current.metadata.teacherFlagged === true ? false : true,
+        },
+      }));
+    },
+    [updateReviewQuestion],
   );
 
   const startProcessing = async () => {
@@ -569,7 +685,7 @@ export function InstitutePaperUploadFlow() {
         </Card>
       )}
 
-      {step === "preview" && pkg && previewTest && (
+      {step === "preview" && pkg && previewBundle && (
         <Card className="border-[#d8d2c7]">
           <CardHeader>
             <CardTitle className="text-lg text-[#14213d]">Step 4 - CBT draft preview</CardTitle>
@@ -583,9 +699,10 @@ export function InstitutePaperUploadFlow() {
               <SummaryStat label="Sections" value={String(pkg.sections.length)} />
               <SummaryStat label="Questions" value={String(pkg.totalQuestions)} />
               <SummaryStat label="Marks" value={String(pkg.totalMarks)} />
-              <SummaryStat label="Extraction" value={pkg.extractionMode} />
+              <SummaryStat label="Draft Status" value={pkg.status} />
             </div>
             <div className="grid gap-3 sm:grid-cols-4">
+              <SummaryStat label="Extraction" value={pkg.extractionMode} />
               <SummaryStat label="Pages" value={String(pkg.extractionSummary.pages)} />
               <SummaryStat label="Chars" value={String(pkg.extractionSummary.extractedChars)} />
               <SummaryStat
@@ -646,165 +763,75 @@ export function InstitutePaperUploadFlow() {
               </Button>
             </div>
 
-            <div className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2">
               {pkg.sections.map((section, sectionIndex) => (
-                <Card key={section.id} className="border-[#ece6da]">
-                  <CardHeader className="space-y-3">
-                    <div className="space-y-2">
-                      <Label>Section name</Label>
-                      <Input
-                        value={section.name}
-                        onChange={(event) => renameSection(sectionIndex, event.target.value)}
-                      />
-                    </div>
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <CardDescription>
-                        {section.questions.length} question(s) in this section.
-                      </CardDescription>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => addQuestion(sectionIndex)}
-                      >
-                        Add question
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {section.questions.map((question, questionIndex) => (
-                      <div key={question.questionId} className="rounded-xl border border-[#ece6da] p-4">
-                        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                          <p className="font-medium text-[#14213d]">Question {questionIndex + 1}</p>
-                          <div className="flex gap-2">
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              onClick={() => moveQuestion(sectionIndex, questionIndex, -1)}
-                              disabled={questionIndex === 0}
-                            >
-                              Move up
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              onClick={() => moveQuestion(sectionIndex, questionIndex, 1)}
-                              disabled={questionIndex === section.questions.length - 1}
-                            >
-                              Move down
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              onClick={() => deleteQuestion(sectionIndex, questionIndex)}
-                            >
-                              Delete
-                            </Button>
-                          </div>
-                        </div>
-
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          <div className="space-y-2">
-                            <Label>Subject</Label>
-                            <Input
-                              value={question.subject}
-                              onChange={(event) =>
-                                updateQuestion(sectionIndex, questionIndex, (current) => ({
-                                  ...current,
-                                  subject: event.target.value,
-                                }))
-                              }
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Correct answer</Label>
-                            <Input
-                              value={question.correctAnswer}
-                              onChange={(event) =>
-                                updateQuestion(sectionIndex, questionIndex, (current) => ({
-                                  ...current,
-                                  correctAnswer: event.target.value.toUpperCase(),
-                                }))
-                              }
-                            />
-                          </div>
-                        </div>
-                        <p className="mt-2 text-xs text-[#5e5a52]">
-                          Parser confidence: {Math.round(question.confidence * 100)}%
-                        </p>
-
-                        <div className="mt-3 space-y-2">
-                          <Label>Question text</Label>
-                          <textarea
-                            className="min-h-[96px] w-full rounded-md border border-[#ece6da] p-3 text-sm"
-                            value={question.questionText}
-                            onChange={(event) =>
-                              updateQuestion(sectionIndex, questionIndex, (current) => ({
-                                ...current,
-                                questionText: event.target.value,
-                              }))
-                            }
-                          />
-                        </div>
-
-                        {question.questionType === "MCQ_SINGLE" ? (
-                          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                            {["A", "B", "C", "D"].map((label, optionIndex) => (
-                              <div key={label} className="space-y-2">
-                                <Label>Option {label}</Label>
-                                <Input
-                                  value={question.optionLabels[optionIndex] ?? ""}
-                                  onChange={(event) =>
-                                    updateQuestion(sectionIndex, questionIndex, (current) => {
-                                      const nextOptions = [...current.optionLabels];
-                                      nextOptions[optionIndex] = event.target.value;
-                                      return { ...current, optionLabels: nextOptions };
-                                    })
-                                  }
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="mt-3 text-sm text-[#5e5a52]">
-                            Numerical question detected. Correct answer should contain the exact numeric value.
-                          </p>
-                        )}
-
-                        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                          <div className="space-y-2">
-                            <Label>Marks</Label>
-                            <Input
-                              value={String(question.marks)}
-                              onChange={(event) =>
-                                updateQuestion(sectionIndex, questionIndex, (current) => ({
-                                  ...current,
-                                  marks: safeNumber(event.target.value, current.marks),
-                                }))
-                              }
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Negative marks</Label>
-                            <Input
-                              value={String(question.negativeMarks)}
-                              onChange={(event) =>
-                                updateQuestion(sectionIndex, questionIndex, (current) => ({
-                                  ...current,
-                                  negativeMarks: safeNumber(event.target.value, current.negativeMarks),
-                                }))
-                              }
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
+                <div key={section.id} className="rounded-xl border border-[#ece6da] p-4">
+                  <div className="space-y-2">
+                    <Label>Section name</Label>
+                    <Input
+                      value={section.name}
+                      onChange={(event) => renameSection(sectionIndex, event.target.value)}
+                    />
+                  </div>
+                  <div className="mt-3 flex items-center justify-between gap-2">
+                    <p className="text-sm text-[#5e5a52]">
+                      {section.questions.length} question(s) in this section.
+                    </p>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => addQuestion(sectionIndex)}
+                    >
+                      Add question
+                    </Button>
+                  </div>
+                </div>
               ))}
+            </div>
+
+            <div className="overflow-hidden rounded-2xl border border-[#d8d2c7]">
+              <ExamInterface
+                examId={previewBundle.exam.id}
+                review={{
+                  exam: previewBundle.exam,
+                  status: pkg.status,
+                  flaggedQuestionIds,
+                  questionIssues,
+                  onQuestionTextChange: (questionId, value) =>
+                    updateReviewQuestion(questionId, (current) => ({
+                      ...current,
+                      questionText: value,
+                    })),
+                  onOptionTextChange: (questionId, label, value) =>
+                    updateReviewQuestion(questionId, (current) => {
+                      const optionIndex = Math.max(0, label.charCodeAt(0) - 65);
+                      const nextOptions = [...current.optionLabels];
+                      nextOptions[optionIndex] = value;
+                      return { ...current, optionLabels: nextOptions };
+                    }),
+                  onCorrectAnswerChange: (questionId, value) =>
+                    updateReviewQuestion(questionId, (current) => ({
+                      ...current,
+                      correctAnswer: value.trim().toUpperCase(),
+                    })),
+                  onMarksChange: (questionId, value) =>
+                    updateReviewQuestion(questionId, (current) => ({
+                      ...current,
+                      marks: safeNumber(value, current.marks),
+                    })),
+                  onNegativeMarksChange: (questionId, value) =>
+                    updateReviewQuestion(questionId, (current) => ({
+                      ...current,
+                      negativeMarks: safeNumber(value, current.negativeMarks),
+                    })),
+                  onToggleFlag: toggleReviewFlag,
+                  onMoveQuestion: moveReviewQuestion,
+                  onDeleteQuestion: deleteReviewQuestion,
+                  onAddQuestion: addQuestionBySectionId,
+                  onContinue: () => setStep("configure"),
+                }}
+              />
             </div>
 
             <details className="text-sm">

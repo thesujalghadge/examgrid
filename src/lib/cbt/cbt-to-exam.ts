@@ -76,8 +76,13 @@ function manualToExamQuestion(
   };
 }
 
-export function cbtTestToExamDefinition(test: CBTTest): ExamDefinition | null {
-  const bankById = new Map(getQuestionBank().map((question) => [question.id, question]));
+export function cbtTestToExamDefinition(
+  test: CBTTest,
+  bankQuestionsOverride?: BankQuestion[],
+): ExamDefinition | null {
+  const bankById = new Map(
+    (bankQuestionsOverride ?? getQuestionBank()).map((question) => [question.id, question]),
+  );
   const orderedSections = [...test.sections].sort((a, b) => a.order - b.order);
   if (orderedSections.length === 0 || test.questions.length === 0) return null;
 
