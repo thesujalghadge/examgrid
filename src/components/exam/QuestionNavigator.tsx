@@ -15,9 +15,12 @@ interface ReviewNavigatorProps {
 interface QuestionNavigatorProps {
   onSubmitClick: () => void;
   review?: ReviewNavigatorProps;
+  preview?: {
+    onEdit: () => void;
+  };
 }
 
-export function QuestionNavigator({ onSubmitClick, review }: QuestionNavigatorProps) {
+export function QuestionNavigator({ onSubmitClick, review, preview }: QuestionNavigatorProps) {
   const exam = useQuestionStore((s) => s.exam);
   const currentQuestionId = useQuestionStore((s) => s.currentQuestionId);
   const clearResponse = useQuestionStore((s) => s.clearResponse);
@@ -76,7 +79,7 @@ export function QuestionNavigator({ onSubmitClick, review }: QuestionNavigatorPr
                 Delete
               </Button>
             </>
-          ) : (
+          ) : preview ? null : (
             <Button
               type="button"
               variant="outline"
@@ -118,6 +121,15 @@ export function QuestionNavigator({ onSubmitClick, review }: QuestionNavigatorPr
               onClick={review.onContinue}
             >
               Continue to Publish
+            </Button>
+          ) : preview ? (
+            <Button
+              type="button"
+              size="sm"
+              className="h-9 bg-[#8a6f3e] px-5 font-bold text-white shadow-sm hover:bg-[#725c33]"
+              onClick={preview.onEdit}
+            >
+              Edit Questions
             </Button>
           ) : (
             <>

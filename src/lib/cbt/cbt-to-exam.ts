@@ -148,7 +148,7 @@ export function cbtTestToExamDefinition(
     id: test.id,
     title: test.title,
     subtitle: `${test.sourceFileName ?? "Institute test"} | ${test.instituteId}`,
-    examType: "JEE_MAIN",
+    examType: test.examType ?? "JEE_MAIN",
     durationMinutes: test.durationMinutes,
     totalQuestions,
     sections,

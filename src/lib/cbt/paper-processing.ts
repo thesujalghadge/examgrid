@@ -536,25 +536,27 @@ export function validateProcessedPaper(pkg: ProcessedPaperPackage): ProcessedPap
         });
       }
       if (question.questionType === "MCQ_SINGLE") {
-        for (const [optionIndex, option] of question.optionLabels.entries()) {
-          if (!option.trim()) {
+        const requiredOptionLabels = ["A", "B", "C", "D"];
+        for (const [optionIndex, label] of requiredOptionLabels.entries()) {
+          if (!question.optionLabels[optionIndex]?.trim()) {
             issues.push({
               level: "error",
               questionId: question.questionId,
               section: section.name,
-              message: `Question ${question.sequence} has an empty option ${String.fromCharCode(65 + optionIndex)}.`,
+              message: `Question ${question.sequence} has an empty option ${label}.`,
             });
           }
         }
-        if (question.optionLabels.filter((option) => option.trim()).length < 2) {
+        if (question.optionLabels.filter((option) => option.trim()).length < requiredOptionLabels.length) {
           issues.push({
             level: "error",
             questionId: question.questionId,
             section: section.name,
-            message: `Question ${question.sequence} needs at least two options.`,
+            message: `Question ${question.sequence} needs four complete options.`,
           });
         }
-        if (!/^[A-D]$/i.test(question.correctAnswer)) {
+        const answerIndex = requiredOptionLabels.indexOf(question.correctAnswer.toUpperCase());
+        if (answerIndex < 0 || !question.optionLabels[answerIndex]?.trim()) {
           issues.push({
             level: "error",
             questionId: question.questionId,

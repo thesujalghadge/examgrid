@@ -1,6 +1,7 @@
 import { preparedMetaToBankQuestion } from "@/lib/cbt/paper-processing";
 import type { ProcessedPaperPackage } from "@/types/cbt-paper-processing";
 import type { CBTTest, CBTTestQuestion, CBTTestSection } from "@/types/cbt";
+import type { ExamDefinition } from "@/types/exam";
 import type { BankQuestion } from "@/types/question-bank";
 
 export function buildCbtTestFromProcessedPaper(
@@ -8,6 +9,7 @@ export function buildCbtTestFromProcessedPaper(
   testId: string,
   batchIds: string[],
   createdBy: string,
+  examType: ExamDefinition["examType"] = "JEE_MAIN",
   createdAt = Date.now(),
 ): { test: CBTTest; bankQuestions: BankQuestion[] } {
   const bankQuestions: BankQuestion[] = [];
@@ -46,6 +48,7 @@ export function buildCbtTestFromProcessedPaper(
     id: testId,
     title: pkg.title,
     instituteId: pkg.instituteId,
+    examType,
     durationMinutes: pkg.durationMinutes,
     totalMarks: pkg.totalMarks,
     createdBy,

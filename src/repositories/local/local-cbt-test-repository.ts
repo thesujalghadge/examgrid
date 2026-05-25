@@ -8,6 +8,7 @@ const cbtTestSchema = z.object({
   id: z.string(),
   title: z.string(),
   instituteId: z.string(),
+  examType: z.enum(["JEE_MAIN", "NEET", "CET"]).optional(),
   durationMinutes: z.number().int().positive(),
   totalMarks: z.number().nonnegative(),
   createdBy: z.string(),

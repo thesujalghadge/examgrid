@@ -37,6 +37,7 @@ import {
 import { getQuestionBank, saveQuestionBank } from "@/services/question-bank-service";
 import { useWorkspaceAuthStore } from "@/stores/workspace-auth-store";
 import type { CBTTest } from "@/types/cbt";
+import type { ExamDefinition } from "@/types/exam";
 import type { Batch } from "@/types/institute-ops";
 import type {
   PaperExtractionSummary,
@@ -47,13 +48,7 @@ import type {
   UploadExtractionMode,
 } from "@/types/cbt-paper-processing";
 
-type WizardStep =
-  | "paper"
-  | "answer_key"
-  | "processing"
-  | "preview"
-  | "configure"
-  | "done";
+type WizardStep = "configure" | "upload" | "preview" | "edit" | "done";
 
 const ACCEPT_PAPER = ".pdf,.doc,.docx,.csv,.xlsx,.txt";
 const ACCEPT_KEY = ".csv,.xlsx,.txt,.doc,.docx";
@@ -68,19 +63,29 @@ export function InstitutePaperUploadFlow() {
 
   const [tests, setTests] = useState<CBTTest[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
-  const [step, setStep] = useState<WizardStep>("paper");
+  const [step, setStep] = useState<WizardStep>("configure");
   const [paperFile, setPaperFile] = useState<File | null>(null);
   const [keyFile, setKeyFile] = useState<File | null>(null);
   const [paperTextOverride, setPaperTextOverride] = useState("");
   const [answerKeyTextOverride, setAnswerKeyTextOverride] = useState("");
   const [pkg, setPkg] = useState<ProcessedPaperPackage | null>(null);
   const [processLog, setProcessLog] = useState<string[]>([]);
+  const [title, setTitle] = useState("Weekly CBT Assessment");
+  const [examType, setExamType] = useState<ExamDefinition["examType"]>("JEE_MAIN");
   const [duration, setDuration] = useState("60");
+  const [defaultMarks, setDefaultMarks] = useState("4");
+  const [defaultNegativeMarks, setDefaultNegativeMarks] = useState("1");
+  const [instructions, setInstructions] = useState(
+    "Read each question carefully before answering.\nUse the palette to review marked and unanswered questions.\nSubmit before the timer ends.",
+  );
+  const [optionalSections, setOptionalSections] = useState("");
   const [selectedBatchIds, setSelectedBatchIds] = useState<string[]>([]);
   const [scheduleStart, setScheduleStart] = useState("");
   const [scheduleEnd, setScheduleEnd] = useState("");
   const [publishError, setPublishError] = useState("");
   const [processingError, setProcessingError] = useState("");
+  const [configurationNotice, setConfigurationNotice] = useState("");
+  const [publishedTestId, setPublishedTestId] = useState<string | null>(null);
 
   const refresh = useCallback(() => {
     setTests(
@@ -106,11 +111,10 @@ export function InstitutePaperUploadFlow() {
     setScheduleEnd(toLocalInput(new Date(now.getTime() + 3 * 60 * 60 * 1000)));
   }, [refresh]);
 
-  useEffect(() => {
-    if (batches.length > 0 && selectedBatchIds.length === 0) {
-      setSelectedBatchIds(batches.map((batch) => batch.id));
-    }
-  }, [batches, selectedBatchIds.length]);
+  const configuredSectionNames = useMemo(
+    () => optionalSections.split(",").map((name) => name.trim()).filter(Boolean),
+    [optionalSections],
+  );
 
   const previewBundle = useMemo(() => {
     if (!pkg) return null;
@@ -118,13 +122,14 @@ export function InstitutePaperUploadFlow() {
     const built = buildCbtTestFromProcessedPaper(
       { ...pkg, durationMinutes: Math.max(1, parseInt(duration, 10) || 60) },
       testId,
-      selectedBatchIds.length ? selectedBatchIds : batches.map((batch) => batch.id),
+      selectedBatchIds,
       createdBy,
+      examType,
     );
     const exam = cbtTestToExamDefinition(built.test, built.bankQuestions);
     if (!exam) return null;
     return { ...built, exam };
-  }, [batches, createdBy, duration, pkg, selectedBatchIds]);
+  }, [createdBy, duration, examType, pkg, selectedBatchIds]);
 
   const blockingIssues = useMemo(
     () => pkg?.validationIssues.filter((issue) => issue.level === "error") ?? [],
@@ -381,10 +386,18 @@ export function InstitutePaperUploadFlow() {
   );
 
   const startProcessing = async () => {
-    if (!paperFile || !instituteId) return;
+    if (!paperFile || !instituteId) {
+      setConfigurationNotice("Add a question paper to continue to the CBT preview.");
+      return;
+    }
+    if (!title.trim()) {
+      setConfigurationNotice("Give this test a title before continuing.");
+      return;
+    }
+    setConfigurationNotice("");
     setPublishError("");
     setProcessingError("");
-    setStep("processing");
+    setStep("upload");
     setProcessLog([]);
 
     try {
@@ -442,14 +455,41 @@ export function InstitutePaperUploadFlow() {
         onStage: (_stage: PaperProcessingStage, log) => setProcessLog(log),
       });
 
-      setPkg(result);
-      setDuration(String(result.durationMinutes));
-      setProcessLog(result.processingLog);
+      const marks = safeNumber(defaultMarks, 4);
+      const negativeMarks = safeNumber(defaultNegativeMarks, 1);
+      const configured = normalizeProcessedPaper({
+        ...result,
+        title: title.trim(),
+        durationMinutes: Math.max(1, parseInt(duration, 10) || 60),
+        instructions: instructions
+          .split("\n")
+          .map((line) => line.trim())
+          .filter(Boolean),
+        sections: result.sections.map((section, sectionIndex) => {
+          const sectionName = configuredSectionNames[sectionIndex] || section.name;
+          return {
+            ...section,
+            name: sectionName,
+            questions: section.questions.map((question) => ({
+              ...question,
+              section: sectionName,
+              subject:
+                question.subject === section.name || question.subject === "Imported Questions"
+                  ? sectionName
+                  : question.subject,
+              marks,
+              negativeMarks,
+            })),
+          };
+        }),
+      });
+      setPkg(configured);
+      setProcessLog(configured.processingLog);
       setStep("preview");
     } catch (error) {
       const message = getErrorMessage(error);
       setProcessingError(message);
-      setStep("answer_key");
+      setStep("configure");
       logSecurityEvent("paper_processing_blocked", {
         instituteId,
         paperFileName: paperFile.name,
@@ -463,12 +503,8 @@ export function InstitutePaperUploadFlow() {
       setPublishError("Complete upload and processing first.");
       return;
     }
-    if (selectedBatchIds.length === 0) {
-      setPublishError("Select at least one batch.");
-      return;
-    }
     if (blockingIssues.length > 0) {
-      setPublishError("Resolve blocking parsing issues before publishing the CBT.");
+      setPublishError("A few questions still need attention before this CBT is ready. Open each highlighted item in the preview to finish it.");
       return;
     }
 
@@ -479,7 +515,7 @@ export function InstitutePaperUploadFlow() {
     const remainingIssues = validateProcessedPaper(finalPkg).filter((issue) => issue.level === "error");
     if (remainingIssues.length > 0) {
       setPkg(finalPkg);
-      setPublishError("Review the preview again. The CBT still has unresolved answer or format errors.");
+      setPublishError("There are still a few answer or option details to review before publishing.");
       return;
     }
 
@@ -489,6 +525,7 @@ export function InstitutePaperUploadFlow() {
       testId,
       selectedBatchIds,
       createdBy,
+      examType,
     );
 
     const existingBank = getQuestionBank();
@@ -504,17 +541,19 @@ export function InstitutePaperUploadFlow() {
     if (examDefinition) {
       repositories.exams.save(examDefinition);
     }
-    repositories.schedules.save({
-      ...createScheduleInput({
-        examId: test.id,
-        batchIds: selectedBatchIds,
-        startAt: new Date(scheduleStart).toISOString(),
-        endAt: new Date(scheduleEnd).toISOString(),
-        durationMinutes: test.durationMinutes,
-        visibilityRule: "assigned_batches",
-      }),
-      instituteId,
-    });
+    if (selectedBatchIds.length > 0 && scheduleStart && scheduleEnd) {
+      repositories.schedules.save({
+        ...createScheduleInput({
+          examId: test.id,
+          batchIds: selectedBatchIds,
+          startAt: new Date(scheduleStart).toISOString(),
+          endAt: new Date(scheduleEnd).toISOString(),
+          durationMinutes: test.durationMinutes,
+          visibilityRule: "assigned_batches",
+        }),
+        instituteId,
+      });
+    }
 
     await awaitRepositoryPersist();
     logUploadEvent("paper_processing_published", {
@@ -525,464 +564,321 @@ export function InstitutePaperUploadFlow() {
       usedOCR: finalPkg.extractionSummary.usedOCR,
     });
     refresh();
+    setPkg({ ...finalPkg, status: "PUBLISHED" });
+    setPublishedTestId(testId);
     setStep("done");
   };
 
   const stepIndex =
-    step === "paper"
-      ? 1
-      : step === "answer_key"
-        ? 2
-        : step === "processing"
-          ? 3
-          : step === "preview"
-            ? 4
-            : step === "configure"
-              ? 5
-              : 6;
+    step === "configure" ? 1 : step === "upload" ? 2 : step === "preview" ? 3 : step === "edit" ? 4 : 5;
+  const reviewMode = step === "edit" ? "edit" : "preview";
+
+  const resetWizard = () => {
+    setStep("configure");
+    setPaperFile(null);
+    setKeyFile(null);
+    setPaperTextOverride("");
+    setAnswerKeyTextOverride("");
+    setPkg(null);
+    setSelectedBatchIds([]);
+    setProcessingError("");
+    setPublishError("");
+    setPublishedTestId(null);
+  };
 
   return (
-    <div className="space-y-6">
-      <Card className="border-[#d8d2c7]">
-        <CardHeader>
-          <CardTitle className="text-base text-[#14213d]">Published tests</CardTitle>
-          <CardDescription>Tests created from uploaded papers in this institute.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {tests.length === 0 ? (
-            <p className="text-sm text-[#5e5a52]">
-              No tests yet. Upload a question paper below to conduct your first CBT.
-            </p>
-          ) : (
-            <ul className="divide-y rounded-xl border border-[#ece6da] bg-white text-sm">
-              {tests.map((test) => {
-                const schedule = getRepositories()
-                  .schedules.list()
-                  .find((row) => row.examId === test.id);
-                const status = schedule ? getScheduleStatus(schedule) : "unscheduled";
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center gap-2 text-xs text-[#5e5a52]">
+        {["Configure", "Upload", "CBT Preview", "Edit", "Publish"].map((label, index) => (
+          <span
+            key={label}
+            className={
+              index + 1 === stepIndex
+                ? "rounded-md bg-[#14213d] px-3 py-1.5 font-medium text-white"
+                : index + 1 < stepIndex
+                  ? "rounded-md bg-[#e9f3ea] px-3 py-1.5 text-[#2f6a37]"
+                  : "rounded-md border border-[#ece6da] bg-white px-3 py-1.5"
+            }
+          >
+            {index + 1}. {label}
+          </span>
+        ))}
+      </div>
+
+      {step === "configure" && (
+        <Card className="border-[#d8d2c7]">
+          <CardHeader className="border-b">
+            <CardTitle className="text-lg text-[#14213d]">Configure test</CardTitle>
+            <CardDescription>Set the essentials and attach the paper in one pass.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 md:grid-cols-4">
+              <label className="space-y-1.5 md:col-span-2">
+                <Label>Title</Label>
+                <Input value={title} onChange={(event) => setTitle(event.target.value)} />
+              </label>
+              <label className="space-y-1.5">
+                <Label>Exam type</Label>
+                <select
+                  value={examType}
+                  onChange={(event) => setExamType(event.target.value as ExamDefinition["examType"])}
+                  className="h-8 w-full rounded-lg border border-input bg-white px-2.5 text-sm"
+                >
+                  <option value="JEE_MAIN">JEE Main</option>
+                  <option value="NEET">NEET</option>
+                  <option value="CET">CET</option>
+                </select>
+              </label>
+              <label className="space-y-1.5">
+                <Label>Duration (min)</Label>
+                <Input type="number" min="1" value={duration} onChange={(event) => setDuration(event.target.value)} />
+              </label>
+              <label className="space-y-1.5">
+                <Label>Marks per question</Label>
+                <Input type="number" min="0" value={defaultMarks} onChange={(event) => setDefaultMarks(event.target.value)} />
+              </label>
+              <label className="space-y-1.5">
+                <Label>Negative marking</Label>
+                <Input type="number" min="0" step="0.25" value={defaultNegativeMarks} onChange={(event) => setDefaultNegativeMarks(event.target.value)} />
+              </label>
+              <label className="space-y-1.5">
+                <Label>Start time</Label>
+                <Input type="datetime-local" value={scheduleStart} onChange={(event) => setScheduleStart(event.target.value)} />
+              </label>
+              <label className="space-y-1.5">
+                <Label>End time</Label>
+                <Input type="datetime-local" value={scheduleEnd} onChange={(event) => setScheduleEnd(event.target.value)} />
+              </label>
+            </div>
+            <div className="grid gap-3 md:grid-cols-[1fr_1fr]">
+              <label className="space-y-1.5">
+                <Label>Instructions</Label>
+                <textarea
+                  className="min-h-20 w-full rounded-lg border border-input bg-white px-3 py-2 text-sm"
+                  value={instructions}
+                  onChange={(event) => setInstructions(event.target.value)}
+                />
+              </label>
+              <label className="space-y-1.5">
+                <Label>Optional sections</Label>
+                <Input
+                  placeholder="Physics, Chemistry, Mathematics"
+                  value={optionalSections}
+                  onChange={(event) => setOptionalSections(event.target.value)}
+                />
+                <p className="text-xs text-[#5e5a52]">Comma-separated labels are applied to detected sections.</p>
+              </label>
+            </div>
+            <div className="grid gap-3 border-t border-[#ece6da] pt-4 sm:grid-cols-2">
+              <label className="space-y-1.5 rounded-lg border border-[#ece6da] bg-[#fbf9f4] p-3">
+                <Label>Upload question paper</Label>
+                <Input type="file" accept={ACCEPT_PAPER} onChange={(event) => setPaperFile(event.target.files?.[0] ?? null)} />
+                <p className="text-xs text-[#5e5a52]">PDF, DOC, DOCX, CSV, XLSX, or TXT</p>
+              </label>
+              <label className="space-y-1.5 rounded-lg border border-[#ece6da] bg-[#fbf9f4] p-3">
+                <Label>Upload answer key</Label>
+                <Input type="file" accept={ACCEPT_KEY} onChange={(event) => setKeyFile(event.target.files?.[0] ?? null)} />
+                <p className="text-xs text-[#5e5a52]">Optional now; missing answers can be completed during edit.</p>
+              </label>
+            </div>
+            <details className="rounded-lg border border-[#ece6da] bg-white px-3 py-2 text-sm">
+              <summary className="cursor-pointer font-medium text-[#5e5a52]">Text fallback for scanned files</summary>
+              <div className="mt-3 grid gap-3 md:grid-cols-2">
+                <textarea
+                  className="min-h-24 rounded-lg border border-input p-2 text-sm"
+                  placeholder="Question paper extracted text"
+                  value={paperTextOverride}
+                  onChange={(event) => setPaperTextOverride(event.target.value)}
+                />
+                <textarea
+                  className="min-h-24 rounded-lg border border-input p-2 text-sm"
+                  placeholder="Answer key text, for example 1-A, 2-B"
+                  value={answerKeyTextOverride}
+                  onChange={(event) => setAnswerKeyTextOverride(event.target.value)}
+                />
+              </div>
+            </details>
+            {(configurationNotice || processingError) && (
+              <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                {configurationNotice || processingError}
+              </p>
+            )}
+            <Button className="bg-[#14213d] px-4" onClick={() => void startProcessing()}>
+              Continue to upload
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {step === "upload" && (
+        <Card className="border-[#d8d2c7]">
+          <CardContent className="space-y-4 py-10">
+            <div className="mx-auto h-9 w-9 animate-spin rounded-full border-2 border-[#8a6f3e] border-t-transparent" />
+            <p className="text-center font-medium text-[#14213d]">Preparing your CBT preview</p>
+            <p className="text-center text-sm text-[#5e5a52]">Uploading, reading questions, and pairing answers.</p>
+            <ul className="mx-auto max-w-2xl space-y-1 text-xs text-[#5e5a52]">
+              {processLog.map((line) => <li key={line}>{line}</li>)}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+
+      {(step === "preview" || step === "edit") && pkg && previewBundle && (
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-semibold text-[#14213d]">
+                {step === "preview" ? "Student CBT preview" : "Edit inside CBT preview"}
+              </h3>
+              <p className="text-sm text-[#5e5a52]">
+                {pkg.paperFileName} | {pkg.totalQuestions} questions | {pkg.totalMarks} marks
+              </p>
+            </div>
+            <div className="flex gap-2 text-xs">
+              <span className="rounded-md bg-[#f5f1e8] px-2.5 py-1 text-[#8a6f3e]">{pkg.sections.length} sections</span>
+              <span className="rounded-md bg-[#f5f1e8] px-2.5 py-1 text-[#8a6f3e]">{blockingIssues.length} to review</span>
+            </div>
+          </div>
+
+          {step === "edit" && (
+            <Card className="border-[#d8d2c7]" size="sm">
+              <CardContent className="space-y-4">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <IssuePanel
+                    title="Details to check"
+                    tone="warning"
+                    items={blockingIssues.map((issue) => issue.message)}
+                    emptyMessage="All required question and answer details are complete."
+                  />
+                  <IssuePanel
+                    title="Parser notes"
+                    tone="warning"
+                    items={warningIssues.map((issue) => issue.message)}
+                    emptyMessage="No additional parser notes."
+                  />
+                </div>
+                <div className="flex flex-wrap items-end gap-3">
+                  {pkg.sections.map((section, sectionIndex) => (
+                    <label key={section.id} className="min-w-40 flex-1 space-y-1">
+                      <Label>Section {sectionIndex + 1}</Label>
+                      <Input value={section.name} onChange={(event) => renameSection(sectionIndex, event.target.value)} />
+                    </label>
+                  ))}
+                  <Button type="button" variant="outline" onClick={addSection}>Add section</Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          <div className="h-[min(780px,calc(100dvh-8rem))] min-h-[560px] overflow-hidden rounded-lg border border-[#d8d2c7]">
+            <ExamInterface
+              examId={previewBundle.exam.id}
+              review={{
+                exam: previewBundle.exam,
+                status: pkg.status,
+                mode: reviewMode,
+                flaggedQuestionIds,
+                questionIssues,
+                onQuestionTextChange: (questionId, value) =>
+                  updateReviewQuestion(questionId, (current) => ({ ...current, questionText: value })),
+                onOptionTextChange: (questionId, label, value) =>
+                  updateReviewQuestion(questionId, (current) => {
+                    const optionIndex = Math.max(0, label.charCodeAt(0) - 65);
+                    const nextOptions = [...current.optionLabels];
+                    nextOptions[optionIndex] = value;
+                    return { ...current, optionLabels: nextOptions };
+                  }),
+                onCorrectAnswerChange: (questionId, value) =>
+                  updateReviewQuestion(questionId, (current) => ({ ...current, correctAnswer: value.trim().toUpperCase() })),
+                onMarksChange: (questionId, value) =>
+                  updateReviewQuestion(questionId, (current) => ({ ...current, marks: safeNumber(value, current.marks) })),
+                onNegativeMarksChange: (questionId, value) =>
+                  updateReviewQuestion(questionId, (current) => ({ ...current, negativeMarks: safeNumber(value, current.negativeMarks) })),
+                onToggleFlag: toggleReviewFlag,
+                onMoveQuestion: moveReviewQuestion,
+                onDeleteQuestion: deleteReviewQuestion,
+                onAddQuestion: addQuestionBySectionId,
+                onContinue: () => {
+                  if (step === "preview") setStep("edit");
+                  else void publishTest();
+                },
+              }}
+            />
+          </div>
+
+          {step === "edit" && (
+            <Card className="border-[#d8d2c7]" size="sm">
+              <CardHeader>
+                <CardTitle className="text-base text-[#14213d]">Publish options</CardTitle>
+                <CardDescription>Assignments are optional; an unassigned CBT can be scheduled later.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex flex-wrap gap-2">
+                  {batches.map((batch) => (
+                    <label key={batch.id} className="flex items-center gap-2 rounded-md border border-[#ece6da] px-3 py-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={selectedBatchIds.includes(batch.id)}
+                        onChange={() =>
+                          setSelectedBatchIds((current) =>
+                            current.includes(batch.id) ? current.filter((id) => id !== batch.id) : [...current, batch.id],
+                          )
+                        }
+                      />
+                      {batch.name}
+                    </label>
+                  ))}
+                </div>
+                {publishError && <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">{publishError}</p>}
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" onClick={() => setStep("preview")}>Return to preview</Button>
+                  <Button className="bg-[#8a6f3e] px-4" onClick={() => void publishTest()}>Publish CBT</Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {step === "done" && (
+        <Card className="border-emerald-200 bg-emerald-50">
+          <CardContent className="space-y-4 py-8">
+            <div>
+              <p className="text-lg font-semibold text-emerald-950">CBT ready for students</p>
+              <p className="mt-1 text-sm text-emerald-800">
+                {pkg?.title} has been published successfully. Assign a batch or schedule its live window when ready.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Link href="/institute/batches" className="inline-flex h-9 items-center rounded-lg bg-[#14213d] px-4 text-sm font-medium text-white">Assign batch</Link>
+              <Button variant="outline" className="bg-white" onClick={() => setStep("preview")}>Preview CBT</Button>
+              {publishedTestId && (
+                <Link href={`/institute/tests/${publishedTestId}`} className="inline-flex h-9 items-center rounded-lg border border-[#d8d2c7] bg-white px-4 text-sm font-medium text-[#14213d]">Schedule</Link>
+              )}
+              <Button variant="outline" className="bg-white" onClick={resetWizard}>Publish another</Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {tests.length > 0 && step !== "preview" && step !== "edit" && (
+        <Card className="border-[#d8d2c7]" size="sm">
+          <CardHeader><CardTitle className="text-base text-[#14213d]">Published tests</CardTitle></CardHeader>
+          <CardContent>
+            <ul className="divide-y rounded-lg border border-[#ece6da] bg-white text-sm">
+              {tests.slice(0, 4).map((test) => {
+                const schedule = getRepositories().schedules.list().find((row) => row.examId === test.id);
                 return (
-                  <li
-                    key={test.id}
-                    className="flex flex-wrap items-center justify-between gap-2 px-4 py-3"
-                  >
-                    <div>
-                      <p className="font-medium text-[#14213d]">{test.title}</p>
-                      <p className="text-xs text-[#5e5a52]">
-                        {test.durationMinutes} min · {test.questions.length} Q · {status}
-                      </p>
-                    </div>
-                    <Link
-                      href={`/institute/tests/${test.id}`}
-                      className="text-sm font-medium text-[#8a6f3e] hover:underline"
-                    >
-                      Open
-                    </Link>
+                  <li key={test.id} className="flex items-center justify-between gap-2 px-3 py-2">
+                    <span>{test.title} <span className="text-[#5e5a52]">| {schedule ? getScheduleStatus(schedule) : "unscheduled"}</span></span>
+                    <Link href={`/institute/tests/${test.id}`} className="font-medium text-[#8a6f3e]">Open</Link>
                   </li>
                 );
               })}
             </ul>
-          )}
-        </CardContent>
-      </Card>
-
-      <div className="flex flex-wrap gap-2 text-xs text-[#5e5a52]">
-        {["Paper", "Answer key", "Processing", "Preview", "Configure", "Publish"].map(
-          (label, index) => (
-            <span
-              key={label}
-              className={
-                index + 1 === stepIndex
-                  ? "rounded-full bg-[#14213d] px-3 py-1 font-medium text-white"
-                  : index + 1 < stepIndex
-                    ? "rounded-full bg-[#e9f3ea] px-3 py-1 text-[#2f6a37]"
-                    : "rounded-full border border-[#ece6da] px-3 py-1"
-              }
-            >
-              {index + 1}. {label}
-            </span>
-          ),
-        )}
-      </div>
-
-      {step === "paper" && (
-        <Card className="border-[#8a6f3e]/40">
-          <CardHeader>
-            <CardTitle className="text-lg text-[#14213d]">Step 1 - Upload question paper</CardTitle>
-            <CardDescription>
-              PDF, DOC, DOCX, CSV, XLSX, or TXT. For scanned or heavily formatted papers, you can also paste extracted text below.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Input
-              type="file"
-              accept={ACCEPT_PAPER}
-              onChange={(event) => setPaperFile(event.target.files?.[0] ?? null)}
-            />
-            <div className="space-y-2">
-              <Label>Extraction fallback text</Label>
-              <textarea
-                className="min-h-[160px] w-full rounded-md border border-[#ece6da] p-3 text-sm"
-                placeholder="Paste numbered questions here when the uploaded file is scanned or heavily formatted. Example: 1) Question text..."
-                value={paperTextOverride}
-                onChange={(event) => setPaperTextOverride(event.target.value)}
-              />
-            </div>
-            <Button className="bg-[#14213d]" disabled={!paperFile} onClick={() => setStep("answer_key")}>
-              Continue to answer key
-            </Button>
           </CardContent>
         </Card>
       )}
-
-      {step === "answer_key" && (
-        <Card className="border-[#d8d2c7]">
-          <CardHeader>
-            <CardTitle className="text-lg text-[#14213d]">Step 2 - Upload answer key</CardTitle>
-            <CardDescription>CSV, XLSX, TXT, DOC, or DOCX. Optional, but required for scored publishing.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Input
-              type="file"
-              accept={ACCEPT_KEY}
-              onChange={(event) => setKeyFile(event.target.files?.[0] ?? null)}
-            />
-            <div className="space-y-2">
-              <Label>Answer key fallback text</Label>
-              <textarea
-                className="min-h-[120px] w-full rounded-md border border-[#ece6da] p-3 text-sm"
-                placeholder="Example: 1-A, 2. B, Q3 -> C"
-                value={answerKeyTextOverride}
-                onChange={(event) => setAnswerKeyTextOverride(event.target.value)}
-              />
-            </div>
-            <p className="text-xs text-[#5e5a52]">
-              Use one line per answer or a compact list. The preview will block publish until unresolved answers are fixed.
-            </p>
-            {processingError ? <p className="text-sm text-amber-800">{processingError}</p> : null}
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setStep("paper")}>
-                Back
-              </Button>
-              <Button className="bg-[#14213d]" onClick={() => void startProcessing()}>
-                Start processing
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {step === "processing" && (
-        <Card className="border-[#d8d2c7]">
-          <CardContent className="space-y-4 py-8">
-            <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-[#8a6f3e] border-t-transparent" />
-            <p className="text-center font-medium text-[#14213d]">Processing paper...</p>
-            <ul className="mx-auto max-w-2xl space-y-1 text-sm text-[#5e5a52]">
-              {processLog.map((line) => (
-                <li key={line}>{line}</li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      )}
-
-      {step === "preview" && pkg && previewBundle && (
-        <Card className="border-[#d8d2c7]">
-          <CardHeader>
-            <CardTitle className="text-lg text-[#14213d]">Step 4 - CBT draft preview</CardTitle>
-            <CardDescription>
-              {pkg.paperFileName}
-              {pkg.answerKeyFileName ? ` + ${pkg.answerKeyFileName}` : ""}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <div className="grid gap-3 sm:grid-cols-4">
-              <SummaryStat label="Sections" value={String(pkg.sections.length)} />
-              <SummaryStat label="Questions" value={String(pkg.totalQuestions)} />
-              <SummaryStat label="Marks" value={String(pkg.totalMarks)} />
-              <SummaryStat label="Draft Status" value={pkg.status} />
-            </div>
-            <div className="grid gap-3 sm:grid-cols-4">
-              <SummaryStat label="Extraction" value={pkg.extractionMode} />
-              <SummaryStat label="Pages" value={String(pkg.extractionSummary.pages)} />
-              <SummaryStat label="Chars" value={String(pkg.extractionSummary.extractedChars)} />
-              <SummaryStat
-                label="OCR Fallback"
-                value={pkg.extractionSummary.usedOCR ? "Yes" : "No"}
-              />
-              <SummaryStat
-                label="Detected"
-                value={String(pkg.extractionSummary.questionsDetected)}
-              />
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <IssuePanel
-                title="Answer key review"
-                tone="warning"
-                items={[
-                  ...pkg.parsingDiagnostics.duplicateAnswers.map(
-                    (item) => `Duplicate mapping for Q${item.questionNumber}: ${item.answer}`,
-                  ),
-                  ...pkg.parsingDiagnostics.unmatchedAnswers.map(
-                    (item) => `Unmatched answer for Q${item.questionNumber}: ${item.answer}`,
-                  ),
-                ]}
-                emptyMessage="All parsed answer key entries matched a detected question."
-              />
-              <div className="rounded-xl border border-[#ece6da] p-4">
-                <p className="font-medium text-[#14213d]">Parsing diagnostics</p>
-                <p className="mt-2 text-sm text-[#5e5a52]">
-                  Parsed questions: {pkg.parsingDiagnostics.parsedQuestionCount}
-                </p>
-                <p className="text-sm text-[#5e5a52]">
-                  Unmatched answers: {pkg.parsingDiagnostics.unmatchedAnswerCount}
-                </p>
-                <p className="text-sm text-[#5e5a52]">
-                  OCR used: {pkg.extractionSummary.usedOCR ? "Yes" : "No"}
-                </p>
-              </div>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <IssuePanel
-                title="Blocking issues"
-                tone="error"
-                items={blockingIssues.map((issue) => issue.message)}
-                emptyMessage="No blocking issues. The CBT is structurally publishable."
-              />
-              <IssuePanel
-                title="Review warnings"
-                tone="warning"
-                items={warningIssues.map((issue) => issue.message)}
-                emptyMessage="No subject or extraction warnings."
-              />
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <Button type="button" variant="outline" onClick={() => addSection()}>
-                Add section
-              </Button>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              {pkg.sections.map((section, sectionIndex) => (
-                <div key={section.id} className="rounded-xl border border-[#ece6da] p-4">
-                  <div className="space-y-2">
-                    <Label>Section name</Label>
-                    <Input
-                      value={section.name}
-                      onChange={(event) => renameSection(sectionIndex, event.target.value)}
-                    />
-                  </div>
-                  <div className="mt-3 flex items-center justify-between gap-2">
-                    <p className="text-sm text-[#5e5a52]">
-                      {section.questions.length} question(s) in this section.
-                    </p>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => addQuestion(sectionIndex)}
-                    >
-                      Add question
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="overflow-hidden rounded-2xl border border-[#d8d2c7]">
-              <ExamInterface
-                examId={previewBundle.exam.id}
-                review={{
-                  exam: previewBundle.exam,
-                  status: pkg.status,
-                  flaggedQuestionIds,
-                  questionIssues,
-                  onQuestionTextChange: (questionId, value) =>
-                    updateReviewQuestion(questionId, (current) => ({
-                      ...current,
-                      questionText: value,
-                    })),
-                  onOptionTextChange: (questionId, label, value) =>
-                    updateReviewQuestion(questionId, (current) => {
-                      const optionIndex = Math.max(0, label.charCodeAt(0) - 65);
-                      const nextOptions = [...current.optionLabels];
-                      nextOptions[optionIndex] = value;
-                      return { ...current, optionLabels: nextOptions };
-                    }),
-                  onCorrectAnswerChange: (questionId, value) =>
-                    updateReviewQuestion(questionId, (current) => ({
-                      ...current,
-                      correctAnswer: value.trim().toUpperCase(),
-                    })),
-                  onMarksChange: (questionId, value) =>
-                    updateReviewQuestion(questionId, (current) => ({
-                      ...current,
-                      marks: safeNumber(value, current.marks),
-                    })),
-                  onNegativeMarksChange: (questionId, value) =>
-                    updateReviewQuestion(questionId, (current) => ({
-                      ...current,
-                      negativeMarks: safeNumber(value, current.negativeMarks),
-                    })),
-                  onToggleFlag: toggleReviewFlag,
-                  onMoveQuestion: moveReviewQuestion,
-                  onDeleteQuestion: deleteReviewQuestion,
-                  onAddQuestion: addQuestionBySectionId,
-                  onContinue: () => setStep("configure"),
-                }}
-              />
-            </div>
-
-            <details className="text-sm">
-              <summary className="cursor-pointer font-medium text-[#8a6f3e]">Processing log</summary>
-              <ul className="mt-2 space-y-1 text-[#5e5a52]">
-                {pkg.processingLog.map((line) => (
-                  <li key={line}>{line}</li>
-                ))}
-              </ul>
-            </details>
-            <details className="text-sm">
-              <summary className="cursor-pointer font-medium text-[#8a6f3e]">
-                Extracted raw text preview
-              </summary>
-              <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap rounded-lg border border-[#ece6da] bg-[#fbf9f4] p-3 text-xs text-[#5e5a52]">
-                {pkg.parsingDiagnostics.rawTextPreview || "No extracted text available."}
-              </pre>
-            </details>
-
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" onClick={() => setStep("answer_key")}>
-                Back
-              </Button>
-              <Button
-                className="bg-[#14213d]"
-                onClick={() => setStep("configure")}
-                disabled={blockingIssues.length > 0}
-              >
-                Continue to configure
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {step === "configure" && pkg && (
-        <Card className="border-[#d8d2c7]">
-          <CardHeader>
-            <CardTitle className="text-lg text-[#14213d]">Step 5 - Configure and publish</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Test title</Label>
-              <Input
-                value={pkg.title}
-                onChange={(event) =>
-                  applyPackageUpdate((current) => ({ ...current, title: event.target.value }))
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Duration (minutes)</Label>
-              <Input value={duration} onChange={(event) => setDuration(event.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>Instructions (one per line)</Label>
-              <textarea
-                className="min-h-[80px] w-full rounded-md border border-[#ece6da] p-2 text-sm"
-                value={pkg.instructions.join("\n")}
-                onChange={(event) =>
-                  applyPackageUpdate((current) => ({
-                    ...current,
-                    instructions: event.target.value
-                      .split("\n")
-                      .map((line) => line.trim())
-                      .filter(Boolean),
-                  }))
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Batches</Label>
-              <div className="flex flex-wrap gap-2">
-                {batches.map((batch) => (
-                  <label
-                    key={batch.id}
-                    className="flex cursor-pointer items-center gap-2 rounded-lg border border-[#ece6da] px-3 py-2 text-sm"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedBatchIds.includes(batch.id)}
-                      onChange={() =>
-                        setSelectedBatchIds((current) =>
-                          current.includes(batch.id)
-                            ? current.filter((id) => id !== batch.id)
-                            : [...current, batch.id],
-                        )
-                      }
-                    />
-                    {batch.name}
-                  </label>
-                ))}
-              </div>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Opens</Label>
-                <Input
-                  type="datetime-local"
-                  value={scheduleStart}
-                  onChange={(event) => setScheduleStart(event.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Closes</Label>
-                <Input
-                  type="datetime-local"
-                  value={scheduleEnd}
-                  onChange={(event) => setScheduleEnd(event.target.value)}
-                />
-              </div>
-            </div>
-            {publishError ? <p className="text-sm text-red-700">{publishError}</p> : null}
-            <Button className="bg-[#8a6f3e]" onClick={() => void publishTest()}>
-              Step 6 - Publish CBT
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {step === "done" && (
-        <Card className="border-green-200 bg-green-50">
-          <CardContent className="space-y-3 py-6">
-            <p className="font-medium text-green-900">CBT published.</p>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setStep("paper");
-                setPaperFile(null);
-                setKeyFile(null);
-                setPaperTextOverride("");
-                setAnswerKeyTextOverride("");
-                setPkg(null);
-                setProcessingError("");
-                setPublishError("");
-              }}
-            >
-              Upload another paper
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  );
-}
-
-function SummaryStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-[#ece6da] p-4">
-      <p className="text-xs uppercase tracking-wide text-[#8f8779]">{label}</p>
-      <p className="text-lg font-semibold text-[#14213d]">{value}</p>
     </div>
   );
 }
@@ -998,6 +894,7 @@ function IssuePanel({
   items: string[];
   emptyMessage: string;
 }) {
+  const visibleItems = items.slice(0, 4);
   const className =
     tone === "error"
       ? "border-red-200 bg-red-50 text-red-900"
@@ -1009,9 +906,12 @@ function IssuePanel({
         <p className="mt-2 text-sm">{emptyMessage}</p>
       ) : (
         <ul className="mt-2 space-y-1 text-sm">
-          {items.map((item) => (
+          {visibleItems.map((item) => (
             <li key={item}>{item}</li>
           ))}
+          {items.length > visibleItems.length && (
+            <li className="font-medium">+{items.length - visibleItems.length} more in the question palette</li>
+          )}
         </ul>
       )}
     </div>

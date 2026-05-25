@@ -47,6 +47,7 @@ export type ExamInterfaceNavigate = {
 export interface ExamTeacherReviewConfig {
   exam: ExamDefinition;
   status: ProcessedPaperStatus;
+  mode: "preview" | "edit";
   flaggedQuestionIds: string[];
   questionIssues: Record<string, string[]>;
   onQuestionTextChange: (questionId: string, value: string) => void;
@@ -398,7 +399,7 @@ export function ExamInterface({
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#c8d0dc]">
+    <div className={isTeacherReview ? "flex h-full min-h-0 flex-col bg-[#c8d0dc]" : "flex min-h-screen flex-col bg-[#c8d0dc]"}>
       <ExamHeader
         examTitle={exam?.title ?? review?.exam.title ?? "CBT Test"}
         candidate={isTeacherReview ? reviewCandidate : candidate!}
@@ -423,8 +424,9 @@ export function ExamInterface({
       <div className="relative flex flex-1 overflow-hidden">
         <main className="flex min-w-0 flex-1 flex-col border-r border-[#1a3c6e]/10 bg-white shadow-sm">
           <QuestionCard
+            previewOnly={Boolean(review && review.mode === "preview")}
             review={
-              review && currentQuestionId
+              review && review.mode === "edit" && currentQuestionId
                 ? {
                     issues: review.questionIssues[currentQuestionId] ?? [],
                     flagged: review.flaggedQuestionIds.includes(currentQuestionId),
@@ -441,8 +443,15 @@ export function ExamInterface({
           />
           <QuestionNavigator
             onSubmitClick={() => setSubmitOpen(true)}
+            preview={
+              review && review.mode === "preview"
+                ? {
+                    onEdit: review.onContinue,
+                  }
+                : undefined
+            }
             review={
-              review && currentQuestionId && currentReviewSection
+              review && review.mode === "edit" && currentQuestionId && currentReviewSection
                 ? {
                     canMoveQuestionUp: currentReviewQuestionIndex > 0,
                     canMoveQuestionDown:

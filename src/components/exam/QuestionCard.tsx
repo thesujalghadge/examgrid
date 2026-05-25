@@ -21,9 +21,10 @@ interface QuestionCardReviewProps {
 
 interface QuestionCardProps {
   review?: QuestionCardReviewProps;
+  previewOnly?: boolean;
 }
 
-export function QuestionCard({ review }: QuestionCardProps) {
+export function QuestionCard({ review, previewOnly = false }: QuestionCardProps) {
   const exam = useQuestionStore((s) => s.exam);
   const currentQuestionId = useQuestionStore((s) => s.currentQuestionId);
   const answers = useQuestionStore((s) => s.answers);
@@ -139,6 +140,7 @@ export function QuestionCard({ review }: QuestionCardProps) {
               questionId={question.id}
               value={selected}
               onValueChange={setNumericalAnswer}
+              disabled={previewOnly}
             />
           )
         ) : (
@@ -167,12 +169,13 @@ export function QuestionCard({ review }: QuestionCardProps) {
                         name={question.id}
                         value={opt.id}
                         checked={isSelected}
+                        disabled={previewOnly}
                         onChange={() =>
                           review
                             ? review.onCorrectAnswerChange?.(opt.label)
                             : selectOption(question.id, opt.id)
                         }
-                        className="mt-0.5 h-4 w-4 shrink-0 accent-[#1a3c6e]"
+                        className="mt-0.5 h-4 w-4 shrink-0 accent-[#1a3c6e] disabled:cursor-default"
                       />
                       <span className="flex-1 text-sm leading-relaxed text-gray-900">
                         <span className="mr-2 inline-flex h-6 w-6 items-center justify-center rounded-full border border-[#1a3c6e] text-xs font-bold text-[#1a3c6e]">
