@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { toNormalizedQuestion } from "@/lib/cbt/normalized-question";
 import { applySubjectMapping, resolveSubjectForQuestion } from "@/lib/cbt/subject-mapping";
-import { parsePaperTextForTest } from "@/lib/cbt/paper-processing";
+import { isNumericAnswer, parsePaperTextForTest, resolveQuestionType } from "@/lib/cbt/paper-processing";
 import {
   JEE_ANSWER_KEY,
   JEE_INLINE_MCQ_BLOCK,
@@ -64,6 +64,12 @@ describe("paper-processing JEE-style extraction", () => {
     expect(chemistryMcq.type).toBe("MCQ_SINGLE");
     expect(chemistryMcq.answer).toBe("C");
     expect(questions[2].section).toBe("Chemistry");
+  });
+
+  it("does not classify as numerical when answer key is a letter but options are missing", () => {
+    const type = resolveQuestionType([], "B", "A particle moves with velocity v.");
+    expect(type).toBe("MCQ_SINGLE");
+    expect(isNumericAnswer("B")).toBe(false);
   });
 
   it("applies multi-subject range mapping by global question number", () => {

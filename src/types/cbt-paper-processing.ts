@@ -25,9 +25,15 @@ export interface PaperParsingDiagnostics {
   duplicateAnswers: AnswerKeyReviewItem[];
 }
 
+export type ProcessedPaperValidationCode =
+  | "missing_answer"
+  | "malformed_options"
+  | "duplicate_id";
+
 export interface ProcessedPaperValidationIssue {
   level: "warning" | "error";
   message: string;
+  code?: ProcessedPaperValidationCode;
   questionId?: string;
   section?: string;
 }

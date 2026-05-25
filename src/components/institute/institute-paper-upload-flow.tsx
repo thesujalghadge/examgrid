@@ -413,6 +413,44 @@ export function InstitutePaperUploadFlow() {
     [updateReviewQuestion],
   );
 
+  const syncConfigureIntoPackage = useCallback(() => {
+    if (!pkg) return;
+    setPkg((current) => {
+      if (!current) return current;
+      return normalizeProcessedPaper(
+        applySubjectMapping({
+          ...current,
+          title: title.trim() || current.title,
+          durationMinutes: Math.max(1, parseInt(duration, 10) || 60),
+          instructions: instructions
+            .split("\n")
+            .map((line) => line.trim())
+            .filter(Boolean),
+        }),
+      );
+    });
+  }, [duration, instructions, pkg, title]);
+
+  const navigateWizard = useCallback(
+    (target: WizardNavStep) => {
+      setPublishError("");
+      setConfigurationNotice("");
+      if (pkg && (target === "configure" || target === "preview" || target === "publish")) {
+        syncConfigureIntoPackage();
+      }
+      if (target === "preview") {
+        setStep("preview");
+        return;
+      }
+      if (target === "publish") {
+        setStep("publish");
+        return;
+      }
+      setStep(target);
+    },
+    [pkg, syncConfigureIntoPackage],
+  );
+
   const openReviewQuestion = useCallback((questionId?: string) => {
     if (!questionId) {
       setStep("edit");
@@ -643,11 +681,7 @@ export function InstitutePaperUploadFlow() {
             key={item.id}
             type="button"
             disabled={!canNavigateWizard(item.id, pkg, step)}
-            onClick={() => {
-              setPublishError("");
-              setConfigurationNotice("");
-              setStep(item.id);
-            }}
+            onClick={() => navigateWizard(item.id)}
             className={
               item.id === activeNavStep
                 ? "rounded-md bg-[#14213d] px-3 py-1.5 font-medium text-white"
@@ -696,11 +730,11 @@ export function InstitutePaperUploadFlow() {
                 <Input type="number" min="0" step="0.25" value={defaultNegativeMarks} onChange={(event) => setDefaultNegativeMarks(event.target.value)} />
               </label>
               <label className="space-y-1.5">
-                <Label>Available From</Label>
+                <Label>Available From (optional)</Label>
                 <Input type="datetime-local" value={scheduleStart} onChange={(event) => setScheduleStart(event.target.value)} />
               </label>
               <label className="space-y-1.5">
-                <Label>Available Until</Label>
+                <Label>Available Until (optional)</Label>
                 <Input type="datetime-local" value={scheduleEnd} onChange={(event) => setScheduleEnd(event.target.value)} />
               </label>
             </div>
@@ -1209,17 +1243,25 @@ function bucketValidationIssues(
     duplicateIds: [],
   };
   for (const issue of issues) {
-    const lower = issue.message.toLowerCase();
     const item = {
       issue,
       reviewQuestionId: issue.questionId ? reviewQuestionIdBySource.get(issue.questionId) : undefined,
     };
-    if (lower.includes("duplicate question id")) {
+    if (issue.code === "duplicate_id") {
       buckets.duplicateIds.push(item);
-    } else if (lower.includes("answer key") || lower.includes("numerical answer")) {
-      buckets.missingAnswers.push(item);
-    } else if (lower.includes("option") || lower.includes("options")) {
+    } else if (issue.code === "malformed_options") {
       buckets.malformedOptions.push(item);
+    } else if (issue.code === "missing_answer") {
+      buckets.missingAnswers.push(item);
+    } else {
+      const lower = issue.message.toLowerCase();
+      if (lower.includes("duplicate question id")) {
+        buckets.duplicateIds.push(item);
+      } else if (lower.includes("answer") || lower.includes("numerical")) {
+        buckets.missingAnswers.push(item);
+      } else if (lower.includes("option")) {
+        buckets.malformedOptions.push(item);
+      }
     }
   }
   return buckets;

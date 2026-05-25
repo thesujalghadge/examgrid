@@ -65,7 +65,7 @@ export function QuestionCard({ review, previewOnly = false }: QuestionCardProps)
         <p className="mt-1 text-xs text-gray-500">
           Section: {section?.name} | Q. {question.number} (Overall #{globalIndex})
         </p>
-        {review ? (
+        {review && !previewOnly ? (
           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
             <span className="rounded-full bg-[#f5f1e8] px-2 py-1 font-medium text-[#8a6f3e]">
               Teacher Review Mode
@@ -80,7 +80,7 @@ export function QuestionCard({ review, previewOnly = false }: QuestionCardProps)
       </div>
 
       <div className="px-4 py-5 md:px-8 md:py-7">
-        {review ? (
+        {review && !previewOnly ? (
           <div className="mb-4 rounded-xl border border-[#ece6da] bg-[#fbf9f4] p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm font-semibold text-[#14213d]">Review controls</p>
@@ -204,7 +204,7 @@ export function QuestionCard({ review, previewOnly = false }: QuestionCardProps)
           </fieldset>
         )}
 
-        {review ? (
+        {review && !previewOnly ? (
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <label className="space-y-2 text-sm font-medium text-[#14213d]">
               <span>Marks</span>

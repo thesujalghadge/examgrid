@@ -45,6 +45,6 @@ CHEMISTRY
 
 export const JEE_ANSWER_KEY = `
 1-A
-2-B
+2-600
 3-C
 `;

@@ -231,6 +231,13 @@ export function ExamInterface({
     finalizeRef.current = finalizeSubmit;
   }, [finalizeSubmit]);
 
+  const reviewExamSignature = useMemo(() => {
+    if (!review) return "";
+    return review.exam.sections
+      .map((section) => `${section.id}:${section.questionIds.map((id) => review.exam.questions[id]?.text ?? "").join("~")}`)
+      .join("|");
+  }, [review]);
+
   useEffect(() => {
     if (!review) return;
 
@@ -251,7 +258,7 @@ export function ExamInterface({
         : review.exam.sections.find((section) => section.questionIds.includes(nextQuestionId))?.id ??
           review.exam.sections[0].id;
 
-    if (!state.exam) {
+    if (!state.exam || state.exam.id !== review.exam.id) {
       state.loadExam(review.exam, nextQuestionId);
     } else {
       state.restoreState({
@@ -267,7 +274,7 @@ export function ExamInterface({
     useTimerStore.getState().stop();
     setResumed(false);
     setReady(true);
-  }, [review]);
+  }, [review, reviewExamSignature, review?.mode]);
 
   useEffect(() => {
     if (!isTeacherReview) return;
@@ -430,7 +437,7 @@ export function ExamInterface({
       <div className="relative flex flex-1 overflow-hidden">
         <main className="flex min-w-0 flex-1 flex-col border-r border-[#1a3c6e]/10 bg-white shadow-sm">
           <QuestionCard
-            previewOnly={false}
+            previewOnly={review?.mode === "preview"}
             review={
               review && review.mode === "edit" && currentQuestionId
                 ? {

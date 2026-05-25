@@ -24,7 +24,15 @@ export function applySubjectMapping(pkg: ProcessedPaperPackage): ProcessedPaperP
     questions: section.questions.map((question) => {
       globalIndex += 1;
       const subject = resolveSubjectForQuestion(globalIndex, mapping);
-      return { ...question, subject };
+      return {
+        ...question,
+        subject,
+        metadata: {
+          ...question.metadata,
+          subjectGlobalQuestionNumber: globalIndex,
+          subjectMappingMode: mapping.mode,
+        },
+      };
     }),
   }));
 

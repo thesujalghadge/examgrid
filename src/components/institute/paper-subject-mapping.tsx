@@ -6,6 +6,25 @@ import { Label } from "@/components/ui/label";
 import { JEE_SUBJECTS, validateSubjectMapping } from "@/lib/cbt/subject-mapping";
 import type { PaperSubjectMapping, SubjectRangeMapping } from "@/types/cbt-paper-processing";
 
+function buildDefaultMultiRanges(totalQuestions: number): SubjectRangeMapping[] {
+  if (totalQuestions <= 0) return [];
+  const chunk = Math.max(1, Math.ceil(totalQuestions / 3));
+  const ranges: SubjectRangeMapping[] = [
+    { start: 1, end: Math.min(chunk, totalQuestions), subject: "Physics" },
+    {
+      start: Math.min(chunk + 1, totalQuestions),
+      end: Math.min(chunk * 2, totalQuestions),
+      subject: "Chemistry",
+    },
+    {
+      start: Math.min(chunk * 2 + 1, totalQuestions),
+      end: totalQuestions,
+      subject: "Mathematics",
+    },
+  ];
+  return ranges.filter((range) => range.start <= range.end);
+}
+
 interface PaperSubjectMappingPanelProps {
   totalQuestions: number;
   mapping: PaperSubjectMapping;
@@ -36,7 +55,7 @@ export function PaperSubjectMappingPanel({
       ranges:
         mapping.ranges && mapping.ranges.length > 0
           ? mapping.ranges
-          : [{ start: 1, end: Math.max(1, totalQuestions), subject: JEE_SUBJECTS[0] }],
+          : buildDefaultMultiRanges(totalQuestions),
     });
   };
 

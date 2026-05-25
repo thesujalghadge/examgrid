@@ -193,8 +193,14 @@ function splitStemAndInlineOptions(line: string): { stemPart: string; options: P
 
 function isOptionStartLine(line: string): { label: string; text: string } | null {
   const direct = line.match(OPTION_START) ?? line.match(OPTION_WORD);
-  if (!direct) return null;
-  return { label: direct[1].toUpperCase(), text: sanitizeLine(direct[2]) };
+  if (direct) {
+    return { label: direct[1].toUpperCase(), text: sanitizeLine(direct[2] ?? "") };
+  }
+  const bare = line.match(/^[\(\[]?([A-D])[\)\].:-]\s*$/i);
+  if (bare) {
+    return { label: bare[1].toUpperCase(), text: "" };
+  }
+  return null;
 }
 
 function hasValidMcqOptions(options: ParsedOption[]): boolean {
@@ -202,6 +208,31 @@ function hasValidMcqOptions(options: ParsedOption[]): boolean {
   const labels = new Set(options.map((option) => option.label));
   if (labels.size !== options.length) return false;
   return options.every((option) => option.text.trim().length > 0);
+}
+
+export function isNumericAnswer(answer: string): boolean {
+  const trimmed = answer.trim();
+  if (!trimmed) return false;
+  return /^-?\d+(?:\.\d+)?(?:e[+-]?\d+)?$/i.test(trimmed);
+}
+
+function looksLikeNumericalStem(text: string): boolean {
+  return /\b(find|calculate|value of|the value|integer|numerical|nearest integer|integral|evaluate|solve for)\b/i.test(
+    text,
+  );
+}
+
+/** MCQ when valid options exist; numerical only without options and a numeric (or clear numerical) stem. */
+export function resolveQuestionType(
+  options: ParsedOption[],
+  correctAnswer: string,
+  stem: string,
+): "MCQ_SINGLE" | "NUMERICAL" {
+  if (hasValidMcqOptions(options)) return "MCQ_SINGLE";
+  if (isNumericAnswer(correctAnswer)) return "NUMERICAL";
+  if (/^[A-D]$/i.test(correctAnswer.trim())) return "MCQ_SINGLE";
+  if (!correctAnswer.trim() && looksLikeNumericalStem(stem)) return "NUMERICAL";
+  return "MCQ_SINGLE";
 }
 
 function parseOptions(lines: string[]): { options: ParsedOption[]; stemLines: string[] } {
@@ -395,8 +426,8 @@ function buildQuestionMeta(
   const inlineAnswer = parseInlineAnswer(block.lines);
   const correctAnswer = answerKey.get(block.questionNumber) ?? inlineAnswer;
   const subject = detectSubject(block.section, questionText);
-  const isMcq = hasValidMcqOptions(options);
-  const questionType = isMcq ? "MCQ_SINGLE" : "NUMERICAL";
+  const questionType = resolveQuestionType(options, correctAnswer, questionText);
+  const isMcq = questionType === "MCQ_SINGLE";
   const optionLabels = isMcq ? options.map((option) => option.text) : [];
   const confidence = computeConfidence({
     questionText,
@@ -530,13 +561,13 @@ export function createBlankPreparedQuestion(sequence: number, section = "Importe
     topic: undefined,
     difficulty: undefined,
     confidence: 0.2,
-    questionType: "NUMERICAL",
+    questionType: "MCQ_SINGLE",
     questionText: "",
     correctAnswer: "",
     solution: undefined,
     marks: 4,
     negativeMarks: 1,
-    optionLabels: [],
+    optionLabels: ["", "", "", ""],
     images: [],
     explanation: undefined,
     metadata: {
@@ -593,6 +624,7 @@ export function validateProcessedPaper(pkg: ProcessedPaperPackage): ProcessedPap
       } else if (seenQuestionIds.has(normalized.id)) {
         issues.push({
           level: "error",
+          code: "duplicate_id",
           questionId: normalized.id,
           section: section.name,
           message: `Question ${question.sequence} has a duplicate question id.`,
@@ -614,6 +646,7 @@ export function validateProcessedPaper(pkg: ProcessedPaperPackage): ProcessedPap
           if (!normalized.options[optionIndex]?.trim()) {
             issues.push({
               level: "error",
+              code: "malformed_options",
               questionId: normalized.id,
               section: section.name,
               message: `Question ${question.sequence} has an empty option ${label}.`,
@@ -623,6 +656,7 @@ export function validateProcessedPaper(pkg: ProcessedPaperPackage): ProcessedPap
         if (normalized.options.filter((option) => option.trim()).length < requiredOptionLabels.length) {
           issues.push({
             level: "error",
+            code: "malformed_options",
             questionId: normalized.id,
             section: section.name,
             message: `Question ${question.sequence} needs four complete options.`,
@@ -632,6 +666,7 @@ export function validateProcessedPaper(pkg: ProcessedPaperPackage): ProcessedPap
         if (answerIndex < 0 || !normalized.options[answerIndex]?.trim()) {
           issues.push({
             level: "error",
+            code: "missing_answer",
             questionId: normalized.id,
             section: section.name,
             message: `Question ${question.sequence} is missing a valid answer key.`,
@@ -640,9 +675,18 @@ export function validateProcessedPaper(pkg: ProcessedPaperPackage): ProcessedPap
       } else if (!normalized.answer.trim()) {
         issues.push({
           level: "error",
+          code: "missing_answer",
           questionId: normalized.id,
           section: section.name,
           message: `Question ${question.sequence} is missing a numerical answer.`,
+        });
+      } else if (!isNumericAnswer(normalized.answer)) {
+        issues.push({
+          level: "error",
+          code: "missing_answer",
+          questionId: normalized.id,
+          section: section.name,
+          message: `Question ${question.sequence} needs a numeric answer.`,
         });
       }
       if (!normalized.subject.trim() || normalized.subject === "Imported Questions") {
