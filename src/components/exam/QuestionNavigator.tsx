@@ -46,26 +46,6 @@ export function QuestionNavigator({ onSubmitClick, review, preview }: QuestionNa
                 variant="outline"
                 size="sm"
                 className="h-9 border-gray-400 bg-white px-4 font-semibold text-gray-800 shadow-sm hover:bg-gray-50"
-                disabled={!review.canMoveQuestionUp}
-                onClick={() => review.onMoveQuestion(-1)}
-              >
-                Move Up
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-9 border-gray-400 bg-white px-4 font-semibold text-gray-800 shadow-sm hover:bg-gray-50"
-                disabled={!review.canMoveQuestionDown}
-                onClick={() => review.onMoveQuestion(1)}
-              >
-                Move Down
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-9 border-gray-400 bg-white px-4 font-semibold text-gray-800 shadow-sm hover:bg-gray-50"
                 onClick={review.onAddQuestion}
               >
                 Add Question

@@ -158,29 +158,29 @@ export function QuestionCard({ review }: QuestionCardProps) {
                 );
               })}
             </ul>
+            {isTeacherEdit && (
+              <div className="mt-5 border-t border-gray-200 pt-4">
+                <label className="flex items-center gap-3 text-sm font-semibold text-gray-700">
+                  Correct Answer:
+                  <select
+                    className="rounded-md border border-[#d7dde7] bg-white px-3 py-1.5 text-sm"
+                    value={reviewCorrectValue}
+                    onChange={(e) => review?.onCorrectAnswerChange?.(e.target.value)}
+                  >
+                    <option value="">Select option...</option>
+                    {question.options.map((opt) => (
+                      <option key={opt.id} value={opt.label}>
+                        Option {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            )}
           </fieldset>
         )}
 
-        {isTeacherEdit ? (
-          <div className="mt-4 grid max-w-md gap-3 sm:grid-cols-2">
-            <label className="space-y-1 text-sm font-medium text-[#14213d]">
-              Marks
-              <input
-                className="w-full rounded-md border border-[#d7dde7] px-3 py-2 text-sm"
-                value={String(question.marks)}
-                onChange={(event) => review?.onMarksChange?.(event.target.value)}
-              />
-            </label>
-            <label className="space-y-1 text-sm font-medium text-[#14213d]">
-              Negative
-              <input
-                className="w-full rounded-md border border-[#d7dde7] px-3 py-2 text-sm"
-                value={String(question.negativeMarks)}
-                onChange={(event) => review?.onNegativeMarksChange?.(event.target.value)}
-              />
-            </label>
-          </div>
-        ) : null}
+        {/* Marks editing removed as per teacher UX update */}
 
         {hasIssues ? (
           <ul className="mt-4 space-y-1 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">

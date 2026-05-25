@@ -117,9 +117,9 @@ export function ConductCbtSubjectPanel({
                 type="number"
                 min={1}
                 max={total}
-                value={range.start}
+                value={range.start || ""}
                 aria-label={`Range ${index + 1} start`}
-                onChange={(event) => updateRange(index, { start: Number(event.target.value) || 1 })}
+                onChange={(event) => updateRange(index, { start: event.target.value ? parseInt(event.target.value, 10) : 0 })}
                 className="w-14 rounded border border-[#d8d2c7] px-2 py-1 text-sm"
               />
               <span className="text-sm text-[#5e5a52]">to</span>
@@ -127,9 +127,9 @@ export function ConductCbtSubjectPanel({
                 type="number"
                 min={1}
                 max={total}
-                value={range.end}
+                value={range.end || ""}
                 aria-label={`Range ${index + 1} end`}
-                onChange={(event) => updateRange(index, { end: Number(event.target.value) || 1 })}
+                onChange={(event) => updateRange(index, { end: event.target.value ? parseInt(event.target.value, 10) : 0 })}
                 className="w-14 rounded border border-[#d8d2c7] px-2 py-1 text-sm"
               />
               <div className="flex flex-wrap gap-1">

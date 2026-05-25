@@ -468,11 +468,22 @@ function buildQuestionMeta(
   const { options, stemLines } = parseOptions(block.lines);
   const questionText = sanitizeLine(stemLines.join(" "));
   const inlineAnswer = parseInlineAnswer(block.lines);
-  const correctAnswer = answerKey.get(block.questionNumber) ?? inlineAnswer;
-  const subject = detectSubject(block.section, questionText);
+  let correctAnswer = answerKey.get(block.questionNumber) ?? inlineAnswer;
   const questionType = resolveQuestionType(options, correctAnswer, questionText);
   const isMcq = questionType === "MCQ_SINGLE";
+
+  if (isMcq && /^[1-4]$/.test(correctAnswer.trim())) {
+    const idx = parseInt(correctAnswer.trim(), 10) - 1;
+    correctAnswer = ["A", "B", "C", "D"][idx];
+  }
+
   const optionLabels = isMcq ? options.map((option) => option.text) : [];
+  if (isMcq) {
+    while (optionLabels.length < 4) {
+      optionLabels.push("");
+    }
+  }
+
   const confidence = computeConfidence({
     questionText,
     optionCount: optionLabels.length,
@@ -485,7 +496,7 @@ function buildQuestionMeta(
   const meta: PreparedQuestionMeta = {
     questionId: `${pkgId}-q-${block.questionNumber}`,
     sequence: block.questionNumber,
-    subject,
+    subject: detectSubject(block.section, questionText),
     section: block.section,
     chapter: undefined,
     topic: undefined,

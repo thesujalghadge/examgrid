@@ -66,7 +66,6 @@ export function InstitutePaperUploadFlow() {
 
   const [title, setTitle] = useState("Weekly CBT");
   const [duration, setDuration] = useState("180");
-  const [totalMarks, setTotalMarks] = useState("360");
   const [marksPerQuestion, setMarksPerQuestion] = useState("4");
   const [negativeMarks, setNegativeMarks] = useState("1");
   const [examType] = useState<ExamDefinition["examType"]>("JEE_MAIN");
@@ -105,7 +104,7 @@ export function InstitutePaperUploadFlow() {
         ...pkg,
         title: title.trim() || pkg.title,
         durationMinutes: Math.max(1, parseInt(duration, 10) || 60),
-        totalMarks: Math.max(0, parseInt(totalMarks, 10) || pkg.totalMarks),
+        totalMarks: pkg.totalMarks,
       },
       testId,
       selectedBatchIds,
@@ -115,7 +114,7 @@ export function InstitutePaperUploadFlow() {
     const exam = cbtTestToExamDefinition(built.test, built.bankQuestions);
     if (!exam) return null;
     return { ...built, exam };
-  }, [createdBy, duration, examType, pkg, selectedBatchIds, title, totalMarks]);
+  }, [createdBy, duration, examType, pkg, selectedBatchIds, title]);
 
   const applyPackageUpdate = useCallback(
     (updater: (current: ProcessedPaperPackage) => ProcessedPaperPackage) => {
@@ -243,6 +242,10 @@ export function InstitutePaperUploadFlow() {
       setPublishError("Enter a test name.");
       return;
     }
+    if (!scheduleStart || !scheduleEnd) {
+      setPublishError("Set 'Available from' and 'Available until' dates.");
+      return;
+    }
     setPublishError("");
     setProcessing(true);
 
@@ -306,13 +309,13 @@ export function InstitutePaperUploadFlow() {
           ...result,
           title: title.trim(),
           durationMinutes: Math.max(1, parseInt(duration, 10) || 60),
-          totalMarks: Math.max(0, parseInt(totalMarks, 10) || totalQ * perQMarks),
+          totalMarks: totalQ * perQMarks,
           sections: result.sections.map((section) => ({
             ...section,
             questions: section.questions.map((q) => ({
               ...q,
               marks: perQMarks,
-              negativeMarks: perQNeg,
+              negativeMarks: q.questionType === "NUMERICAL" ? 0 : perQNeg,
             })),
           })),
           subjectMapping: mapping,
@@ -320,7 +323,6 @@ export function InstitutePaperUploadFlow() {
       );
 
       setPkg(configured);
-      setTotalMarks(String(configured.totalMarks));
       setStep("review");
     } catch (error) {
       setPublishError(error instanceof Error ? error.message : "Could not read the paper. Try again or paste text.");
@@ -336,7 +338,7 @@ export function InstitutePaperUploadFlow() {
       ...pkg,
       title: title.trim(),
       durationMinutes: Math.max(1, parseInt(duration, 10) || 60),
-      totalMarks: Math.max(0, parseInt(totalMarks, 10) || pkg.totalMarks),
+      totalMarks: pkg.totalMarks,
     });
     const errors = validateProcessedPaper(finalPkg).filter((issue) => issue.level === "error");
     if (errors.length > 0) {
@@ -439,10 +441,6 @@ export function InstitutePaperUploadFlow() {
                 <Input type="number" min={1} value={duration} onChange={(e) => setDuration(e.target.value)} />
               </label>
               <label className="space-y-1.5">
-                <Label>Total marks</Label>
-                <Input type="number" min={0} value={totalMarks} onChange={(e) => setTotalMarks(e.target.value)} />
-              </label>
-              <label className="space-y-1.5">
                 <Label>Marks per question</Label>
                 <Input type="number" min={0} value={marksPerQuestion} onChange={(e) => setMarksPerQuestion(e.target.value)} />
               </label>
@@ -451,11 +449,11 @@ export function InstitutePaperUploadFlow() {
                 <Input type="number" min={0} step={0.25} value={negativeMarks} onChange={(e) => setNegativeMarks(e.target.value)} />
               </label>
               <label className="space-y-1.5">
-                <Label>Available from (optional)</Label>
+                <Label>Available from</Label>
                 <Input type="datetime-local" value={scheduleStart} onChange={(e) => setScheduleStart(e.target.value)} />
               </label>
               <label className="space-y-1.5">
-                <Label>Available until (optional)</Label>
+                <Label>Available until</Label>
                 <Input type="datetime-local" value={scheduleEnd} onChange={(e) => setScheduleEnd(e.target.value)} />
               </label>
             </div>
@@ -579,7 +577,8 @@ export function InstitutePaperUploadFlow() {
                     return {
                       ...next,
                       questionType,
-                      optionLabels: questionType === "NUMERICAL" ? [] : next.optionLabels,
+                      optionLabels: questionType === "NUMERICAL" ? [] : (next.optionLabels.length < 4 ? ["", "", "", ""] : next.optionLabels),
+                      negativeMarks: questionType === "NUMERICAL" ? 0 : next.negativeMarks,
                     };
                   }),
                 onMarksChange: (id, value) =>
@@ -589,7 +588,44 @@ export function InstitutePaperUploadFlow() {
                 onToggleFlag: () => undefined,
                 onMoveQuestion: moveReviewQuestion,
                 onDeleteQuestion: deleteReviewQuestion,
-                onAddQuestion: () => undefined,
+                onAddQuestion: (sectionId) => {
+                  applyPackageUpdate((current) => {
+                    const sectionIndex = current.sections.findIndex((s) => s.id === sectionId);
+                    if (sectionIndex === -1) return current;
+                    return {
+                      ...current,
+                      sections: current.sections.map((section, si) => {
+                        if (si !== sectionIndex) return section;
+                        const seq = section.questions.length + 1;
+                        return {
+                          ...section,
+                          questions: [
+                            ...section.questions,
+                            {
+                              questionId: `manual-q-${Date.now()}-${seq}`,
+                              sequence: seq,
+                              subject: section.name,
+                              section: section.name,
+                              confidence: 1,
+                              questionType: "MCQ_SINGLE",
+                              questionText: "New Question",
+                              correctAnswer: "A",
+                              marks: safeNumber(marksPerQuestion, 4),
+                              negativeMarks: safeNumber(negativeMarks, 1),
+                              optionLabels: ["", "", "", ""],
+                              images: [],
+                              metadata: {
+                                parser: "manual",
+                                sourceQuestionNumber: seq,
+                                answerKeySource: "manual",
+                              },
+                            } as PreparedQuestionMeta,
+                          ],
+                        };
+                      }),
+                    };
+                  });
+                },
                 onContinue: () => void publishTest(),
               }}
             />

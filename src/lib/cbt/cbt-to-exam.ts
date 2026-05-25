@@ -106,7 +106,6 @@ export function cbtTestToExamDefinition(
     if (!examSection) continue;
 
     const rows = (questionsBySection.get(section.id) ?? []).slice();
-    rows.sort((a, b) => a.questionId.localeCompare(b.questionId));
 
     let number = 0;
     for (const row of rows) {
