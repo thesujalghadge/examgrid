@@ -4,6 +4,8 @@ import {
   logUploadEvent,
   logValidationFailure,
 } from "@/lib/logging/runtime-logger";
+import { toNormalizedQuestion, fromNormalizedQuestion } from "@/lib/cbt/normalized-question";
+import { applySubjectMapping, defaultSubjectMapping } from "@/lib/cbt/subject-mapping";
 import type {
   AnswerKeyReviewItem,
   PaperExtractionSummary,
@@ -31,12 +33,6 @@ export const SCANNED_DOCUMENT_WARNING =
   "We detected a scanned or complex document. Please review extracted content before publishing.";
 const DEFAULT_DURATION_MINUTES = 60;
 const SUBJECTS = ["Physics", "Chemistry", "Mathematics", "Biology"] as const;
-const SUBJECT_KEYWORDS: Array<{ subject: string; keywords: string[] }> = [
-  { subject: "Physics", keywords: ["velocity", "force", "current", "acceleration", "newton"] },
-  { subject: "Chemistry", keywords: ["mole", "reaction", "equilibrium", "acid", "atom"] },
-  { subject: "Mathematics", keywords: ["integral", "derivative", "quadratic", "matrix", "triangle"] },
-  { subject: "Biology", keywords: ["cell", "organism", "enzyme", "genetics"] },
-];
 
 type SupportedFileType = SupportedPaperFileType;
 
@@ -109,16 +105,22 @@ function looksLikeQuestionStart(line: string): RegExpMatchArray | null {
     line.match(/^\(?(\d{1,3})\)\s*(.*)$/i) ??
     line.match(/^(\d{1,3})\.\s*(.*)$/i) ??
     line.match(/^(\d{1,3})\)\s*(.*)$/i) ??
-    line.match(/^q(?:uestion)?\s*(\d{1,3})[:.)\-\s]*\s*(.*)$/i) ??
-    line.match(/^que\.?\s*(\d{1,3})[:.)\-\s]*\s*(.*)$/i)
+    line.match(/^q(?:uestion)?\s*\.?\s*(\d{1,3})[:.)\-\s]+\s*(.*)$/i) ??
+    line.match(/^que\.?\s*(\d{1,3})[:.)\-\s]+\s*(.*)$/i)
   );
 }
 
 function looksLikeSectionHeader(line: string): string | null {
   const named = line.match(/^section\s+[a-z0-9]+\s*[:.-]\s*(.+)$/i);
   if (named?.[1]) return sanitizeLine(named[1]);
+  const part = line.match(/^(?:part|paper)\s*[-:]?\s*([a-z])\s*[:.-]?\s*(.+)$/i);
+  if (part?.[2]) return sanitizeLine(part[2]);
   const subject = SUBJECTS.find((item) => item.toLowerCase() === line.toLowerCase());
   return subject ?? null;
+}
+
+function isAnswerLine(line: string): boolean {
+  return /^(?:answer|ans)\s*[:.-]/i.test(line);
 }
 
 function parseQuestionBlocks(text: string): QuestionBlock[] {
@@ -143,7 +145,7 @@ function parseQuestionBlocks(text: string): QuestionBlock[] {
       active = {
         questionNumber: Number(start[1]),
         section: currentSection,
-        lines: [sanitizeLine(start[2])],
+        lines: [sanitizeLine(start[2])].filter(Boolean),
       };
       continue;
     }
@@ -155,10 +157,15 @@ function parseQuestionBlocks(text: string): QuestionBlock[] {
   return blocks;
 }
 
+const OPTION_START =
+  /^[\(\[]?([A-D])[\)\].:\-]\s+(.+)$/i;
+const OPTION_WORD =
+  /^option\s+([A-D])[:.)\-\s]+\s*(.+)$/i;
+
 function parseInlineOptions(text: string): ParsedOption[] {
   const matches = [
-    ...text.matchAll(/(?:^|\s)([A-D])[\).:-]\s*(.+?)(?=(?:\s+[A-D][\).:-]\s+)|$)/g),
-    ...text.matchAll(/(?:^|\s)\(([A-D])\)\s*(.+?)(?=(?:\s+\([A-D]\)\s+)|$)/g),
+    ...text.matchAll(/(?:^|\s)([A-D])[\).:-]\s*(.+?)(?=(?:\s+[A-D][\).:-]\s+)|$)/gi),
+    ...text.matchAll(/(?:^|\s)\(([A-D])\)\s*(.+?)(?=(?:\s+\([A-D]\)\s+)|$)/gi),
   ];
   return matches.map((match) => ({
     label: match[1].toUpperCase(),
@@ -166,10 +173,42 @@ function parseInlineOptions(text: string): ParsedOption[] {
   }));
 }
 
-function parseOptions(lines: string[]): { options: ParsedOption[]; remaining: string[] } {
+function stripInlineOptionsFromStem(text: string): string {
+  return sanitizeLine(
+    text
+      .replace(/(?:^|\s)([A-D])[\).:-]\s*.+?(?=(?:\s+[A-D][\).:-]\s+)|$)/gi, " ")
+      .replace(/(?:^|\s)\([A-D]\)\s*.+?(?=(?:\s+\([A-D]\)\s+)|$)/gi, " "),
+  );
+}
+
+function splitStemAndInlineOptions(line: string): { stemPart: string; options: ParsedOption[] } {
+  const marker = line.search(/(?:^|\s)(?:\(?[A-D][\).:-]|\([A-D]\)\s+)/i);
+  if (marker < 0) {
+    return { stemPart: sanitizeLine(line), options: [] };
+  }
+  const stemPart = sanitizeLine(line.slice(0, marker));
+  const options = parseInlineOptions(line.slice(marker));
+  return { stemPart, options };
+}
+
+function isOptionStartLine(line: string): { label: string; text: string } | null {
+  const direct = line.match(OPTION_START) ?? line.match(OPTION_WORD);
+  if (!direct) return null;
+  return { label: direct[1].toUpperCase(), text: sanitizeLine(direct[2]) };
+}
+
+function hasValidMcqOptions(options: ParsedOption[]): boolean {
+  if (options.length < 2) return false;
+  const labels = new Set(options.map((option) => option.label));
+  if (labels.size !== options.length) return false;
+  return options.every((option) => option.text.trim().length > 0);
+}
+
+function parseOptions(lines: string[]): { options: ParsedOption[]; stemLines: string[] } {
   const options: ParsedOption[] = [];
-  const remaining: string[] = [];
+  const stemLines: string[] = [];
   let activeOption: ParsedOption | null = null;
+  let seenOption = false;
 
   const flushActiveOption = () => {
     if (!activeOption) return;
@@ -181,26 +220,26 @@ function parseOptions(lines: string[]): { options: ParsedOption[]; remaining: st
   };
 
   for (const line of lines) {
-    const direct =
-      line.match(/^[\(\[]?([A-D])[\)\].:-]\s*(.+)$/i) ??
-      line.match(/^option\s+([A-D])[:.)\-\s]+\s*(.+)$/i);
-    if (direct) {
+    if (isAnswerLine(line)) continue;
+
+    const start = isOptionStartLine(line);
+    if (start) {
+      seenOption = true;
       flushActiveOption();
-      activeOption = {
-        label: direct[1].toUpperCase(),
-        text: sanitizeLine(direct[2]),
-      };
+      activeOption = { label: start.label, text: start.text };
       continue;
     }
 
-    const inline = parseInlineOptions(line);
-    if (inline.length >= 2) {
+    const inlineSplit = splitStemAndInlineOptions(line);
+    if (inlineSplit.options.length >= 2) {
+      seenOption = true;
       flushActiveOption();
-      options.push(...inline);
+      options.push(...inlineSplit.options);
+      if (inlineSplit.stemPart) stemLines.push(inlineSplit.stemPart);
       continue;
     }
 
-    if (activeOption && line.length > 0 && !looksLikeQuestionStart(line)) {
+    if (activeOption && seenOption && !looksLikeQuestionStart(line)) {
       activeOption = {
         ...activeOption,
         text: `${activeOption.text} ${sanitizeLine(line)}`,
@@ -208,15 +247,37 @@ function parseOptions(lines: string[]): { options: ParsedOption[]; remaining: st
       continue;
     }
 
-    remaining.push(line);
+    if (!seenOption) {
+      const earlyInline = splitStemAndInlineOptions(line);
+      if (earlyInline.options.length >= 2) {
+        seenOption = true;
+        flushActiveOption();
+        options.push(...earlyInline.options);
+        if (earlyInline.stemPart) stemLines.push(earlyInline.stemPart);
+        continue;
+      }
+    }
+
+    stemLines.push(line);
   }
 
   flushActiveOption();
 
-  return {
-    options: dedupeOptions(options),
-    remaining,
-  };
+  const deduped = dedupeOptions(options);
+  if (deduped.length >= 2) {
+    return { options: deduped, stemLines };
+  }
+
+  const combinedStem = stemLines.join(" ");
+  const inlineFromStem = dedupeOptions(parseInlineOptions(combinedStem));
+  if (hasValidMcqOptions(inlineFromStem)) {
+    return {
+      options: inlineFromStem,
+      stemLines: [stripInlineOptionsFromStem(combinedStem)],
+    };
+  }
+
+  return { options: deduped, stemLines };
 }
 
 function dedupeOptions(options: ParsedOption[]): ParsedOption[] {
@@ -226,17 +287,14 @@ function dedupeOptions(options: ParsedOption[]): ParsedOption[] {
   }
   return ["A", "B", "C", "D"]
     .map((label) => byLabel.get(label))
-    .filter((option): option is ParsedOption => Boolean(option));
+    .filter((option): option is ParsedOption => Boolean(option?.text.trim()));
 }
 
-function detectSubject(section: string, text: string): string {
+function detectSubject(section: string, _text: string): string {
   const exact = SUBJECTS.find((subject) => section.toLowerCase().includes(subject.toLowerCase()));
   if (exact) return exact;
-  const lowered = text.toLowerCase();
-  for (const { subject, keywords } of SUBJECT_KEYWORDS) {
-    if (keywords.some((keyword) => lowered.includes(keyword))) return subject;
-  }
-  return section;
+  if (section !== "Imported Questions") return section;
+  return "Imported Questions";
 }
 
 function parseAnswerKeyEntries(text?: string): ParsedAnswerEntry[] {
@@ -305,20 +363,19 @@ function parseInlineAnswer(lines: string[]): string {
   return "";
 }
 
-function isNumericAnswer(answer: string): boolean {
-  return /^-?\d+(?:\.\d+)?$/.test(answer.trim());
-}
-
 function computeConfidence(input: {
   questionText: string;
   optionCount: number;
   correctAnswer: string;
   extractionMode: UploadExtractionMode;
   usedOCR: boolean;
+  isMcq: boolean;
 }): number {
   let confidence = 0.25;
   if (input.questionText.length > 20) confidence += 0.25;
-  if (input.optionCount >= 4) confidence += 0.25;
+  if (input.isMcq && input.optionCount >= 4) confidence += 0.25;
+  else if (input.isMcq && input.optionCount >= 2) confidence += 0.12;
+  else if (!input.isMcq && input.questionText.length > 10) confidence += 0.15;
   if (input.correctAnswer.trim()) confidence += 0.15;
   if (input.extractionMode === "file") confidence += 0.05;
   if (input.extractionMode === "hybrid") confidence += 0.02;
@@ -333,24 +390,24 @@ function buildQuestionMeta(
   extractionMode: UploadExtractionMode,
   usedOCR: boolean,
 ): PreparedQuestionMeta {
-  const { options, remaining } = parseOptions(block.lines);
-  const linesWithoutAnswers = remaining.filter((line) => !/^(?:answer|ans)\s*[:.-]/i.test(line));
-  const questionText = sanitizeLine(linesWithoutAnswers.join(" "));
+  const { options, stemLines } = parseOptions(block.lines);
+  const questionText = sanitizeLine(stemLines.join(" "));
   const inlineAnswer = parseInlineAnswer(block.lines);
   const correctAnswer = answerKey.get(block.questionNumber) ?? inlineAnswer;
   const subject = detectSubject(block.section, questionText);
-  const hasValidOptions = options.some((option) => option.text.trim());
-  const questionType =
-    hasValidOptions || !isNumericAnswer(correctAnswer) ? "MCQ_SINGLE" : "NUMERICAL";
+  const isMcq = hasValidMcqOptions(options);
+  const questionType = isMcq ? "MCQ_SINGLE" : "NUMERICAL";
+  const optionLabels = isMcq ? options.map((option) => option.text) : [];
   const confidence = computeConfidence({
     questionText,
-    optionCount: options.length,
+    optionCount: optionLabels.length,
     correctAnswer,
     extractionMode,
     usedOCR,
+    isMcq,
   });
 
-  return {
+  const meta: PreparedQuestionMeta = {
     questionId: `${pkgId}-q-${block.questionNumber}`,
     sequence: block.questionNumber,
     subject,
@@ -365,11 +422,11 @@ function buildQuestionMeta(
     solution: undefined,
     marks: 4,
     negativeMarks: 1,
-    optionLabels: options.map((option) => option.text),
+    optionLabels,
     images: [],
     explanation: undefined,
     metadata: {
-      parser: "deterministic_v2",
+      parser: "deterministic_v3",
       sourceQuestionNumber: block.questionNumber,
       answerKeySource: answerKey.has(block.questionNumber)
         ? "answer_key_file"
@@ -379,6 +436,14 @@ function buildQuestionMeta(
       detectedQuestionType: questionType,
     },
   };
+
+  return fromNormalizedQuestion(toNormalizedQuestion(meta), {
+    sequence: meta.sequence,
+    section: meta.section,
+    marks: meta.marks,
+    negativeMarks: meta.negativeMarks,
+    metadata: meta.metadata,
+  });
 }
 
 function buildSections(questions: PreparedQuestionMeta[]) {
@@ -465,13 +530,13 @@ export function createBlankPreparedQuestion(sequence: number, section = "Importe
     topic: undefined,
     difficulty: undefined,
     confidence: 0.2,
-    questionType: "MCQ_SINGLE",
+    questionType: "NUMERICAL",
     questionText: "",
     correctAnswer: "",
     solution: undefined,
     marks: 4,
     negativeMarks: 1,
-    optionLabels: ["", "", "", ""],
+    optionLabels: [],
     images: [],
     explanation: undefined,
     metadata: {
@@ -518,79 +583,80 @@ export function validateProcessedPaper(pkg: ProcessedPaperPackage): ProcessedPap
       issues.push({ level: "error", section: section.name, message: "Section name is required." });
     }
     for (const question of section.questions) {
-      if (!question.questionId.trim()) {
+      const normalized = toNormalizedQuestion(question);
+      if (!normalized.id.trim()) {
         issues.push({
           level: "error",
           section: section.name,
           message: `Question ${question.sequence} is missing a stable question id.`,
         });
-      } else if (seenQuestionIds.has(question.questionId)) {
+      } else if (seenQuestionIds.has(normalized.id)) {
         issues.push({
           level: "error",
-          questionId: question.questionId,
+          questionId: normalized.id,
           section: section.name,
           message: `Question ${question.sequence} has a duplicate question id.`,
         });
       } else {
-        seenQuestionIds.add(question.questionId);
+        seenQuestionIds.add(normalized.id);
       }
-      if (!question.questionText.trim()) {
+      if (!normalized.stem.trim()) {
         issues.push({
           level: "error",
-          questionId: question.questionId,
+          questionId: normalized.id,
           section: section.name,
           message: `Question ${question.sequence} is missing question text.`,
         });
       }
-      if (question.questionType === "MCQ_SINGLE") {
+      if (normalized.type === "MCQ_SINGLE") {
         const requiredOptionLabels = ["A", "B", "C", "D"];
         for (const [optionIndex, label] of requiredOptionLabels.entries()) {
-          if (!question.optionLabels[optionIndex]?.trim()) {
+          if (!normalized.options[optionIndex]?.trim()) {
             issues.push({
               level: "error",
-              questionId: question.questionId,
+              questionId: normalized.id,
               section: section.name,
               message: `Question ${question.sequence} has an empty option ${label}.`,
             });
           }
         }
-        if (question.optionLabels.filter((option) => option.trim()).length < requiredOptionLabels.length) {
+        if (normalized.options.filter((option) => option.trim()).length < requiredOptionLabels.length) {
           issues.push({
             level: "error",
-            questionId: question.questionId,
+            questionId: normalized.id,
             section: section.name,
             message: `Question ${question.sequence} needs four complete options.`,
           });
         }
-        const answerIndex = requiredOptionLabels.indexOf(question.correctAnswer.toUpperCase());
-        if (answerIndex < 0 || !question.optionLabels[answerIndex]?.trim()) {
+        const answerIndex = requiredOptionLabels.indexOf(normalized.answer.toUpperCase());
+        if (answerIndex < 0 || !normalized.options[answerIndex]?.trim()) {
           issues.push({
             level: "error",
-            questionId: question.questionId,
+            questionId: normalized.id,
             section: section.name,
             message: `Question ${question.sequence} is missing a valid answer key.`,
           });
         }
-      } else if (!question.correctAnswer.trim()) {
+      } else if (!normalized.answer.trim()) {
         issues.push({
           level: "error",
-          questionId: question.questionId,
+          questionId: normalized.id,
           section: section.name,
           message: `Question ${question.sequence} is missing a numerical answer.`,
         });
       }
-      if (!question.subject.trim() || question.subject === "Imported Questions") {
+      if (!normalized.subject.trim() || normalized.subject === "Imported Questions") {
         issues.push({
           level: "warning",
-          questionId: question.questionId,
+          questionId: normalized.id,
           section: section.name,
           message: `Question ${question.sequence} needs subject review.`,
         });
       }
-      if (question.confidence < 0.45) {
+      if (normalized.confidence < 0.45) {
         issues.push({
           level: "warning",
-          questionId: question.questionId,
+          questionId: normalized.id,
           section: section.name,
           message: `Question ${question.sequence} has low parser confidence and should be reviewed.`,
         });
@@ -611,19 +677,29 @@ function dedupeIssues(issues: ProcessedPaperValidationIssue[]): ProcessedPaperVa
 }
 
 export function normalizeProcessedPaper(pkg: ProcessedPaperPackage): ProcessedPaperPackage {
-  const sections = pkg.sections
+  const withSubjects = applySubjectMapping(pkg);
+  const sections = withSubjects.sections
     .map((section, sectionIndex) => ({
       ...section,
       id: `section-${slug(section.name || String(sectionIndex + 1)) || sectionIndex + 1}`,
-      questions: section.questions.map((question, questionIndex) => ({
-        ...question,
-        sequence: questionIndex + 1,
-        section: section.name,
-        questionText: sanitizeLine(question.questionText),
-        optionLabels: question.optionLabels.map((option) => sanitizeLine(option)),
-      })),
+      questions: section.questions.map((question, questionIndex) => {
+        const normalized = toNormalizedQuestion({
+          ...question,
+          sequence: questionIndex + 1,
+          section: section.name,
+          questionText: sanitizeLine(question.questionText),
+          optionLabels: question.optionLabels.map((option) => sanitizeLine(option)),
+        });
+        return fromNormalizedQuestion(normalized, {
+          sequence: questionIndex + 1,
+          section: section.name,
+          marks: question.marks,
+          negativeMarks: question.negativeMarks,
+          metadata: question.metadata,
+        });
+      }),
     }))
-    .filter((section) => section.questions.length > 0 || sectionIndexIsFirst(section, pkg.sections));
+    .filter((section) => section.questions.length > 0 || sectionIndexIsFirst(section, withSubjects.sections));
   const totalQuestions = sections.reduce((count, section) => count + section.questions.length, 0);
   const totalMarks = sections.reduce(
     (count, section) =>
@@ -631,15 +707,17 @@ export function normalizeProcessedPaper(pkg: ProcessedPaperPackage): ProcessedPa
     0,
   );
   const normalized = {
-    ...pkg,
+    ...withSubjects,
     status: "DRAFT_REVIEW" as const,
     sections,
     totalQuestions,
     totalMarks,
     extractionSummary: {
-      ...pkg.extractionSummary,
+      ...withSubjects.extractionSummary,
       questionsDetected: totalQuestions,
     },
+    subjectMapping:
+      withSubjects.subjectMapping ?? defaultSubjectMapping(totalQuestions),
   };
   return {
     ...normalized,
@@ -723,6 +801,7 @@ export async function runPaperProcessing(input: ParsePaperInput): Promise<Proces
     preparedAt: Date.now(),
     totalMarks: 0,
     totalQuestions: 0,
+    subjectMapping: defaultSubjectMapping(questions.length),
   };
 
   makeLog(
@@ -785,23 +864,37 @@ export async function runPaperProcessing(input: ParsePaperInput): Promise<Proces
   };
 }
 
+/** Test helper: parse paper text synchronously without upload metadata. */
+export function parsePaperTextForTest(
+  paperText: string,
+  answerKeyText?: string,
+): PreparedQuestionMeta[] {
+  const id = "test-paper";
+  const blocks = parseQuestionBlocks(paperText);
+  const answerEntries = parseAnswerKeyEntries(answerKeyText);
+  const { mappedAnswers: answerKey } = mapAnswerEntries(answerEntries, blocks);
+  return blocks.map((block) => buildQuestionMeta(id, block, answerKey, "manual", false));
+}
+
 export function preparedMetaToBankQuestion(
   meta: PreparedQuestionMeta,
   packageId: string,
 ): BankQuestion {
   const now = Date.now();
   const bankId = `${packageId}-bank-${meta.questionId}`;
-  if (meta.questionType === "NUMERICAL") {
+  const normalized = toNormalizedQuestion(meta);
+
+  if (normalized.type === "NUMERICAL") {
     return {
       id: bankId,
-      subject: meta.subject,
+      subject: normalized.subject,
       chapter: meta.chapter ?? "General",
       topic: meta.topic ?? "General",
       difficulty: mapDifficulty(meta.difficulty),
       questionType: "NUMERICAL",
-      questionText: meta.questionText,
+      questionText: normalized.stem,
       options: [],
-      correctAnswer: meta.correctAnswer,
+      correctAnswer: normalized.answer,
       solution: meta.solution ?? "",
       marks: meta.marks,
       negativeMarks: meta.negativeMarks,
@@ -810,20 +903,23 @@ export function preparedMetaToBankQuestion(
       updatedAt: now,
     };
   }
-  const labels = ["A", "B", "C", "D"];
+
+  const options: BankQuestion["options"] = [];
+  for (const [index, label] of ["A", "B", "C", "D"].entries()) {
+    const text = normalized.options[index]?.trim();
+    if (text) options.push({ label, text });
+  }
+
   return {
     id: bankId,
-    subject: meta.subject,
+    subject: normalized.subject,
     chapter: meta.chapter ?? "General",
     topic: meta.topic ?? "General",
     difficulty: mapDifficulty(meta.difficulty),
     questionType: "MCQ_SINGLE",
-    questionText: meta.questionText,
-    options: labels.map((label, index) => ({
-      label,
-      text: meta.optionLabels[index] ?? "",
-    })),
-    correctAnswer: meta.correctAnswer,
+    questionText: normalized.stem,
+    options,
+    correctAnswer: normalized.answer,
     solution: meta.solution ?? "",
     marks: meta.marks,
     negativeMarks: meta.negativeMarks,

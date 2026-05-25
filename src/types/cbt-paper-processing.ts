@@ -61,11 +61,27 @@ export interface PreparedSectionMeta {
   questions: PreparedQuestionMeta[];
 }
 
+export type SubjectMappingMode = "single" | "multi";
+
+export interface SubjectRangeMapping {
+  start: number;
+  end: number;
+  subject: string;
+}
+
+export interface PaperSubjectMapping {
+  mode: SubjectMappingMode;
+  singleSubject?: string;
+  ranges?: SubjectRangeMapping[];
+  appliedAt?: number;
+}
+
 export interface ProcessedPaperPackage {
   id: string;
   status: ProcessedPaperStatus;
   title: string;
   instituteId: string;
+  subjectMapping?: PaperSubjectMapping;
   paperFileName: string;
   paperFileType: SupportedPaperFileType;
   answerKeyFileName?: string;

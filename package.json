@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint src proxy.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
     "db:bootstrap": "node scripts/supabase/bootstrap-db.mjs",
     "db:push": "npx supabase db push",
     "db:verify": "node scripts/supabase/verify-remote.mjs",
@@ -37,6 +39,7 @@
     "eslint-config-next": "16.2.6",
     "supabase": "^2.98.2",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.4"
   }
 }

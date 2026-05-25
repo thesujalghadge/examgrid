@@ -13,7 +13,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ExamInterface } from "@/components/exam/ExamInterface";
+import { PaperSubjectMappingPanel } from "@/components/institute/paper-subject-mapping";
 import { buildCbtTestFromProcessedPaper } from "@/lib/cbt/build-test-from-processing";
+import { applySubjectMapping, defaultSubjectMapping } from "@/lib/cbt/subject-mapping";
+import type { PaperSubjectMapping } from "@/types/cbt-paper-processing";
 import { cbtTestToExamDefinition } from "@/lib/cbt/cbt-to-exam";
 import {
   createBlankPreparedQuestion,
@@ -44,7 +47,6 @@ import type {
   PaperExtractionSummary,
   PaperProcessingStage,
   PreparedQuestionMeta,
-  PreparedSectionMeta,
   ProcessedPaperPackage,
   ProcessedPaperValidationIssue,
   SupportedPaperFileType,
@@ -90,7 +92,6 @@ export function InstitutePaperUploadFlow() {
     "Read each question carefully before answering.\nUse the palette to review marked and unanswered questions.\nSubmit before the timer ends.",
   );
   const [optionalSections, setOptionalSections] = useState("");
-  const [subjectMapping, setSubjectMapping] = useState("");
   const [selectedBatchIds, setSelectedBatchIds] = useState<string[]>([]);
   const [scheduleStart, setScheduleStart] = useState("");
   const [scheduleEnd, setScheduleEnd] = useState("");
@@ -153,7 +154,7 @@ export function InstitutePaperUploadFlow() {
     (updater: (current: ProcessedPaperPackage) => ProcessedPaperPackage) => {
       setPkg((current) => {
         if (!current) return current;
-        return normalizeProcessedPaper(updater(current));
+        return normalizeProcessedPaper(applySubjectMapping(updater(current)));
       });
     },
     [],
@@ -495,26 +496,23 @@ export function InstitutePaperUploadFlow() {
 
       const marks = safeNumber(defaultMarks, 4);
       const negativeMarks = safeNumber(defaultNegativeMarks, 1);
-      const configuredSections = applySubjectMappings(
-        result.sections.map((section, sectionIndex) => {
-          const sectionName = configuredSectionNames[sectionIndex] || section.name;
-          return {
-            ...section,
-            name: sectionName,
-            questions: section.questions.map((question) => ({
-              ...question,
-              section: sectionName,
-              subject:
-                question.subject === section.name || question.subject === "Imported Questions"
-                  ? sectionName
-                  : question.subject,
-              marks,
-              negativeMarks,
-            })),
-          };
-        }),
-        subjectMapping,
-      );
+      const configuredSections = result.sections.map((section, sectionIndex) => {
+        const sectionName = configuredSectionNames[sectionIndex] || section.name;
+        return {
+          ...section,
+          name: sectionName,
+          questions: section.questions.map((question) => ({
+            ...question,
+            section: sectionName,
+            subject:
+              question.subject === section.name || question.subject === "Imported Questions"
+                ? sectionName
+                : question.subject,
+            marks,
+            negativeMarks,
+          })),
+        };
+      });
       const configured = normalizeProcessedPaper({
         ...result,
         title: title.trim(),
@@ -524,6 +522,9 @@ export function InstitutePaperUploadFlow() {
           .map((line) => line.trim())
           .filter(Boolean),
         sections: configuredSections,
+        subjectMapping: defaultSubjectMapping(
+          configuredSections.reduce((count, section) => count + section.questions.length, 0),
+        ),
       });
       setPkg(configured);
       setProcessLog(configured.processingLog);
@@ -722,15 +723,9 @@ export function InstitutePaperUploadFlow() {
                 <p className="text-xs text-[#5e5a52]">Optional comma-separated labels for detected sections.</p>
               </label>
             </div>
-            <label className="block space-y-1.5 border-t border-[#ece6da] pt-4">
-              <Label>Subject mapping</Label>
-              <textarea
-                className="min-h-20 w-full rounded-lg border border-input bg-white px-3 py-2 text-sm"
-                placeholder={"Single subject: Physics\nRange mapping:\nQ1-Q10 Physics\nQ11-Q20 Chemistry"}
-                value={subjectMapping}
-                onChange={(event) => setSubjectMapping(event.target.value)}
-              />
-            </label>
+            <p className="border-t border-[#ece6da] pt-4 text-sm text-[#5e5a52]">
+              Subject mapping is configured in Preview after questions are extracted (single subject or question ranges).
+            </p>
             {(configurationNotice || processingError) && (
               <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
                 {configurationNotice || processingError}
@@ -824,6 +819,16 @@ export function InstitutePaperUploadFlow() {
             buckets={validationBuckets}
             onOpenQuestion={openReviewQuestion}
           />
+
+          {pkg.subjectMapping ? (
+            <PaperSubjectMappingPanel
+              totalQuestions={pkg.totalQuestions}
+              mapping={pkg.subjectMapping}
+              onChange={(nextMapping: PaperSubjectMapping) =>
+                applyPackageUpdate((current) => ({ ...current, subjectMapping: nextMapping }))
+              }
+            />
+          ) : null}
 
           {step === "edit" && (
             <Card className="border-[#d8d2c7]" size="sm">
@@ -1218,78 +1223,6 @@ function bucketValidationIssues(
     }
   }
   return buckets;
-}
-
-interface SubjectRule {
-  start: number;
-  end: number;
-  subject: string;
-  source: string;
-}
-
-function parseSubjectRules(input: string): SubjectRule[] {
-  const lines = input
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-  if (lines.length === 0) return [];
-  if (lines.length === 1 && !/^q?\d+/i.test(lines[0])) {
-    return [{ start: 1, end: Number.MAX_SAFE_INTEGER, subject: lines[0], source: lines[0] }];
-  }
-  return lines
-    .map((line) => {
-      const range =
-        line.match(/^q?\s*(\d{1,3})\s*[-–]\s*q?\s*(\d{1,3})\s+(.+)$/i) ??
-        line.match(/^q?\s*(\d{1,3})\s+(.+)$/i);
-      if (!range) return null;
-      const start = Number(range[1]);
-      const end = range[3] ? Number(range[2]) : start;
-      const subject = (range[3] ?? range[2]).trim();
-      if (!subject || !Number.isFinite(start) || !Number.isFinite(end)) return null;
-      return { start: Math.min(start, end), end: Math.max(start, end), subject, source: line };
-    })
-    .filter((rule): rule is SubjectRule => Boolean(rule));
-}
-
-function applySubjectMappings(
-  sections: PreparedSectionMeta[],
-  mappingInput: string,
-): PreparedSectionMeta[] {
-  const rules = parseSubjectRules(mappingInput);
-  if (rules.length === 0) return sections;
-  let globalQuestionNumber = 0;
-  return sections.map((section) => ({
-    ...section,
-    questions: section.questions.map((question) => {
-      globalQuestionNumber += 1;
-      const rule = rules.find(
-        (candidate) =>
-          globalQuestionNumber >= candidate.start &&
-          globalQuestionNumber <= candidate.end,
-      );
-      if (!rule) {
-        return {
-          ...question,
-          metadata: {
-            ...question.metadata,
-            subjectGlobalQuestionNumber: globalQuestionNumber,
-            subjectMappingInput: mappingInput,
-          },
-        };
-      }
-      return {
-        ...question,
-        subject: rule.subject,
-        metadata: {
-          ...question.metadata,
-          subjectGlobalQuestionNumber: globalQuestionNumber,
-          subjectMappingInput: mappingInput,
-          subjectMappingRule: rule.source,
-          subjectMappingSource: "wizard",
-        },
-      };
-    }),
-  }));
 }
 
 function getErrorMessage(error: unknown): string {

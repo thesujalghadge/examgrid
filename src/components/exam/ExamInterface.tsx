@@ -390,6 +390,12 @@ export function ExamInterface({
     ? currentReviewSectionQuestionIds.indexOf(currentQuestionId)
     : -1;
 
+  const activeExam = review?.exam ?? exam;
+  const currentQuestionType = currentQuestionId
+    ? activeExam?.questions[currentQuestionId]?.type
+    : undefined;
+  const showCalculator = currentQuestionType === "NUMERICAL";
+
   if (!ready || (!isTeacherReview && (!candidate || !exam))) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-200 text-sm text-gray-600">
@@ -472,7 +478,7 @@ export function ExamInterface({
         />
       </div>
 
-      <ExamCalculator />
+      {showCalculator ? <ExamCalculator /> : null}
       {!isTeacherReview ? <ExamGuardDialogs guard={guard} /> : null}
 
       {!isTeacherReview ? (
