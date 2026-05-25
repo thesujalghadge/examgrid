@@ -20,6 +20,7 @@ export const bankQuestionStoredSchema = z.object({
   solution: z.string(),
   marks: z.number().nonnegative(),
   negativeMarks: z.number().nonnegative(),
+  metadata: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])).optional(),
   createdAt: z.number(),
   updatedAt: z.number(),
 });

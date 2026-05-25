@@ -305,6 +305,10 @@ function parseInlineAnswer(lines: string[]): string {
   return "";
 }
 
+function isNumericAnswer(answer: string): boolean {
+  return /^-?\d+(?:\.\d+)?$/.test(answer.trim());
+}
+
 function computeConfidence(input: {
   questionText: string;
   optionCount: number;
@@ -335,7 +339,9 @@ function buildQuestionMeta(
   const inlineAnswer = parseInlineAnswer(block.lines);
   const correctAnswer = answerKey.get(block.questionNumber) ?? inlineAnswer;
   const subject = detectSubject(block.section, questionText);
-  const questionType = options.length > 0 ? "MCQ_SINGLE" : "NUMERICAL";
+  const hasValidOptions = options.some((option) => option.text.trim());
+  const questionType =
+    hasValidOptions || !isNumericAnswer(correctAnswer) ? "MCQ_SINGLE" : "NUMERICAL";
   const confidence = computeConfidence({
     questionText,
     optionCount: options.length,
@@ -370,6 +376,7 @@ function buildQuestionMeta(
         : inlineAnswer
           ? "inline_paper"
           : "missing",
+      detectedQuestionType: questionType,
     },
   };
 }
@@ -798,6 +805,7 @@ export function preparedMetaToBankQuestion(
       solution: meta.solution ?? "",
       marks: meta.marks,
       negativeMarks: meta.negativeMarks,
+      metadata: meta.metadata,
       createdAt: now,
       updatedAt: now,
     };
@@ -813,12 +821,13 @@ export function preparedMetaToBankQuestion(
     questionText: meta.questionText,
     options: labels.map((label, index) => ({
       label,
-      text: meta.optionLabels[index] ?? `Option ${label}`,
+      text: meta.optionLabels[index] ?? "",
     })),
     correctAnswer: meta.correctAnswer,
     solution: meta.solution ?? "",
     marks: meta.marks,
     negativeMarks: meta.negativeMarks,
+    metadata: meta.metadata,
     createdAt: now,
     updatedAt: now,
   };

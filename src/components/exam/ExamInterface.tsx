@@ -424,7 +424,7 @@ export function ExamInterface({
       <div className="relative flex flex-1 overflow-hidden">
         <main className="flex min-w-0 flex-1 flex-col border-r border-[#1a3c6e]/10 bg-white shadow-sm">
           <QuestionCard
-            previewOnly={Boolean(review && review.mode === "preview")}
+            previewOnly={false}
             review={
               review && review.mode === "edit" && currentQuestionId
                 ? {

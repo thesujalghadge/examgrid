@@ -79,7 +79,7 @@ export function QuestionCard({ review, previewOnly = false }: QuestionCardProps)
         ) : null}
       </div>
 
-      <div className="px-8 py-6">
+      <div className="px-4 py-5 md:px-8 md:py-7">
         {review ? (
           <div className="mb-4 rounded-xl border border-[#ece6da] bg-[#fbf9f4] p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -108,9 +108,14 @@ export function QuestionCard({ review, previewOnly = false }: QuestionCardProps)
           </div>
         ) : null}
 
-        <div className="mb-6">
-          <div className="mb-2 flex items-start gap-2 text-[15px] leading-relaxed text-gray-900">
-            <span className="font-bold text-[#1a3c6e]">Q.{question.number}.</span>
+        <div className="mb-7 rounded-md border border-gray-200 bg-white shadow-sm">
+          <div className="border-b border-gray-200 bg-[#f8fafc] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-[#1a3c6e]">
+            Question No. {question.number}
+          </div>
+          <div className="flex items-start gap-3 px-4 py-4 text-[15px] leading-7 text-gray-950">
+            <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#1a3c6e] text-xs font-bold text-white">
+              {question.number}
+            </span>
             {review ? (
               <textarea
                 className="min-h-[110px] w-full rounded-md border border-[#d7dde7] px-3 py-2 text-sm text-gray-900"
@@ -118,7 +123,7 @@ export function QuestionCard({ review, previewOnly = false }: QuestionCardProps)
                 onChange={(event) => review.onQuestionTextChange?.(event.target.value)}
               />
             ) : (
-              <p>{question.text}</p>
+              <p className="whitespace-pre-wrap">{question.text}</p>
             )}
           </div>
         </div>
@@ -148,14 +153,14 @@ export function QuestionCard({ review, previewOnly = false }: QuestionCardProps)
             <legend className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
               {review ? "Review options" : "Select one option"}
             </legend>
-            <ul className="space-y-2.5">
+            <ul className="space-y-3">
               {question.options.map((opt) => {
                 const isSelected = review ? reviewCorrectValue === opt.label : selected === opt.id;
                 return (
                   <li key={opt.id}>
                     <label
                       className={cn(
-                        "flex items-start gap-3 rounded-sm border-2 px-4 py-3 transition-colors",
+                        "flex items-start gap-4 rounded-md border px-4 py-3.5 transition-colors shadow-sm",
                         review ? "border-[#d7dde7] bg-white" : "cursor-pointer",
                         isSelected
                           ? "border-[#1a3c6e] bg-[#eef3fa]"
@@ -177,8 +182,8 @@ export function QuestionCard({ review, previewOnly = false }: QuestionCardProps)
                         }
                         className="mt-0.5 h-4 w-4 shrink-0 accent-[#1a3c6e] disabled:cursor-default"
                       />
-                      <span className="flex-1 text-sm leading-relaxed text-gray-900">
-                        <span className="mr-2 inline-flex h-6 w-6 items-center justify-center rounded-full border border-[#1a3c6e] text-xs font-bold text-[#1a3c6e]">
+                      <span className="flex-1 text-sm leading-6 text-gray-950">
+                        <span className="mr-3 inline-flex h-7 w-7 items-center justify-center rounded-full border border-[#1a3c6e] bg-white text-xs font-bold text-[#1a3c6e]">
                           {opt.label}
                         </span>
                         {review ? (

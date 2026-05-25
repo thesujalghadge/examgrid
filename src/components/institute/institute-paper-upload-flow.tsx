@@ -36,6 +36,7 @@ import {
 } from "@/services/institute-ops-service";
 import { getQuestionBank, saveQuestionBank } from "@/services/question-bank-service";
 import { useWorkspaceAuthStore } from "@/stores/workspace-auth-store";
+import { useQuestionStore } from "@/stores/question-store";
 import type { CBTTest } from "@/types/cbt";
 import type { ExamDefinition } from "@/types/exam";
 import type { Batch } from "@/types/institute-ops";
@@ -43,17 +44,27 @@ import type {
   PaperExtractionSummary,
   PaperProcessingStage,
   PreparedQuestionMeta,
+  PreparedSectionMeta,
   ProcessedPaperPackage,
+  ProcessedPaperValidationIssue,
   SupportedPaperFileType,
   UploadExtractionMode,
 } from "@/types/cbt-paper-processing";
 
-type WizardStep = "configure" | "upload" | "preview" | "edit" | "done";
+type WizardStep = "configure" | "upload" | "processing" | "preview" | "edit" | "publish" | "done";
+type WizardNavStep = "configure" | "upload" | "preview" | "publish";
+type ValidationBucket = "missingAnswers" | "malformedOptions" | "duplicateIds";
 
 const ACCEPT_PAPER = ".pdf,.doc,.docx,.csv,.xlsx,.txt";
 const ACCEPT_KEY = ".csv,.xlsx,.txt,.doc,.docx";
 const PAPER_FILE_TYPES = ["pdf", "doc", "docx", "csv", "xlsx", "txt"] as const;
 const ANSWER_KEY_FILE_TYPES = ["csv", "xlsx", "txt", "doc", "docx"] as const;
+const WIZARD_NAV: Array<{ id: WizardNavStep; label: string }> = [
+  { id: "configure", label: "Configure" },
+  { id: "upload", label: "Upload" },
+  { id: "preview", label: "Preview" },
+  { id: "publish", label: "Publish" },
+];
 
 export function InstitutePaperUploadFlow() {
   const session = useWorkspaceAuthStore((state) => state.session);
@@ -79,6 +90,7 @@ export function InstitutePaperUploadFlow() {
     "Read each question carefully before answering.\nUse the palette to review marked and unanswered questions.\nSubmit before the timer ends.",
   );
   const [optionalSections, setOptionalSections] = useState("");
+  const [subjectMapping, setSubjectMapping] = useState("");
   const [selectedBatchIds, setSelectedBatchIds] = useState<string[]>([]);
   const [scheduleStart, setScheduleStart] = useState("");
   const [scheduleEnd, setScheduleEnd] = useState("");
@@ -106,9 +118,6 @@ export function InstitutePaperUploadFlow() {
 
   useEffect(() => {
     refresh();
-    const now = new Date();
-    setScheduleStart(toLocalInput(new Date(now.getTime() - 15 * 60 * 1000)));
-    setScheduleEnd(toLocalInput(new Date(now.getTime() + 3 * 60 * 60 * 1000)));
   }, [refresh]);
 
   const configuredSectionNames = useMemo(
@@ -165,6 +174,24 @@ export function InstitutePaperUploadFlow() {
     });
     return locations;
   }, [pkg, previewBundle]);
+
+  const reviewQuestionIdBySource = useMemo(() => {
+    const ids = new Map<string, string>();
+    if (!pkg || !previewBundle) return ids;
+    let questionNumber = 0;
+    for (const section of pkg.sections) {
+      for (const question of section.questions) {
+        questionNumber += 1;
+        ids.set(question.questionId, `${previewBundle.test.id}-question-${questionNumber}`);
+      }
+    }
+    return ids;
+  }, [pkg, previewBundle]);
+
+  const validationBuckets = useMemo(
+    () => bucketValidationIssues(blockingIssues, reviewQuestionIdBySource),
+    [blockingIssues, reviewQuestionIdBySource],
+  );
 
   const reviewSectionLocations = useMemo(() => {
     const locations = new Map<string, number>();
@@ -385,6 +412,17 @@ export function InstitutePaperUploadFlow() {
     [updateReviewQuestion],
   );
 
+  const openReviewQuestion = useCallback((questionId?: string) => {
+    if (!questionId) {
+      setStep("edit");
+      return;
+    }
+    setStep("edit");
+    window.setTimeout(() => {
+      useQuestionStore.getState().goToQuestion(questionId);
+    }, 0);
+  }, []);
+
   const startProcessing = async () => {
     if (!paperFile || !instituteId) {
       setConfigurationNotice("Add a question paper to continue to the CBT preview.");
@@ -397,7 +435,7 @@ export function InstitutePaperUploadFlow() {
     setConfigurationNotice("");
     setPublishError("");
     setProcessingError("");
-    setStep("upload");
+    setStep("processing");
     setProcessLog([]);
 
     try {
@@ -457,15 +495,8 @@ export function InstitutePaperUploadFlow() {
 
       const marks = safeNumber(defaultMarks, 4);
       const negativeMarks = safeNumber(defaultNegativeMarks, 1);
-      const configured = normalizeProcessedPaper({
-        ...result,
-        title: title.trim(),
-        durationMinutes: Math.max(1, parseInt(duration, 10) || 60),
-        instructions: instructions
-          .split("\n")
-          .map((line) => line.trim())
-          .filter(Boolean),
-        sections: result.sections.map((section, sectionIndex) => {
+      const configuredSections = applySubjectMappings(
+        result.sections.map((section, sectionIndex) => {
           const sectionName = configuredSectionNames[sectionIndex] || section.name;
           return {
             ...section,
@@ -482,6 +513,17 @@ export function InstitutePaperUploadFlow() {
             })),
           };
         }),
+        subjectMapping,
+      );
+      const configured = normalizeProcessedPaper({
+        ...result,
+        title: title.trim(),
+        durationMinutes: Math.max(1, parseInt(duration, 10) || 60),
+        instructions: instructions
+          .split("\n")
+          .map((line) => line.trim())
+          .filter(Boolean),
+        sections: configuredSections,
       });
       setPkg(configured);
       setProcessLog(configured.processingLog);
@@ -569,8 +611,14 @@ export function InstitutePaperUploadFlow() {
     setStep("done");
   };
 
-  const stepIndex =
-    step === "configure" ? 1 : step === "upload" ? 2 : step === "preview" ? 3 : step === "edit" ? 4 : 5;
+  const activeNavStep: WizardNavStep =
+    step === "processing" || step === "upload"
+      ? "upload"
+      : step === "preview" || step === "edit"
+        ? "preview"
+        : step === "publish" || step === "done"
+          ? "publish"
+          : "configure";
   const reviewMode = step === "edit" ? "edit" : "preview";
 
   const resetWizard = () => {
@@ -589,19 +637,24 @@ export function InstitutePaperUploadFlow() {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-2 text-xs text-[#5e5a52]">
-        {["Configure", "Upload", "CBT Preview", "Edit", "Publish"].map((label, index) => (
-          <span
-            key={label}
+        {WIZARD_NAV.map((item, index) => (
+          <button
+            key={item.id}
+            type="button"
+            disabled={!canNavigateWizard(item.id, pkg, step)}
+            onClick={() => {
+              setPublishError("");
+              setConfigurationNotice("");
+              setStep(item.id);
+            }}
             className={
-              index + 1 === stepIndex
+              item.id === activeNavStep
                 ? "rounded-md bg-[#14213d] px-3 py-1.5 font-medium text-white"
-                : index + 1 < stepIndex
-                  ? "rounded-md bg-[#e9f3ea] px-3 py-1.5 text-[#2f6a37]"
-                  : "rounded-md border border-[#ece6da] bg-white px-3 py-1.5"
+                : "rounded-md border border-[#ece6da] bg-white px-3 py-1.5 enabled:hover:bg-[#fbf9f4] disabled:cursor-not-allowed disabled:opacity-50"
             }
           >
-            {index + 1}. {label}
-          </span>
+            {index + 1}. {item.label}
+          </button>
         ))}
       </div>
 
@@ -642,11 +695,11 @@ export function InstitutePaperUploadFlow() {
                 <Input type="number" min="0" step="0.25" value={defaultNegativeMarks} onChange={(event) => setDefaultNegativeMarks(event.target.value)} />
               </label>
               <label className="space-y-1.5">
-                <Label>Start time</Label>
+                <Label>Available From</Label>
                 <Input type="datetime-local" value={scheduleStart} onChange={(event) => setScheduleStart(event.target.value)} />
               </label>
               <label className="space-y-1.5">
-                <Label>End time</Label>
+                <Label>Available Until</Label>
                 <Input type="datetime-local" value={scheduleEnd} onChange={(event) => setScheduleEnd(event.target.value)} />
               </label>
             </div>
@@ -666,44 +719,24 @@ export function InstitutePaperUploadFlow() {
                   value={optionalSections}
                   onChange={(event) => setOptionalSections(event.target.value)}
                 />
-                <p className="text-xs text-[#5e5a52]">Comma-separated labels are applied to detected sections.</p>
+                <p className="text-xs text-[#5e5a52]">Optional comma-separated labels for detected sections.</p>
               </label>
             </div>
-            <div className="grid gap-3 border-t border-[#ece6da] pt-4 sm:grid-cols-2">
-              <label className="space-y-1.5 rounded-lg border border-[#ece6da] bg-[#fbf9f4] p-3">
-                <Label>Upload question paper</Label>
-                <Input type="file" accept={ACCEPT_PAPER} onChange={(event) => setPaperFile(event.target.files?.[0] ?? null)} />
-                <p className="text-xs text-[#5e5a52]">PDF, DOC, DOCX, CSV, XLSX, or TXT</p>
-              </label>
-              <label className="space-y-1.5 rounded-lg border border-[#ece6da] bg-[#fbf9f4] p-3">
-                <Label>Upload answer key</Label>
-                <Input type="file" accept={ACCEPT_KEY} onChange={(event) => setKeyFile(event.target.files?.[0] ?? null)} />
-                <p className="text-xs text-[#5e5a52]">Optional now; missing answers can be completed during edit.</p>
-              </label>
-            </div>
-            <details className="rounded-lg border border-[#ece6da] bg-white px-3 py-2 text-sm">
-              <summary className="cursor-pointer font-medium text-[#5e5a52]">Text fallback for scanned files</summary>
-              <div className="mt-3 grid gap-3 md:grid-cols-2">
-                <textarea
-                  className="min-h-24 rounded-lg border border-input p-2 text-sm"
-                  placeholder="Question paper extracted text"
-                  value={paperTextOverride}
-                  onChange={(event) => setPaperTextOverride(event.target.value)}
-                />
-                <textarea
-                  className="min-h-24 rounded-lg border border-input p-2 text-sm"
-                  placeholder="Answer key text, for example 1-A, 2-B"
-                  value={answerKeyTextOverride}
-                  onChange={(event) => setAnswerKeyTextOverride(event.target.value)}
-                />
-              </div>
-            </details>
+            <label className="block space-y-1.5 border-t border-[#ece6da] pt-4">
+              <Label>Subject mapping</Label>
+              <textarea
+                className="min-h-20 w-full rounded-lg border border-input bg-white px-3 py-2 text-sm"
+                placeholder={"Single subject: Physics\nRange mapping:\nQ1-Q10 Physics\nQ11-Q20 Chemistry"}
+                value={subjectMapping}
+                onChange={(event) => setSubjectMapping(event.target.value)}
+              />
+            </label>
             {(configurationNotice || processingError) && (
               <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
                 {configurationNotice || processingError}
               </p>
             )}
-            <Button className="bg-[#14213d] px-4" onClick={() => void startProcessing()}>
+            <Button className="bg-[#14213d] px-4" onClick={() => setStep("upload")}>
               Continue to upload
             </Button>
           </CardContent>
@@ -711,6 +744,54 @@ export function InstitutePaperUploadFlow() {
       )}
 
       {step === "upload" && (
+        <Card className="border-[#d8d2c7]">
+          <CardHeader className="border-b">
+            <CardTitle className="text-lg text-[#14213d]">Upload paper and answer key</CardTitle>
+            <CardDescription>Upload now or paste fallback text for scanned or complex files.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="space-y-1.5 rounded-lg border border-[#ece6da] bg-[#fbf9f4] p-3">
+                <Label>Upload question paper</Label>
+                <Input type="file" accept={ACCEPT_PAPER} onChange={(event) => setPaperFile(event.target.files?.[0] ?? null)} />
+                <p className="text-xs text-[#5e5a52]">{paperFile ? paperFile.name : "PDF, DOC, DOCX, CSV, XLSX, or TXT"}</p>
+              </label>
+              <label className="space-y-1.5 rounded-lg border border-[#ece6da] bg-[#fbf9f4] p-3">
+                <Label>Upload answer key</Label>
+                <Input type="file" accept={ACCEPT_KEY} onChange={(event) => setKeyFile(event.target.files?.[0] ?? null)} />
+                <p className="text-xs text-[#5e5a52]">{keyFile ? keyFile.name : "Optional. Missing answers can be fixed during edit."}</p>
+              </label>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <textarea
+                className="min-h-32 rounded-lg border border-input p-2 text-sm"
+                placeholder="Question paper extracted text"
+                value={paperTextOverride}
+                onChange={(event) => setPaperTextOverride(event.target.value)}
+              />
+              <textarea
+                className="min-h-32 rounded-lg border border-input p-2 text-sm"
+                placeholder="Answer key text, for example 1-A, 2-B"
+                value={answerKeyTextOverride}
+                onChange={(event) => setAnswerKeyTextOverride(event.target.value)}
+              />
+            </div>
+            {(configurationNotice || processingError) && (
+              <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                {configurationNotice || processingError}
+              </p>
+            )}
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={() => setStep("configure")}>Back to configure</Button>
+              <Button className="bg-[#14213d] px-4" onClick={() => void startProcessing()}>
+                Build CBT preview
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {step === "processing" && (
         <Card className="border-[#d8d2c7]">
           <CardContent className="space-y-4 py-10">
             <div className="mx-auto h-9 w-9 animate-spin rounded-full border-2 border-[#8a6f3e] border-t-transparent" />
@@ -739,6 +820,10 @@ export function InstitutePaperUploadFlow() {
               <span className="rounded-md bg-[#f5f1e8] px-2.5 py-1 text-[#8a6f3e]">{blockingIssues.length} to review</span>
             </div>
           </div>
+          <ValidationSummary
+            buckets={validationBuckets}
+            onOpenQuestion={openReviewQuestion}
+          />
 
           {step === "edit" && (
             <Card className="border-[#d8d2c7]" size="sm">
@@ -747,14 +832,24 @@ export function InstitutePaperUploadFlow() {
                   <IssuePanel
                     title="Details to check"
                     tone="warning"
-                    items={blockingIssues.map((issue) => issue.message)}
+                    issues={blockingIssues.map((issue) => ({
+                      key: `${issue.questionId ?? issue.message}:${issue.message}`,
+                      message: issue.message,
+                      reviewQuestionId: issue.questionId ? reviewQuestionIdBySource.get(issue.questionId) : undefined,
+                    }))}
                     emptyMessage="All required question and answer details are complete."
+                    onOpenQuestion={openReviewQuestion}
                   />
                   <IssuePanel
                     title="Parser notes"
                     tone="warning"
-                    items={warningIssues.map((issue) => issue.message)}
+                    issues={warningIssues.map((issue) => ({
+                      key: `${issue.questionId ?? issue.message}:${issue.message}`,
+                      message: issue.message,
+                      reviewQuestionId: issue.questionId ? reviewQuestionIdBySource.get(issue.questionId) : undefined,
+                    }))}
                     emptyMessage="No additional parser notes."
+                    onOpenQuestion={openReviewQuestion}
                   />
                 </div>
                 <div className="flex flex-wrap items-end gap-3">
@@ -800,44 +895,60 @@ export function InstitutePaperUploadFlow() {
                 onAddQuestion: addQuestionBySectionId,
                 onContinue: () => {
                   if (step === "preview") setStep("edit");
-                  else void publishTest();
+                  else setStep("publish");
                 },
               }}
             />
           </div>
 
-          {step === "edit" && (
-            <Card className="border-[#d8d2c7]" size="sm">
-              <CardHeader>
-                <CardTitle className="text-base text-[#14213d]">Publish options</CardTitle>
-                <CardDescription>Assignments are optional; an unassigned CBT can be scheduled later.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex flex-wrap gap-2">
-                  {batches.map((batch) => (
-                    <label key={batch.id} className="flex items-center gap-2 rounded-md border border-[#ece6da] px-3 py-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={selectedBatchIds.includes(batch.id)}
-                        onChange={() =>
-                          setSelectedBatchIds((current) =>
-                            current.includes(batch.id) ? current.filter((id) => id !== batch.id) : [...current, batch.id],
-                          )
-                        }
-                      />
-                      {batch.name}
-                    </label>
-                  ))}
-                </div>
-                {publishError && <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">{publishError}</p>}
-                <div className="flex flex-wrap gap-2">
-                  <Button variant="outline" onClick={() => setStep("preview")}>Return to preview</Button>
-                  <Button className="bg-[#8a6f3e] px-4" onClick={() => void publishTest()}>Publish CBT</Button>
-                </div>
-              </CardContent>
-            </Card>
+          {step === "preview" && (
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={() => setStep("upload")}>Back to upload</Button>
+              <Button variant="outline" onClick={() => setStep("edit")}>Edit questions</Button>
+              <Button className="bg-[#14213d]" onClick={() => setStep("publish")}>Continue to publish</Button>
+            </div>
           )}
         </div>
+      )}
+
+      {step === "publish" && pkg && (
+        <Card className="border-[#d8d2c7]" size="sm">
+          <CardHeader>
+            <CardTitle className="text-base text-[#14213d]">Publish options</CardTitle>
+            <CardDescription>Assignments and availability are optional; unresolved counts link back to the affected question.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <ValidationSummary
+              buckets={validationBuckets}
+              onOpenQuestion={openReviewQuestion}
+            />
+            <div className="flex flex-wrap gap-2">
+              {batches.map((batch) => (
+                <label key={batch.id} className="flex items-center gap-2 rounded-md border border-[#ece6da] px-3 py-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={selectedBatchIds.includes(batch.id)}
+                    onChange={() =>
+                      setSelectedBatchIds((current) =>
+                        current.includes(batch.id) ? current.filter((id) => id !== batch.id) : [...current, batch.id],
+                      )
+                    }
+                  />
+                  {batch.name}
+                </label>
+              ))}
+              {batches.length === 0 && (
+                <p className="text-sm text-[#5e5a52]">No batches yet. You can publish now and assign later.</p>
+              )}
+            </div>
+            {publishError && <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">{publishError}</p>}
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={() => setStep("preview")}>Preview</Button>
+              <Button variant="outline" onClick={() => setStep("edit")}>Edit questions</Button>
+              <Button className="bg-[#8a6f3e] px-4" onClick={() => void publishTest()}>Publish CBT</Button>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {step === "done" && (
@@ -881,20 +992,23 @@ export function InstitutePaperUploadFlow() {
       )}
     </div>
   );
+
 }
 
 function IssuePanel({
   title,
   tone,
-  items,
+  issues,
   emptyMessage,
+  onOpenQuestion,
 }: {
   title: string;
   tone: "error" | "warning";
-  items: string[];
+  issues: Array<{ key: string; message: string; reviewQuestionId?: string }>;
   emptyMessage: string;
+  onOpenQuestion: (questionId?: string) => void;
 }) {
-  const visibleItems = items.slice(0, 4);
+  const visibleItems = issues.slice(0, 4);
   const className =
     tone === "error"
       ? "border-red-200 bg-red-50 text-red-900"
@@ -902,18 +1016,60 @@ function IssuePanel({
   return (
     <div className={`rounded-xl border p-4 ${className}`}>
       <p className="font-medium">{title}</p>
-      {items.length === 0 ? (
+      {issues.length === 0 ? (
         <p className="mt-2 text-sm">{emptyMessage}</p>
       ) : (
         <ul className="mt-2 space-y-1 text-sm">
           {visibleItems.map((item) => (
-            <li key={item}>{item}</li>
+            <li key={item.key}>
+              <button
+                type="button"
+                className="text-left underline-offset-2 hover:underline"
+                onClick={() => onOpenQuestion(item.reviewQuestionId)}
+              >
+                {item.message}
+              </button>
+            </li>
           ))}
-          {items.length > visibleItems.length && (
-            <li className="font-medium">+{items.length - visibleItems.length} more in the question palette</li>
+          {issues.length > visibleItems.length && (
+            <li className="font-medium">+{issues.length - visibleItems.length} more in the question palette</li>
           )}
         </ul>
       )}
+    </div>
+  );
+}
+
+function ValidationSummary({
+  buckets,
+  onOpenQuestion,
+}: {
+  buckets: Record<ValidationBucket, Array<{ issue: ProcessedPaperValidationIssue; reviewQuestionId?: string }>>;
+  onOpenQuestion: (questionId?: string) => void;
+}) {
+  const rows = [
+    { key: "missingAnswers" as const, label: "Missing answers" },
+    { key: "malformedOptions" as const, label: "Malformed options" },
+    { key: "duplicateIds" as const, label: "Duplicate IDs" },
+  ];
+  return (
+    <div className="grid gap-2 sm:grid-cols-3">
+      {rows.map((row) => {
+        const items = buckets[row.key];
+        const first = items[0];
+        return (
+          <button
+            key={row.key}
+            type="button"
+            disabled={items.length === 0}
+            onClick={() => onOpenQuestion(first?.reviewQuestionId)}
+            className="rounded-lg border border-[#ece6da] bg-white px-3 py-2 text-left text-sm shadow-sm enabled:hover:border-[#8a6f3e] disabled:cursor-default disabled:opacity-70"
+          >
+            <span className="block text-xs uppercase tracking-wide text-[#8f8779]">{row.label}</span>
+            <span className="text-xl font-semibold text-[#14213d]">{items.length}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -1027,6 +1183,115 @@ function mergeExtractionMode(
   return "file";
 }
 
+function canNavigateWizard(
+  target: WizardNavStep,
+  pkg: ProcessedPaperPackage | null,
+  step: WizardStep,
+): boolean {
+  if (step === "processing") return target === "upload";
+  if (target === "configure" || target === "upload") return true;
+  if (target === "preview" || target === "publish") return Boolean(pkg);
+  return false;
+}
+
+function bucketValidationIssues(
+  issues: ProcessedPaperValidationIssue[],
+  reviewQuestionIdBySource: Map<string, string>,
+): Record<ValidationBucket, Array<{ issue: ProcessedPaperValidationIssue; reviewQuestionId?: string }>> {
+  const buckets: Record<ValidationBucket, Array<{ issue: ProcessedPaperValidationIssue; reviewQuestionId?: string }>> = {
+    missingAnswers: [],
+    malformedOptions: [],
+    duplicateIds: [],
+  };
+  for (const issue of issues) {
+    const lower = issue.message.toLowerCase();
+    const item = {
+      issue,
+      reviewQuestionId: issue.questionId ? reviewQuestionIdBySource.get(issue.questionId) : undefined,
+    };
+    if (lower.includes("duplicate question id")) {
+      buckets.duplicateIds.push(item);
+    } else if (lower.includes("answer key") || lower.includes("numerical answer")) {
+      buckets.missingAnswers.push(item);
+    } else if (lower.includes("option") || lower.includes("options")) {
+      buckets.malformedOptions.push(item);
+    }
+  }
+  return buckets;
+}
+
+interface SubjectRule {
+  start: number;
+  end: number;
+  subject: string;
+  source: string;
+}
+
+function parseSubjectRules(input: string): SubjectRule[] {
+  const lines = input
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (lines.length === 0) return [];
+  if (lines.length === 1 && !/^q?\d+/i.test(lines[0])) {
+    return [{ start: 1, end: Number.MAX_SAFE_INTEGER, subject: lines[0], source: lines[0] }];
+  }
+  return lines
+    .map((line) => {
+      const range =
+        line.match(/^q?\s*(\d{1,3})\s*[-–]\s*q?\s*(\d{1,3})\s+(.+)$/i) ??
+        line.match(/^q?\s*(\d{1,3})\s+(.+)$/i);
+      if (!range) return null;
+      const start = Number(range[1]);
+      const end = range[3] ? Number(range[2]) : start;
+      const subject = (range[3] ?? range[2]).trim();
+      if (!subject || !Number.isFinite(start) || !Number.isFinite(end)) return null;
+      return { start: Math.min(start, end), end: Math.max(start, end), subject, source: line };
+    })
+    .filter((rule): rule is SubjectRule => Boolean(rule));
+}
+
+function applySubjectMappings(
+  sections: PreparedSectionMeta[],
+  mappingInput: string,
+): PreparedSectionMeta[] {
+  const rules = parseSubjectRules(mappingInput);
+  if (rules.length === 0) return sections;
+  let globalQuestionNumber = 0;
+  return sections.map((section) => ({
+    ...section,
+    questions: section.questions.map((question) => {
+      globalQuestionNumber += 1;
+      const rule = rules.find(
+        (candidate) =>
+          globalQuestionNumber >= candidate.start &&
+          globalQuestionNumber <= candidate.end,
+      );
+      if (!rule) {
+        return {
+          ...question,
+          metadata: {
+            ...question.metadata,
+            subjectGlobalQuestionNumber: globalQuestionNumber,
+            subjectMappingInput: mappingInput,
+          },
+        };
+      }
+      return {
+        ...question,
+        subject: rule.subject,
+        metadata: {
+          ...question.metadata,
+          subjectGlobalQuestionNumber: globalQuestionNumber,
+          subjectMappingInput: mappingInput,
+          subjectMappingRule: rule.source,
+          subjectMappingSource: "wizard",
+        },
+      };
+    }),
+  }));
+}
+
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
   return "Processing failed. Review the upload and try again.";
@@ -1035,9 +1300,4 @@ function getErrorMessage(error: unknown): string {
 function safeNumber(value: string, fallback: number): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
-}
-
-function toLocalInput(date: Date): string {
-  const pad = (value: number) => String(value).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }

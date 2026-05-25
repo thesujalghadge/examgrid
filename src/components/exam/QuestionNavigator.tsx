@@ -79,7 +79,7 @@ export function QuestionNavigator({ onSubmitClick, review, preview }: QuestionNa
                 Delete
               </Button>
             </>
-          ) : preview ? null : (
+          ) : (
             <Button
               type="button"
               variant="outline"
@@ -122,15 +122,6 @@ export function QuestionNavigator({ onSubmitClick, review, preview }: QuestionNa
             >
               Continue to Publish
             </Button>
-          ) : preview ? (
-            <Button
-              type="button"
-              size="sm"
-              className="h-9 bg-[#8a6f3e] px-5 font-bold text-white shadow-sm hover:bg-[#725c33]"
-              onClick={preview.onEdit}
-            >
-              Edit Questions
-            </Button>
           ) : (
             <>
               <Button
@@ -149,14 +140,25 @@ export function QuestionNavigator({ onSubmitClick, review, preview }: QuestionNa
               >
                 Mark for Review &amp; Next
               </Button>
-              <Button
-                type="button"
-                size="sm"
-                className="h-9 bg-[#c62828] px-5 font-bold text-white shadow-sm hover:bg-[#a82020]"
-                onClick={onSubmitClick}
-              >
-                Submit
-              </Button>
+              {preview ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  className="h-9 bg-[#8a6f3e] px-5 font-bold text-white shadow-sm hover:bg-[#725c33]"
+                  onClick={preview.onEdit}
+                >
+                  Edit Questions
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  size="sm"
+                  className="h-9 bg-[#c62828] px-5 font-bold text-white shadow-sm hover:bg-[#a82020]"
+                  onClick={onSubmitClick}
+                >
+                  Submit
+                </Button>
+              )}
             </>
           )}
         </div>

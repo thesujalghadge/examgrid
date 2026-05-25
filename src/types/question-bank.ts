@@ -28,6 +28,7 @@ export interface BankQuestion {
   solution: string;
   marks: number;
   negativeMarks: number;
+  metadata?: Record<string, string | number | boolean | null>;
   createdAt: number;
   updatedAt: number;
 }
