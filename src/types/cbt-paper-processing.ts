@@ -69,6 +69,9 @@ export interface PreparedSectionMeta {
 
 export type SubjectMappingMode = "single" | "multi";
 
+/** How the teacher assigns subjects before publishing. */
+export type SubjectPaperLayout = "single" | "two" | "full";
+
 export interface SubjectRangeMapping {
   start: number;
   end: number;
@@ -76,6 +79,7 @@ export interface SubjectRangeMapping {
 }
 
 export interface PaperSubjectMapping {
+  layout: SubjectPaperLayout;
   mode: SubjectMappingMode;
   singleSubject?: string;
   ranges?: SubjectRangeMapping[];

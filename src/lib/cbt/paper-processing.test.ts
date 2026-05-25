@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { toNormalizedQuestion } from "@/lib/cbt/normalized-question";
 import { applySubjectMapping, resolveSubjectForQuestion } from "@/lib/cbt/subject-mapping";
-import { isNumericAnswer, parsePaperTextForTest, resolveQuestionType } from "@/lib/cbt/paper-processing";
+import {
+  isNumericAnswer,
+  parseAnswerKeyForTest,
+  parsePaperTextForTest,
+  resolveQuestionType,
+} from "@/lib/cbt/paper-processing";
 import {
   JEE_ANSWER_KEY,
   JEE_INLINE_MCQ_BLOCK,
@@ -66,6 +71,27 @@ describe("paper-processing JEE-style extraction", () => {
     expect(questions[2].section).toBe("Chemistry");
   });
 
+  it("parses common coaching answer key formats", () => {
+    const key = `
+1-A
+2. B
+3 A
+4,C
+5->C
+6: D
+7 - 42
+8	9
+    `;
+    const entries = parseAnswerKeyForTest(key);
+    expect(entries.find((e) => e.questionNumber === 1)?.answer).toBe("A");
+    expect(entries.find((e) => e.questionNumber === 2)?.answer).toBe("B");
+    expect(entries.find((e) => e.questionNumber === 3)?.answer).toBe("A");
+    expect(entries.find((e) => e.questionNumber === 4)?.answer).toBe("C");
+    expect(entries.find((e) => e.questionNumber === 5)?.answer).toBe("C");
+    expect(entries.find((e) => e.questionNumber === 6)?.answer).toBe("D");
+    expect(entries.find((e) => e.questionNumber === 7)?.answer).toBe("42");
+  });
+
   it("does not classify as numerical when answer key is a letter but options are missing", () => {
     const type = resolveQuestionType([], "B", "A particle moves with velocity v.");
     expect(type).toBe("MCQ_SINGLE");
@@ -115,6 +141,7 @@ describe("paper-processing JEE-style extraction", () => {
       totalMarks: 12,
       totalQuestions: 3,
       subjectMapping: {
+        layout: "two",
         mode: "multi",
         ranges: [
           { start: 1, end: 2, subject: "Physics" },

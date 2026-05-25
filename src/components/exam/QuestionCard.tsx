@@ -5,7 +5,7 @@ import { useQuestionStore } from "@/stores/question-store";
 import { NumericalAnswerInput } from "./NumericalAnswerInput";
 
 function getQuestionTypeLabel(type: string) {
-  return type === "NUMERICAL" ? "Numerical Value" : "Single Correct MCQ";
+  return type === "NUMERICAL" ? "Numerical (NAT)" : "MCQ";
 }
 
 interface QuestionCardReviewProps {
@@ -21,10 +21,9 @@ interface QuestionCardReviewProps {
 
 interface QuestionCardProps {
   review?: QuestionCardReviewProps;
-  previewOnly?: boolean;
 }
 
-export function QuestionCard({ review, previewOnly = false }: QuestionCardProps) {
+export function QuestionCard({ review }: QuestionCardProps) {
   const exam = useQuestionStore((s) => s.exam);
   const currentQuestionId = useQuestionStore((s) => s.currentQuestionId);
   const answers = useQuestionStore((s) => s.answers);
@@ -46,81 +45,43 @@ export function QuestionCard({ review, previewOnly = false }: QuestionCardProps)
   const selected = answers[currentQuestionId] ?? "";
   const globalIndex = exam.sections.flatMap((s) => s.questionIds).indexOf(currentQuestionId) + 1;
   const isNumerical = question.type === "NUMERICAL";
+  const isTeacherEdit = Boolean(review);
   const reviewCorrectValue = question.correctOptionId
     ? question.options.find((option) => option.id === question.correctOptionId)?.label ?? ""
     : question.correctNumericalAnswer ?? "";
+  const hasIssues = (review?.issues?.length ?? 0) > 0;
 
   return (
     <div className="flex-1 overflow-y-auto bg-white">
       <div className="border-b border-gray-200 bg-[#f8fafc] px-6 py-3">
         <div className="flex items-center justify-between gap-4">
           <h3 className="text-sm font-bold text-[#1a3c6e]">
-            Question Type: {getQuestionTypeLabel(question.type)}
+            {getQuestionTypeLabel(question.type)}
           </h3>
           <span className="rounded border border-gray-300 bg-white px-2 py-0.5 text-xs font-medium text-gray-700">
-            Marks: +{question.marks}
+            +{question.marks}
             {question.negativeMarks > 0 ? ` / -${question.negativeMarks}` : ""}
           </span>
         </div>
         <p className="mt-1 text-xs text-gray-500">
-          Section: {section?.name} | Q. {question.number} (Overall #{globalIndex})
+          {section?.name} · Q{question.number} (#{globalIndex})
         </p>
-        {review && !previewOnly ? (
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-            <span className="rounded-full bg-[#f5f1e8] px-2 py-1 font-medium text-[#8a6f3e]">
-              Teacher Review Mode
-            </span>
-            {review.flagged ? (
-              <span className="rounded-full bg-amber-100 px-2 py-1 font-medium text-amber-800">
-                Parsing issue flagged
-              </span>
-            ) : null}
-          </div>
-        ) : null}
       </div>
 
       <div className="px-4 py-5 md:px-8 md:py-7">
-        {review && !previewOnly ? (
-          <div className="mb-4 rounded-xl border border-[#ece6da] bg-[#fbf9f4] p-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm font-semibold text-[#14213d]">Review controls</p>
-              {review.onToggleFlag ? (
-                <button
-                  type="button"
-                  onClick={review.onToggleFlag}
-                  className="rounded border border-[#d7c59e] px-3 py-1 text-xs font-medium text-[#8a6f3e] hover:bg-[#f5f1e8]"
-                >
-                  {review.flagged ? "Clear parsing flag" : "Flag parsing issue"}
-                </button>
-              ) : null}
-            </div>
-            {review.issues && review.issues.length > 0 ? (
-              <ul className="mt-3 space-y-1 text-sm text-amber-800">
-                {review.issues.map((issue) => (
-                  <li key={issue}>• {issue}</li>
-                ))}
-              </ul>
-            ) : (
-              <p className="mt-3 text-sm text-[#5e5a52]">
-                No question-specific validation issues right now.
-              </p>
-            )}
-          </div>
-        ) : null}
-
         <div className="mb-7 rounded-md border border-gray-200 bg-white shadow-sm">
           <div className="border-b border-gray-200 bg-[#f8fafc] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-[#1a3c6e]">
-            Question No. {question.number}
+            Question
           </div>
           <div className="flex items-start gap-3 px-4 py-4 text-[15px] leading-7 text-gray-950">
             <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#1a3c6e] text-xs font-bold text-white">
               {question.number}
             </span>
-            {review ? (
+            {isTeacherEdit ? (
               <textarea
-                className="min-h-[110px] w-full rounded-md border border-[#d7dde7] px-3 py-2 text-sm text-gray-900"
+                className="min-h-[100px] w-full rounded-md border border-[#d7dde7] px-3 py-2 text-sm text-gray-900"
                 value={question.text}
-                onChange={(event) => review.onQuestionTextChange?.(event.target.value)}
+                onChange={(event) => review?.onQuestionTextChange?.(event.target.value)}
               />
             ) : (
               <p className="whitespace-pre-wrap">{question.text}</p>
@@ -129,15 +90,15 @@ export function QuestionCard({ review, previewOnly = false }: QuestionCardProps)
         </div>
 
         {isNumerical ? (
-          review ? (
-            <div className="space-y-3">
+          isTeacherEdit ? (
+            <div className="space-y-2 rounded-md border border-gray-200 p-4">
               <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500">
-                Correct numerical answer
+                Correct answer (numerical)
               </label>
               <input
-                className="w-full rounded-md border border-[#d7dde7] px-3 py-2 text-sm"
+                className="w-full max-w-xs rounded-md border border-[#d7dde7] px-3 py-2 text-sm"
                 value={reviewCorrectValue}
-                onChange={(event) => review.onCorrectAnswerChange?.(event.target.value)}
+                onChange={(event) => review?.onCorrectAnswerChange?.(event.target.value)}
               />
             </div>
           ) : (
@@ -145,28 +106,25 @@ export function QuestionCard({ review, previewOnly = false }: QuestionCardProps)
               questionId={question.id}
               value={selected}
               onValueChange={setNumericalAnswer}
-              disabled={previewOnly}
             />
           )
         ) : (
-          <fieldset>
-            <legend className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
-              {review ? "Review options" : "Select one option"}
+          <fieldset className="rounded-md border border-gray-200 p-4">
+            <legend className="mb-3 px-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+              Options
             </legend>
             <ul className="space-y-3">
               {question.options.map((opt) => {
-                const isSelected = review ? reviewCorrectValue === opt.label : selected === opt.id;
+                const isSelected = isTeacherEdit
+                  ? reviewCorrectValue === opt.label
+                  : selected === opt.id;
                 return (
                   <li key={opt.id}>
                     <label
                       className={cn(
-                        "flex items-start gap-4 rounded-md border px-4 py-3.5 transition-colors shadow-sm",
-                        review ? "border-[#d7dde7] bg-white" : "cursor-pointer",
-                        isSelected
-                          ? "border-[#1a3c6e] bg-[#eef3fa]"
-                          : !review
-                            ? "border-gray-300 bg-white hover:border-gray-400"
-                            : "border-gray-300 bg-white",
+                        "flex items-start gap-4 rounded-md border px-4 py-3.5 shadow-sm transition-colors",
+                        isTeacherEdit ? "border-[#d7dde7] bg-white" : "cursor-pointer border-gray-300 bg-white hover:border-gray-400",
+                        isSelected && "border-[#1a3c6e] bg-[#eef3fa]",
                       )}
                     >
                       <input
@@ -174,23 +132,22 @@ export function QuestionCard({ review, previewOnly = false }: QuestionCardProps)
                         name={question.id}
                         value={opt.id}
                         checked={isSelected}
-                        disabled={previewOnly}
                         onChange={() =>
-                          review
-                            ? review.onCorrectAnswerChange?.(opt.label)
+                          isTeacherEdit
+                            ? review?.onCorrectAnswerChange?.(opt.label)
                             : selectOption(question.id, opt.id)
                         }
-                        className="mt-0.5 h-4 w-4 shrink-0 accent-[#1a3c6e] disabled:cursor-default"
+                        className="mt-0.5 h-4 w-4 shrink-0 accent-[#1a3c6e]"
                       />
                       <span className="flex-1 text-sm leading-6 text-gray-950">
                         <span className="mr-3 inline-flex h-7 w-7 items-center justify-center rounded-full border border-[#1a3c6e] bg-white text-xs font-bold text-[#1a3c6e]">
                           {opt.label}
                         </span>
-                        {review ? (
+                        {isTeacherEdit ? (
                           <input
                             className="w-[calc(100%-2.5rem)] rounded-md border border-[#d7dde7] px-2 py-1 text-sm"
                             value={opt.text}
-                            onChange={(event) => review.onOptionTextChange?.(opt.label, event.target.value)}
+                            onChange={(event) => review?.onOptionTextChange?.(opt.label, event.target.value)}
                           />
                         ) : (
                           opt.text
@@ -204,25 +161,33 @@ export function QuestionCard({ review, previewOnly = false }: QuestionCardProps)
           </fieldset>
         )}
 
-        {review && !previewOnly ? (
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <label className="space-y-2 text-sm font-medium text-[#14213d]">
-              <span>Marks</span>
+        {isTeacherEdit ? (
+          <div className="mt-4 grid max-w-md gap-3 sm:grid-cols-2">
+            <label className="space-y-1 text-sm font-medium text-[#14213d]">
+              Marks
               <input
                 className="w-full rounded-md border border-[#d7dde7] px-3 py-2 text-sm"
                 value={String(question.marks)}
-                onChange={(event) => review.onMarksChange?.(event.target.value)}
+                onChange={(event) => review?.onMarksChange?.(event.target.value)}
               />
             </label>
-            <label className="space-y-2 text-sm font-medium text-[#14213d]">
-              <span>Negative marks</span>
+            <label className="space-y-1 text-sm font-medium text-[#14213d]">
+              Negative
               <input
                 className="w-full rounded-md border border-[#d7dde7] px-3 py-2 text-sm"
                 value={String(question.negativeMarks)}
-                onChange={(event) => review.onNegativeMarksChange?.(event.target.value)}
+                onChange={(event) => review?.onNegativeMarksChange?.(event.target.value)}
               />
             </label>
           </div>
+        ) : null}
+
+        {hasIssues ? (
+          <ul className="mt-4 space-y-1 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            {review!.issues!.map((issue) => (
+              <li key={issue}>• {issue}</li>
+            ))}
+          </ul>
         ) : null}
       </div>
     </div>

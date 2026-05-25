@@ -10,6 +10,7 @@ interface ReviewNavigatorProps {
   onDeleteQuestion: () => void;
   onAddQuestion: () => void;
   onContinue: () => void;
+  continueLabel?: string;
 }
 
 interface QuestionNavigatorProps {
@@ -120,7 +121,7 @@ export function QuestionNavigator({ onSubmitClick, review, preview }: QuestionNa
               className="h-9 bg-[#8a6f3e] px-5 font-bold text-white shadow-sm hover:bg-[#725c33]"
               onClick={review.onContinue}
             >
-              Continue to Publish
+              {review.continueLabel ?? "Continue"}
             </Button>
           ) : (
             <>

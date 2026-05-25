@@ -47,7 +47,6 @@ export type ExamInterfaceNavigate = {
 export interface ExamTeacherReviewConfig {
   exam: ExamDefinition;
   status: ProcessedPaperStatus;
-  mode: "preview" | "edit";
   flaggedQuestionIds: string[];
   questionIssues: Record<string, string[]>;
   onQuestionTextChange: (questionId: string, value: string) => void;
@@ -274,7 +273,7 @@ export function ExamInterface({
     useTimerStore.getState().stop();
     setResumed(false);
     setReady(true);
-  }, [review, reviewExamSignature, review?.mode]);
+  }, [review, reviewExamSignature]);
 
   useEffect(() => {
     if (!isTeacherReview) return;
@@ -437,13 +436,14 @@ export function ExamInterface({
       <div className="relative flex flex-1 overflow-hidden">
         <main className="flex min-w-0 flex-1 flex-col border-r border-[#1a3c6e]/10 bg-white shadow-sm">
           <QuestionCard
-            previewOnly={review?.mode === "preview"}
             review={
-              review && review.mode === "edit" && currentQuestionId
+              review && currentQuestionId
                 ? {
                     issues: review.questionIssues[currentQuestionId] ?? [],
                     flagged: review.flaggedQuestionIds.includes(currentQuestionId),
-                    onToggleFlag: () => review.onToggleFlag(currentQuestionId),
+                    onToggleFlag: review.onToggleFlag
+                      ? () => review.onToggleFlag(currentQuestionId)
+                      : undefined,
                     onQuestionTextChange: (value) => review.onQuestionTextChange(currentQuestionId, value),
                     onOptionTextChange: (label, value) =>
                       review.onOptionTextChange(currentQuestionId, label, value),
@@ -456,15 +456,8 @@ export function ExamInterface({
           />
           <QuestionNavigator
             onSubmitClick={() => setSubmitOpen(true)}
-            preview={
-              review && review.mode === "preview"
-                ? {
-                    onEdit: review.onContinue,
-                  }
-                : undefined
-            }
             review={
-              review && review.mode === "edit" && currentQuestionId && currentReviewSection
+              review && currentQuestionId && currentReviewSection
                 ? {
                     canMoveQuestionUp: currentReviewQuestionIndex > 0,
                     canMoveQuestionDown:
@@ -474,6 +467,7 @@ export function ExamInterface({
                     onDeleteQuestion: () => review.onDeleteQuestion(currentQuestionId),
                     onAddQuestion: () => review.onAddQuestion(currentReviewSection.id),
                     onContinue: review.onContinue,
+                    continueLabel: "Publish CBT",
                   }
                 : undefined
             }

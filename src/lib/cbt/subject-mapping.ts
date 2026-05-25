@@ -1,15 +1,54 @@
-import type { PaperSubjectMapping, ProcessedPaperPackage } from "@/types/cbt-paper-processing";
+import type {
+  PaperSubjectMapping,
+  ProcessedPaperPackage,
+  SubjectPaperLayout,
+  SubjectRangeMapping,
+} from "@/types/cbt-paper-processing";
 
 export const JEE_SUBJECTS = ["Physics", "Chemistry", "Mathematics", "Biology"] as const;
 
-export function defaultSubjectMapping(totalQuestions: number): PaperSubjectMapping {
+export function rangesForLayout(
+  layout: SubjectPaperLayout,
+  totalQuestions: number,
+): SubjectRangeMapping[] {
+  const total = Math.max(1, totalQuestions);
+  if (layout === "single") {
+    return [{ start: 1, end: total, subject: "Physics" }];
+  }
+  if (layout === "two") {
+    const mid = Math.max(1, Math.floor(total / 2));
+    return [
+      { start: 1, end: mid, subject: "Physics" },
+      { start: mid + 1, end: total, subject: "Chemistry" },
+    ];
+  }
+  const third = Math.max(1, Math.ceil(total / 3));
+  const twoThird = Math.min(total, third * 2);
+  return [
+    { start: 1, end: third, subject: "Physics" },
+    { start: third + 1, end: twoThird, subject: "Chemistry" },
+    { start: twoThird + 1, end: total, subject: "Mathematics" },
+  ];
+}
+
+export function defaultSubjectMapping(
+  totalQuestions: number,
+  layout: SubjectPaperLayout = "full",
+  singleSubject = "Physics",
+): PaperSubjectMapping {
+  if (layout === "single") {
+    return {
+      layout: "single",
+      mode: "single",
+      singleSubject,
+      ranges: [{ start: 1, end: Math.max(1, totalQuestions), subject: singleSubject }],
+      appliedAt: Date.now(),
+    };
+  }
   return {
-    mode: "single",
-    singleSubject: "Physics",
-    ranges:
-      totalQuestions > 0
-        ? [{ start: 1, end: totalQuestions, subject: "Physics" }]
-        : [],
+    layout,
+    mode: "multi",
+    ranges: rangesForLayout(layout, totalQuestions),
     appliedAt: Date.now(),
   };
 }
@@ -30,7 +69,7 @@ export function applySubjectMapping(pkg: ProcessedPaperPackage): ProcessedPaperP
         metadata: {
           ...question.metadata,
           subjectGlobalQuestionNumber: globalIndex,
-          subjectMappingMode: mapping.mode,
+          subjectMappingLayout: mapping.layout,
         },
       };
     }),
@@ -66,28 +105,28 @@ export function validateSubjectMapping(
   const issues: string[] = [];
   if (totalQuestions === 0) return issues;
 
-  if (mapping.mode === "single") {
+  if (mapping.layout === "single" || mapping.mode === "single") {
     if (!mapping.singleSubject?.trim()) {
-      issues.push("Select a subject for the full paper.");
+      issues.push("Choose a subject for this paper.");
     }
     return issues;
   }
 
   const ranges = mapping.ranges ?? [];
   if (ranges.length === 0) {
-    issues.push("Add at least one question range for multi-subject mapping.");
+    issues.push("Set question ranges for each subject.");
     return issues;
   }
 
   for (const range of ranges) {
     if (!range.subject.trim()) {
-      issues.push(`Range ${range.start}-${range.end} needs a subject.`);
+      issues.push(`Questions ${range.start}–${range.end} need a subject.`);
     }
     if (range.start < 1 || range.end < range.start) {
-      issues.push(`Range ${range.start}-${range.end} is invalid.`);
+      issues.push(`Range ${range.start}–${range.end} is not valid.`);
     }
     if (range.end > totalQuestions) {
-      issues.push(`Range ${range.start}-${range.end} exceeds ${totalQuestions} questions.`);
+      issues.push(`Range ${range.start}–${range.end} goes past question ${totalQuestions}.`);
     }
   }
 
@@ -96,7 +135,7 @@ export function validateSubjectMapping(
     const previous = sorted[index - 1];
     const current = sorted[index];
     if (current.start <= previous.end) {
-      issues.push(`Ranges ${previous.start}-${previous.end} and ${current.start}-${current.end} overlap.`);
+      issues.push(`Ranges ${previous.start}–${previous.end} and ${current.start}–${current.end} overlap.`);
     }
   }
 
@@ -107,7 +146,7 @@ export function validateSubjectMapping(
     }
   }
   if (covered.size < totalQuestions) {
-    issues.push("Some questions are not covered by a subject range.");
+    issues.push("Some questions are not assigned to a subject range.");
   }
 
   return issues;

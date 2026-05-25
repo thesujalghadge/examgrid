@@ -1,171 +1,136 @@
 "use client";
 
-import { useMemo } from "react";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { JEE_SUBJECTS, validateSubjectMapping } from "@/lib/cbt/subject-mapping";
-import type { PaperSubjectMapping, SubjectRangeMapping } from "@/types/cbt-paper-processing";
+import { JEE_SUBJECTS, rangesForLayout } from "@/lib/cbt/subject-mapping";
+import type { PaperSubjectMapping, SubjectPaperLayout, SubjectRangeMapping } from "@/types/cbt-paper-processing";
 
-function buildDefaultMultiRanges(totalQuestions: number): SubjectRangeMapping[] {
-  if (totalQuestions <= 0) return [];
-  const chunk = Math.max(1, Math.ceil(totalQuestions / 3));
-  const ranges: SubjectRangeMapping[] = [
-    { start: 1, end: Math.min(chunk, totalQuestions), subject: "Physics" },
-    {
-      start: Math.min(chunk + 1, totalQuestions),
-      end: Math.min(chunk * 2, totalQuestions),
-      subject: "Chemistry",
-    },
-    {
-      start: Math.min(chunk * 2 + 1, totalQuestions),
-      end: totalQuestions,
-      subject: "Mathematics",
-    },
-  ];
-  return ranges.filter((range) => range.start <= range.end);
-}
-
-interface PaperSubjectMappingPanelProps {
-  totalQuestions: number;
+interface ConductCbtSubjectPanelProps {
+  /** Expected or parsed question count — used for range labels. */
+  questionCount: number;
   mapping: PaperSubjectMapping;
   onChange: (mapping: PaperSubjectMapping) => void;
+  compact?: boolean;
 }
 
-export function PaperSubjectMappingPanel({
-  totalQuestions,
+export function ConductCbtSubjectPanel({
+  questionCount,
   mapping,
   onChange,
-}: PaperSubjectMappingPanelProps) {
-  const issues = useMemo(
-    () => validateSubjectMapping(totalQuestions, mapping),
-    [mapping, totalQuestions],
-  );
+  compact = false,
+}: ConductCbtSubjectPanelProps) {
+  const total = Math.max(1, questionCount);
 
-  const setMode = (mode: PaperSubjectMapping["mode"]) => {
-    if (mode === "single") {
+  const setLayout = (layout: SubjectPaperLayout) => {
+    if (layout === "single") {
       onChange({
+        layout: "single",
         mode: "single",
-        singleSubject: mapping.singleSubject ?? JEE_SUBJECTS[0],
-        ranges: [{ start: 1, end: Math.max(1, totalQuestions), subject: mapping.singleSubject ?? JEE_SUBJECTS[0] }],
+        singleSubject: mapping.singleSubject ?? "Physics",
+        ranges: [{ start: 1, end: total, subject: mapping.singleSubject ?? "Physics" }],
       });
       return;
     }
     onChange({
+      layout,
       mode: "multi",
-      ranges:
-        mapping.ranges && mapping.ranges.length > 0
-          ? mapping.ranges
-          : buildDefaultMultiRanges(totalQuestions),
+      ranges: rangesForLayout(layout, total),
     });
   };
 
   const updateRange = (index: number, patch: Partial<SubjectRangeMapping>) => {
     const ranges = [...(mapping.ranges ?? [])];
     ranges[index] = { ...ranges[index], ...patch };
-    onChange({ ...mapping, mode: "multi", ranges });
-  };
-
-  const addRange = () => {
-    const ranges = [...(mapping.ranges ?? [])];
-    const lastEnd = ranges.length > 0 ? ranges[ranges.length - 1].end : 0;
-    const start = Math.min(totalQuestions, lastEnd + 1);
-    const end = Math.min(totalQuestions, start + 9);
-    ranges.push({ start, end: Math.max(start, end), subject: JEE_SUBJECTS[1] ?? "Chemistry" });
-    onChange({ ...mapping, mode: "multi", ranges });
-  };
-
-  const removeRange = (index: number) => {
-    const ranges = (mapping.ranges ?? []).filter((_, currentIndex) => currentIndex !== index);
-    onChange({ ...mapping, mode: "multi", ranges });
+    onChange({ ...mapping, layout: mapping.layout, mode: "multi", ranges });
   };
 
   return (
-    <div className="space-y-4 rounded-xl border border-[#ece6da] bg-[#fbf9f4] p-4">
-      <div>
-        <p className="font-medium text-[#14213d]">Subject mapping</p>
-        <p className="mt-1 text-sm text-[#5e5a52]">
-          Assign subjects to parsed questions before preview. Use ranges for multi-subject JEE papers.
-        </p>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          size="sm"
-          variant={mapping.mode === "single" ? "default" : "outline"}
-          className={mapping.mode === "single" ? "bg-[#14213d]" : ""}
-          onClick={() => setMode("single")}
-        >
-          Single subject
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant={mapping.mode === "multi" ? "default" : "outline"}
-          className={mapping.mode === "multi" ? "bg-[#14213d]" : ""}
-          onClick={() => setMode("multi")}
-        >
-          Multi subject
-        </Button>
-      </div>
-
-      {mapping.mode === "single" ? (
-        <div className="space-y-2">
-          <Label>Subject for all {totalQuestions} question(s)</Label>
-          <div className="flex flex-wrap gap-2">
-            {JEE_SUBJECTS.map((subject) => (
-              <button
-                key={subject}
-                type="button"
-                onClick={() =>
-                  onChange({
-                    mode: "single",
-                    singleSubject: subject,
-                    ranges: [{ start: 1, end: Math.max(1, totalQuestions), subject }],
-                  })
-                }
-                className={
-                  mapping.singleSubject === subject
-                    ? "rounded-full bg-[#14213d] px-3 py-1.5 text-sm font-medium text-white"
-                    : "rounded-full border border-[#d8d2c7] bg-white px-3 py-1.5 text-sm text-[#14213d] hover:border-[#8a6f3e]"
-                }
-              >
-                {subject}
-              </button>
-            ))}
-          </div>
+    <div className={compact ? "space-y-3" : "space-y-4 rounded-xl border border-[#ece6da] bg-[#fbf9f4] p-4"}>
+      {!compact ? (
+        <div>
+          <p className="font-medium text-[#14213d]">Subjects</p>
+          <p className="mt-1 text-sm text-[#5e5a52]">
+            Choose how subjects apply across questions. Tap a subject chip to assign a range.
+          </p>
         </div>
       ) : (
-        <div className="space-y-3">
-          <p className="text-sm text-[#5e5a52]">
-            Click a subject chip to set the range. Example: [1-10] Physics, [11-20] Chemistry.
-          </p>
+        <Label>Subjects</Label>
+      )}
+
+      <div className="flex flex-wrap gap-2">
+        {(
+          [
+            { id: "single" as const, label: "Single Subject" },
+            { id: "two" as const, label: "Two Subjects" },
+            { id: "full" as const, label: "Full Test" },
+          ] as const
+        ).map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => setLayout(item.id)}
+            className={
+              mapping.layout === item.id
+                ? "rounded-lg bg-[#14213d] px-4 py-2 text-sm font-medium text-white"
+                : "rounded-lg border border-[#d8d2c7] bg-white px-4 py-2 text-sm text-[#14213d] hover:border-[#8a6f3e]"
+            }
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+
+      {mapping.layout === "single" ? (
+        <div className="flex flex-wrap gap-2">
+          {JEE_SUBJECTS.map((subject) => (
+            <button
+              key={subject}
+              type="button"
+              onClick={() =>
+                onChange({
+                  layout: "single",
+                  mode: "single",
+                  singleSubject: subject,
+                  ranges: [{ start: 1, end: total, subject }],
+                })
+              }
+              className={
+                mapping.singleSubject === subject
+                  ? "rounded-full bg-[#8a6f3e] px-4 py-1.5 text-sm font-medium text-white"
+                  : "rounded-full border border-[#d8d2c7] bg-white px-4 py-1.5 text-sm text-[#14213d]"
+              }
+            >
+              {subject}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-2">
           {(mapping.ranges ?? []).map((range, index) => (
             <div
               key={`${range.start}-${range.end}-${index}`}
-              className="flex flex-wrap items-center gap-2 rounded-lg border border-[#ece6da] bg-white p-3"
+              className="flex flex-wrap items-center gap-2 rounded-lg border border-[#ece6da] bg-white px-3 py-2"
             >
-              <span className="text-sm font-medium text-[#14213d]">Q</span>
+              <span className="text-sm font-semibold text-[#14213d]">
+                Q{range.start}–{range.end}
+              </span>
               <input
                 type="number"
                 min={1}
-                max={totalQuestions}
+                max={total}
                 value={range.start}
-                onChange={(event) =>
-                  updateRange(index, { start: Number(event.target.value) || 1 })
-                }
-                className="w-16 rounded border border-[#d8d2c7] px-2 py-1 text-sm"
+                aria-label={`Range ${index + 1} start`}
+                onChange={(event) => updateRange(index, { start: Number(event.target.value) || 1 })}
+                className="w-14 rounded border border-[#d8d2c7] px-2 py-1 text-sm"
               />
               <span className="text-sm text-[#5e5a52]">to</span>
               <input
                 type="number"
                 min={1}
-                max={totalQuestions}
+                max={total}
                 value={range.end}
-                onChange={(event) =>
-                  updateRange(index, { end: Number(event.target.value) || 1 })
-                }
-                className="w-16 rounded border border-[#d8d2c7] px-2 py-1 text-sm"
+                aria-label={`Range ${index + 1} end`}
+                onChange={(event) => updateRange(index, { end: Number(event.target.value) || 1 })}
+                className="w-14 rounded border border-[#d8d2c7] px-2 py-1 text-sm"
               />
               <div className="flex flex-wrap gap-1">
                 {JEE_SUBJECTS.map((subject) => (
@@ -175,39 +140,17 @@ export function PaperSubjectMappingPanel({
                     onClick={() => updateRange(index, { subject })}
                     className={
                       range.subject === subject
-                        ? "rounded-full bg-[#8a6f3e] px-2.5 py-1 text-xs font-medium text-white"
-                        : "rounded-full border border-[#d8d2c7] px-2.5 py-1 text-xs text-[#14213d]"
+                        ? "rounded-full bg-[#14213d] px-3 py-1 text-xs font-medium text-white"
+                        : "rounded-full border border-[#d8d2c7] px-3 py-1 text-xs text-[#14213d]"
                     }
                   >
                     {subject}
                   </button>
                 ))}
               </div>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => removeRange(index)}
-                disabled={(mapping.ranges?.length ?? 0) <= 1}
-              >
-                Remove
-              </Button>
             </div>
           ))}
-          <Button type="button" size="sm" variant="outline" onClick={addRange}>
-            Add range
-          </Button>
         </div>
-      )}
-
-      {issues.length > 0 ? (
-        <ul className="space-y-1 text-sm text-amber-800">
-          {issues.map((issue) => (
-            <li key={issue}>• {issue}</li>
-          ))}
-        </ul>
-      ) : (
-        <p className="text-sm text-[#2f6a37]">Subject mapping covers all parsed questions.</p>
       )}
     </div>
   );

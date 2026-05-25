@@ -328,24 +328,68 @@ function detectSubject(section: string, _text: string): string {
   return "Imported Questions";
 }
 
+function normalizeAnswerKeyText(text: string): string {
+  return normalizeText(text)
+    .replace(/(\d{1,3})\s*,\s*([A-Da-d])/g, "$1 $2")
+    .replace(/(\d{1,3})\s*,\s*(-?\d)/g, "$1 $2")
+    .replace(/[|;/\\]+/g, "\n")
+    .replace(/\s{2,}/g, " ");
+}
+
 function parseAnswerKeyEntries(text?: string): ParsedAnswerEntry[] {
   if (!text) return [];
-  const normalized = normalizeText(text);
+  const normalized = normalizeAnswerKeyText(text);
   const entries: ParsedAnswerEntry[] = [];
+  const seen = new Set<number>();
+
   const patterns = [
-    /(?:^|\n)\s*(?:q(?:uestion)?|que\.?)?\s*(\d{1,3})\s*(?:->|[-.:])\s*([A-D]|-?\d+(?:\.\d+)?)/gi,
-    /(?:^|\n)\s*(\d{1,3})\s+([A-D]|-?\d+(?:\.\d+)?)/gi,
+    /(?:^|[\s\n])(?:q(?:uestion)?|que\.?)?\s*#?\s*(\d{1,3})\s*(?:[-–>]+|[:.,])\s*([A-D])(?![A-Za-z])/gi,
+    /(?:^|[\s\n])(?:q(?:uestion)?|que\.?)?\s*#?\s*(\d{1,3})\s*(?:[-–>]+|[:.,])\s*(-?\d+(?:\.\d+)?(?:e[+-]?\d+)?)/gi,
+    /(?:^|[\s\n])(\d{1,3})\s*\.\s*([A-D])(?![A-Za-z])/gi,
+    /(?:^|[\s\n])(\d{1,3})\s*\.\s*(-?\d+(?:\.\d+)?(?:e[+-]?\d+)?)/gi,
+    /(?:^|[\s\n])(\d{1,3})\s+([A-D])(?![A-Za-z])/gi,
+    /(?:^|[\s\n])(\d{1,3})\s+(-?\d+(?:\.\d+)?(?:e[+-]?\d+)?)/gi,
+    /(?:^|[\s\n])(\d{1,3})\s*,\s*([A-D])(?![A-Za-z])/gi,
+    /(?:^|[\s\n])(\d{1,3})\s*,\s*(-?\d+(?:\.\d+)?(?:e[+-]?\d+)?)/gi,
   ];
+
   for (const pattern of patterns) {
     for (const match of normalized.matchAll(pattern)) {
+      const questionNumber = Number(match[1]);
+      if (!Number.isFinite(questionNumber) || questionNumber < 1 || seen.has(questionNumber)) {
+        continue;
+      }
+      const answer = match[2].toUpperCase();
+      seen.add(questionNumber);
       entries.push({
-        questionNumber: Number(match[1]),
-        answer: match[2].toUpperCase(),
+        questionNumber,
+        answer,
         raw: sanitizeLine(match[0]),
       });
     }
   }
-  return entries;
+
+  const lines = normalized.split("\n").map((line) => sanitizeLine(line)).filter(Boolean);
+  for (const line of lines) {
+    const cells = line.split(/\s{2,}|\t+/).map((cell) => sanitizeLine(cell)).filter(Boolean);
+    if (cells.length >= 2) {
+      const qMatch = cells[0].match(/^(\d{1,3})$/);
+      const aMatch = cells[1].match(/^([A-D]|-?\d+(?:\.\d+)?(?:e[+-]?\d+)?)$/i);
+      if (qMatch && aMatch) {
+        const questionNumber = Number(qMatch[1]);
+        if (!seen.has(questionNumber)) {
+          seen.add(questionNumber);
+          entries.push({
+            questionNumber,
+            answer: aMatch[1].toUpperCase(),
+            raw: line,
+          });
+        }
+      }
+    }
+  }
+
+  return entries.sort((a, b) => a.questionNumber - b.questionNumber);
 }
 
 function mapAnswerEntries(
@@ -761,7 +805,7 @@ export function normalizeProcessedPaper(pkg: ProcessedPaperPackage): ProcessedPa
       questionsDetected: totalQuestions,
     },
     subjectMapping:
-      withSubjects.subjectMapping ?? defaultSubjectMapping(totalQuestions),
+      withSubjects.subjectMapping ?? defaultSubjectMapping(totalQuestions, "full"),
   };
   return {
     ...normalized,
@@ -845,7 +889,7 @@ export async function runPaperProcessing(input: ParsePaperInput): Promise<Proces
     preparedAt: Date.now(),
     totalMarks: 0,
     totalQuestions: 0,
-    subjectMapping: defaultSubjectMapping(questions.length),
+    subjectMapping: defaultSubjectMapping(questions.length, "full"),
   };
 
   makeLog(
@@ -906,6 +950,21 @@ export async function runPaperProcessing(input: ParsePaperInput): Promise<Proces
       `Validation completed with ${errorCount} error(s) and ${warningCount} warning(s).`,
     ),
   };
+}
+
+export function inferQuestionTypeFromMeta(meta: PreparedQuestionMeta): "MCQ_SINGLE" | "NUMERICAL" {
+  const options: ParsedOption[] = meta.optionLabels
+    .map((text, index) => ({
+      label: (["A", "B", "C", "D"][index] ?? "A") as string,
+      text,
+    }))
+    .filter((option) => option.text.trim());
+  return resolveQuestionType(options, meta.correctAnswer, meta.questionText);
+}
+
+/** Test helper: parse answer key text. */
+export function parseAnswerKeyForTest(text: string) {
+  return parseAnswerKeyEntries(text);
 }
 
 /** Test helper: parse paper text synchronously without upload metadata. */
