@@ -115,6 +115,7 @@ export function QuestionCard({ review }: QuestionCardProps) {
     () => stripLeadingQuestionNumber(question.text),
     [question.text],
   );
+  const isLongQuestion = displayQuestionText.length > 300;
   const hasLatexQuestion = containsLatexDelimiters(displayQuestionText);
   const reviewCorrectValue = question.correctOptionId
     ? question.options.find((option) => option.id === question.correctOptionId)?.label ?? ""
@@ -174,7 +175,13 @@ export function QuestionCard({ review }: QuestionCardProps) {
                 onChange={(event) => review?.onQuestionTextChange?.(event.target.value)}
               />
             ) : (
-              <div className="whitespace-pre-wrap">
+              <div
+                className={cn(
+                  "whitespace-pre-wrap",
+                  isLongQuestion &&
+                    "max-h-[40vh] overflow-y-auto rounded border border-gray-100 bg-gray-50 p-3",
+                )}
+              >
                 {hasLatexQuestion ? (
                   <div ref={mathRef}>{displayQuestionText}</div>
                 ) : (
@@ -254,7 +261,7 @@ export function QuestionCard({ review }: QuestionCardProps) {
                       )}
                       <span
                         className={cn(
-                          "flex-1 text-sm leading-6",
+                          "flex-1 whitespace-pre-wrap break-words text-sm leading-6",
                           isSelected && !isTeacherEdit ? "text-white" : "text-gray-950",
                         )}
                       >

@@ -3,6 +3,7 @@ export function stripLeadingQuestionNumber(text: string): string {
 }
 
 export function formatInlineMath(text: string): string {
+  text = text.trim();
   if (/\\\(|\\\[|\$/.test(text)) return text;
   let out = text.replace(/\b([A-Za-z]+)(\d+)/g, "$1<sub>$2</sub>");
   out = out.replace(/\^(\d+)/g, "<sup>$1</sup>");

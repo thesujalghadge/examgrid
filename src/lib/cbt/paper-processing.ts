@@ -109,6 +109,9 @@ function normalizeText(text: string): string {
 }
 
 function sanitizeLine(text: string): string {
+  if (/\\[a-zA-Z([]|[$∫∑∆→⇒θαβγλ]|\[Figure\s*\d*\]|\[Diagram\]|see figure below/i.test(text)) {
+    return text.trim();
+  }
   return text.replace(/\s+/g, " ").trim();
 }
 
@@ -167,6 +170,10 @@ function parseQuestionBlocks(text: string): QuestionBlock[] {
 
     const start = looksLikeQuestionStart(line);
     if (start) {
+      if (active && !active.lines.some((activeLine) => activeLine.trim())) {
+        active.lines.push(line);
+        continue;
+      }
       if (active) blocks.push(active);
       active = {
         questionNumber: Number(start[1]),

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -545,15 +545,15 @@ export function InstitutePaperUploadFlow() {
               </label>
               <label className="space-y-1.5">
                 <Label>Duration (minutes)</Label>
-                <Input type="number" min={1} value={duration} onChange={(e) => setDuration(e.target.value)} />
+                <Input type="text" inputMode="numeric" pattern="[0-9]*" value={duration} onChange={(e) => setDuration(e.target.value)} />
               </label>
               <label className="space-y-1.5">
                 <Label>Marks per question</Label>
-                <Input type="number" min={0} value={marksPerQuestion} onChange={(e) => setMarksPerQuestion(e.target.value)} />
+                <Input type="text" inputMode="numeric" pattern="[0-9]*" value={marksPerQuestion} onChange={(e) => setMarksPerQuestion(e.target.value)} />
               </label>
               <label className="space-y-1.5">
                 <Label>Negative marks</Label>
-                <Input type="number" min={0} step={0.25} value={negativeMarks} onChange={(e) => setNegativeMarks(e.target.value)} />
+                <Input type="text" inputMode="decimal" value={negativeMarks} onChange={(e) => setNegativeMarks(e.target.value)} />
               </label>
               <label className="space-y-1.5">
                 <Label>Available from</Label>
@@ -669,7 +669,7 @@ export function InstitutePaperUploadFlow() {
               </label>
               <label className="space-y-1.5">
                 <Label>Duration</Label>
-                <Input type="number" min={1} value={duration} onChange={(e) => setDuration(e.target.value)} />
+                <Input type="text" inputMode="numeric" pattern="[0-9]*" value={duration} onChange={(e) => setDuration(e.target.value)} />
               </label>
               <label className="space-y-1.5">
                 <Label>Scheduled Date & Time</Label>
@@ -677,11 +677,11 @@ export function InstitutePaperUploadFlow() {
               </label>
               <label className="space-y-1.5">
                 <Label>Marks per question</Label>
-                <Input type="number" min={0} value={marksPerQuestion} onChange={(e) => setMarksPerQuestion(e.target.value)} />
+                <Input type="text" inputMode="numeric" pattern="[0-9]*" value={marksPerQuestion} onChange={(e) => setMarksPerQuestion(e.target.value)} />
               </label>
               <label className="space-y-1.5">
                 <Label>Negative marks</Label>
-                <Input type="number" min={0} step={0.25} value={negativeMarks} onChange={(e) => setNegativeMarks(e.target.value)} />
+                <Input type="text" inputMode="decimal" value={negativeMarks} onChange={(e) => setNegativeMarks(e.target.value)} />
               </label>
             </div>
 
@@ -1005,6 +1005,54 @@ function SubjectRangeTable({
   onRemove: (index: number) => void;
   onUpdate: (index: number, updater: (range: SubjectRangeMapping) => SubjectRangeMapping) => void;
 }) {
+  const [draftRanges, setDraftRanges] = useState(() =>
+    ranges.map((range) => ({
+      subject: range.subject,
+      start: String(range.start),
+      end: String(range.end),
+    })),
+  );
+  const [rowErrors, setRowErrors] = useState<Record<number, string>>({});
+
+  useEffect(() => {
+    setDraftRanges(
+      ranges.map((range) => ({
+        subject: range.subject,
+        start: String(range.start),
+        end: String(range.end),
+      })),
+    );
+  }, [ranges]);
+
+  const commitRange = (index: number, changedField: "start" | "end") => {
+    const draft = draftRanges[index];
+    if (!draft) return;
+
+    let start = Math.max(1, parseInt(draft.start, 10) || 1);
+    let end = Math.max(1, parseInt(draft.end, 10) || start);
+    let error = "";
+
+    if (changedField === "start" && start > end) {
+      end = start;
+    }
+    if (end - start + 1 > 15) {
+      end = start + 14;
+      error = "A single subject cannot have more than 15 questions.";
+    }
+    if (end > totalQuestions) {
+      end = totalQuestions;
+      error = `Range exceeds total detected questions (max: ${totalQuestions}).`;
+    }
+
+    setDraftRanges((current) =>
+      current.map((range, i) =>
+        i === index ? { ...range, start: String(start), end: String(end) } : range,
+      ),
+    );
+    setRowErrors((current) => ({ ...current, [index]: error }));
+    onUpdate(index, (current) => ({ ...current, start, end }));
+  };
+
   return (
     <div className="space-y-3">
       <div className="overflow-x-auto rounded-lg border border-[#ece6da]">
@@ -1019,18 +1067,25 @@ function SubjectRangeTable({
             </tr>
           </thead>
           <tbody>
-            {ranges.map((range, index) => (
-              <tr key={`${range.subject}-${index}`} className="border-t border-[#ece6da]">
+            {draftRanges.map((range, index) => {
+              const start = parseInt(range.start, 10) || 0;
+              const end = parseInt(range.end, 10) || 0;
+              return (
+              <Fragment key={`${range.subject}-${index}`}>
+              <tr className="border-t border-[#ece6da]">
                 <td className="px-3 py-2">
                   <select
                     className="h-9 w-full rounded-md border border-[#d7dde7] bg-white px-2 text-sm"
                     value={SUBJECT_OPTIONS.includes(range.subject as (typeof SUBJECT_OPTIONS)[number]) ? range.subject : "Custom"}
-                    onChange={(event) =>
+                    onChange={(event) => {
+                      setDraftRanges((current) =>
+                        current.map((row, i) => (i === index ? { ...row, subject: event.target.value } : row)),
+                      );
                       onUpdate(index, (current) => ({
                         ...current,
                         subject: event.target.value,
-                      }))
-                    }
+                      }));
+                    }}
                   >
                     {SUBJECT_OPTIONS.map((subject) => (
                       <option key={subject} value={subject}>
@@ -1041,31 +1096,33 @@ function SubjectRangeTable({
                 </td>
                 <td className="px-3 py-2">
                   <Input
-                    type="number"
-                    min={1}
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     value={range.start}
                     onChange={(event) =>
-                      onUpdate(index, (current) => ({
-                        ...current,
-                        start: Math.max(1, parseInt(event.target.value, 10) || 1),
-                      }))
+                      setDraftRanges((current) =>
+                        current.map((row, i) => (i === index ? { ...row, start: event.target.value } : row)),
+                      )
                     }
+                    onBlur={() => commitRange(index, "start")}
                   />
                 </td>
                 <td className="px-3 py-2">
                   <Input
-                    type="number"
-                    min={1}
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     value={range.end}
                     onChange={(event) =>
-                      onUpdate(index, (current) => ({
-                        ...current,
-                        end: Math.max(1, parseInt(event.target.value, 10) || 1),
-                      }))
+                      setDraftRanges((current) =>
+                        current.map((row, i) => (i === index ? { ...row, end: event.target.value } : row)),
+                      )
                     }
+                    onBlur={() => commitRange(index, "end")}
                   />
                 </td>
-                <td className="px-3 py-2 text-gray-500">{Math.max(0, range.end - range.start + 1)}</td>
+                <td className="px-3 py-2 text-gray-500">{Math.max(0, end - start + 1)}</td>
                 <td className="px-3 py-2">
                   <button
                     type="button"
@@ -1077,7 +1134,16 @@ function SubjectRangeTable({
                   </button>
                 </td>
               </tr>
-            ))}
+              {rowErrors[index] ? (
+                <tr className="border-t border-[#f3d4d4]">
+                  <td colSpan={5} className="px-3 pb-2">
+                    <p className="mt-1 text-xs text-red-600">{rowErrors[index]}</p>
+                  </td>
+                </tr>
+              ) : null}
+              </Fragment>
+              );
+            })}
           </tbody>
         </table>
       </div>

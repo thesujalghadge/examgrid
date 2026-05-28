@@ -91,19 +91,25 @@ export function ExamInterface({
   const [ready, setReady] = useState(false);
   const submitInProgressRef = useRef(false);
   const finalizeRef = useRef<() => void>(() => {});
+  const routerRef = useRef(router);
+  const navRef = useRef(nav);
   const { persistNow, setStartedAt, setResult } = useExamPersistence();
+  const setStartedAtRef = useRef(setStartedAt);
   const wsSession = useWorkspaceAuthStore((s) => s.session);
+  const instituteId = wsSession?.instituteId;
+  const candidateRollNumber = candidate?.rollNumber;
   const cbtTest = useMemo(() => getRepositories().cbtTests.getById(examId), [examId]);
   const isInstituteCbt = !isTeacherReview && Boolean(cbtTest);
 
   const testEngine = useTestSessionEngine({
-    enabled: isInstituteCbt && Boolean(candidate && wsSession?.instituteId),
+    enabled: isInstituteCbt && Boolean(candidateRollNumber && instituteId),
     testId: examId,
-    studentId: candidate?.rollNumber ?? "",
-    instituteId: wsSession?.instituteId ?? "",
+    studentId: candidateRollNumber ?? "",
+    instituteId: instituteId ?? "",
     durationMinutes: cbtTest?.durationMinutes ?? 180,
     onExpired: () => finalizeRef.current(),
   });
+  const testEngineRef = useRef(testEngine);
 
   const guard = useExamGuard({
     enabled: ready && !isTeacherReview,
@@ -230,6 +236,13 @@ export function ExamInterface({
     finalizeRef.current = finalizeSubmit;
   }, [finalizeSubmit]);
 
+  useEffect(() => {
+    routerRef.current = router;
+    navRef.current = nav;
+    setStartedAtRef.current = setStartedAt;
+    testEngineRef.current = testEngine;
+  }, [nav, router, setStartedAt, testEngine]);
+
   const reviewExamSignature = useMemo(() => {
     if (!review) return "";
     return review.exam.sections
@@ -284,9 +297,9 @@ export function ExamInterface({
   }, [isTeacherReview]);
 
   useEffect(() => {
-    if (isTeacherReview || !candidate) {
-      if (!isTeacherReview && !candidate) {
-        router.replace(nav.login);
+    if (isTeacherReview || !candidateRollNumber) {
+      if (!isTeacherReview && !candidateRollNumber) {
+        routerRef.current.replace(navRef.current.login);
       }
       return;
     }
@@ -295,44 +308,52 @@ export function ExamInterface({
     if (
       !examDef ||
       !ensureExamReadyForCbt(examDef) ||
-      (isOperationalSchedulingActive() && !canCandidateAccessExam(candidate, examId))
+      (isOperationalSchedulingActive() &&
+        !canCandidateAccessExam(
+          {
+            name: "",
+            rollNumber: candidateRollNumber,
+            applicationNumber: "",
+          },
+          examId,
+        ))
     ) {
       logCbtWarning("test load denied", {
         examId,
-        candidateRoll: candidate.rollNumber,
+        candidateRoll: candidateRollNumber,
       });
-      router.replace(nav.unauthorized);
+      routerRef.current.replace(navRef.current.unauthorized);
       return;
     }
 
     logCbtGuard("test load allowed", {
       examId,
-      candidateRoll: candidate.rollNumber,
+      candidateRoll: candidateRollNumber,
     });
 
     const startedAt = Date.now();
 
     const finishBootstrap = (result: ReturnType<typeof bootstrapExamSession>) => {
       if (result.status === "not_found") {
-        router.replace(nav.unauthorized);
+        routerRef.current.replace(navRef.current.unauthorized);
         return;
       }
       if (result.status === "already_submitted") {
-        router.replace(nav.result(examId));
+        routerRef.current.replace(navRef.current.result(examId));
         return;
       }
       if (result.status === "resumed") {
         setResumed(true);
-        setStartedAt(result.attempt.startedAt);
+        setStartedAtRef.current(result.attempt.startedAt);
         if (useTimerStore.getState().getRemainingSeconds() <= 0) {
           setReady(true);
-          queueMicrotask(() => finalizeSubmit());
+          queueMicrotask(() => finalizeRef.current());
           return;
         }
       } else {
-        setStartedAt(startedAt);
+        setStartedAtRef.current(startedAt);
         recordAuditEvent({
-          actorId: candidate.rollNumber,
+          actorId: candidateRollNumber,
           actorRole: "student",
           actionType: "exam_start",
           resourceType: "exam",
@@ -344,15 +365,15 @@ export function ExamInterface({
       setReady(true);
     };
 
-    if (isInstituteCbt && wsSession?.instituteId) {
-      const boot = bootstrapExamSession(examId, candidate.rollNumber, startedAt);
-      void testEngine.beginSession().then((ts) => {
+    if (isInstituteCbt && instituteId) {
+      const boot = bootstrapExamSession(examId, candidateRollNumber, startedAt);
+      void testEngineRef.current.beginSession().then((ts) => {
         if (!ts && boot.status === "already_submitted") {
-          router.replace(nav.result(examId));
+          routerRef.current.replace(navRef.current.result(examId));
           return;
         }
         if (!ts) {
-          router.replace(nav.unauthorized);
+          routerRef.current.replace(navRef.current.unauthorized);
           return;
         }
         finishBootstrap(boot);
@@ -360,18 +381,13 @@ export function ExamInterface({
       return;
     }
 
-    finishBootstrap(bootstrapExamSession(examId, candidate.rollNumber, startedAt));
+    finishBootstrap(bootstrapExamSession(examId, candidateRollNumber, startedAt));
   }, [
-    candidate,
     examId,
-    finalizeSubmit,
+    candidateRollNumber,
     isInstituteCbt,
     isTeacherReview,
-    nav,
-    router,
-    setStartedAt,
-    testEngine,
-    wsSession?.instituteId,
+    instituteId,
   ]);
 
   const handleTimeUp = useCallback(() => {
@@ -434,7 +450,7 @@ export function ExamInterface({
       <SectionTabs />
 
       <div className="relative flex flex-1 overflow-hidden">
-        <main className="flex min-w-0 flex-1 flex-col border-r border-[#1a3c6e]/10 bg-white shadow-sm">
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col border-r border-[#1a3c6e]/10 bg-white shadow-sm">
           <QuestionCard
             review={
               review && currentQuestionId
