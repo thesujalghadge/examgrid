@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -13,10 +14,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ExamInterface } from "@/components/exam/ExamInterface";
-import { ConductCbtSubjectPanel } from "@/components/institute/paper-subject-mapping";
 import { buildCbtTestFromProcessedPaper } from "@/lib/cbt/build-test-from-processing";
 import { applySubjectMapping, defaultSubjectMapping } from "@/lib/cbt/subject-mapping";
 import { cbtTestToExamDefinition } from "@/lib/cbt/cbt-to-exam";
+import { cn } from "@/lib/utils";
 import {
   detectFileType,
   inferQuestionTypeFromMeta,
@@ -40,16 +41,18 @@ import type {
   PaperSubjectMapping,
   PreparedQuestionMeta,
   ProcessedPaperPackage,
+  SubjectRangeMapping,
   SupportedPaperFileType,
 } from "@/types/cbt-paper-processing";
 
-type FlowStep = "configure" | "review" | "done";
+type FlowStep = "upload" | "configure" | "metadata" | "processing" | "review" | "done";
 
-const ACCEPT_PAPER = ".pdf,.doc,.docx,.csv,.xlsx,.txt";
-const ACCEPT_KEY = ".csv,.xlsx,.txt,.doc,.docx";
-const PAPER_FILE_TYPES = ["pdf", "doc", "docx", "csv", "xlsx", "txt"] as const;
-const ANSWER_KEY_FILE_TYPES = ["csv", "xlsx", "txt", "doc", "docx"] as const;
+const ACCEPT_PAPER = ".pdf,.docx,.txt";
+const ACCEPT_KEY = ".pdf,.docx,.txt";
+const PAPER_FILE_TYPES = ["pdf", "docx", "txt"] as const;
+const ANSWER_KEY_FILE_TYPES = ["pdf", "docx", "txt"] as const;
 const PLANNED_JEE_QUESTIONS = 90;
+const SUBJECT_OPTIONS = ["Physics", "Chemistry", "Mathematics", "Biology", "Custom"] as const;
 
 export function InstitutePaperUploadFlow() {
   const session = useWorkspaceAuthStore((state) => state.session);
@@ -57,7 +60,7 @@ export function InstitutePaperUploadFlow() {
   const instituteId = session?.instituteId ?? "";
   const createdBy = session?.userId ?? "institute-admin";
 
-  const [step, setStep] = useState<FlowStep>("configure");
+  const [step, setStep] = useState<FlowStep>("upload");
   const [processing, setProcessing] = useState(false);
   const [paperFile, setPaperFile] = useState<File | null>(null);
   const [keyFile, setKeyFile] = useState<File | null>(null);
@@ -68,7 +71,7 @@ export function InstitutePaperUploadFlow() {
   const [duration, setDuration] = useState("180");
   const [marksPerQuestion, setMarksPerQuestion] = useState("4");
   const [negativeMarks, setNegativeMarks] = useState("1");
-  const [examType] = useState<ExamDefinition["examType"]>("JEE_MAIN");
+  const [examType, setExamType] = useState<ExamDefinition["examType"]>("JEE_MAIN");
   const [scheduleStart, setScheduleStart] = useState("");
   const [scheduleEnd, setScheduleEnd] = useState("");
   const [selectedBatchIds, setSelectedBatchIds] = useState<string[]>([]);
@@ -95,6 +98,11 @@ export function InstitutePaperUploadFlow() {
   }, [instituteId, selectedBatchIds.length]);
 
   const questionCountForSubjects = pkg?.totalQuestions ?? Math.max(1, parseInt(plannedQuestions, 10) || PLANNED_JEE_QUESTIONS);
+  const subjectRanges = subjectMapping.ranges ?? defaultSubjectMapping(questionCountForSubjects, "full").ranges ?? [];
+  const rangeValidation = useMemo(
+    () => validateSubjectRanges(subjectRanges, questionCountForSubjects),
+    [questionCountForSubjects, subjectRanges],
+  );
 
   const previewBundle = useMemo(() => {
     if (!pkg) return null;
@@ -125,6 +133,54 @@ export function InstitutePaperUploadFlow() {
     },
     [],
   );
+
+  const updateSubjectRange = useCallback(
+    (index: number, updater: (range: SubjectRangeMapping) => SubjectRangeMapping) => {
+      setSubjectMapping((current) => {
+        const ranges = current.ranges ?? defaultSubjectMapping(questionCountForSubjects, "full").ranges ?? [];
+        return {
+          ...current,
+          layout: "full",
+          mode: "multi",
+          ranges: ranges.map((range, i) => (i === index ? updater(range) : range)),
+        };
+      });
+    },
+    [questionCountForSubjects],
+  );
+
+  const addSubjectRange = useCallback(() => {
+    setSubjectMapping((current) => {
+      const ranges = current.ranges ?? defaultSubjectMapping(questionCountForSubjects, "full").ranges ?? [];
+      const lastEnd = ranges.reduce((max, range) => Math.max(max, range.end), 0);
+      const start = Math.min(questionCountForSubjects, lastEnd + 1);
+      return {
+        ...current,
+        layout: "full",
+        mode: "multi",
+        ranges: [
+          ...ranges,
+          {
+            subject: "Physics",
+            start,
+            end: start,
+          },
+        ],
+      };
+    });
+  }, [questionCountForSubjects]);
+
+  const removeSubjectRange = useCallback((index: number) => {
+    setSubjectMapping((current) => {
+      const ranges = current.ranges ?? [];
+      return {
+        ...current,
+        layout: "full",
+        mode: "multi",
+        ranges: ranges.filter((_, i) => i !== index),
+      };
+    });
+  }, []);
 
   const reviewQuestionLocations = useMemo(() => {
     const locations = new Map<string, { sectionIndex: number; questionIndex: number }>();
@@ -242,12 +298,17 @@ export function InstitutePaperUploadFlow() {
       setPublishError("Enter a test name.");
       return;
     }
-    if (!scheduleStart || !scheduleEnd) {
-      setPublishError("Set 'Available from' and 'Available until' dates.");
+    if (!scheduleStart) {
+      setPublishError("Set the scheduled date and time.");
+      return;
+    }
+    if (rangeValidation.message) {
+      setPublishError(rangeValidation.message);
       return;
     }
     setPublishError("");
     setProcessing(true);
+    setStep("processing");
 
     try {
       validateUploadFile({
@@ -325,6 +386,7 @@ export function InstitutePaperUploadFlow() {
       setPkg(configured);
       setStep("review");
     } catch (error) {
+      setStep("metadata");
       setPublishError(error instanceof Error ? error.message : "Could not read the paper. Try again or paste text.");
       logSecurityEvent("paper_processing_blocked", { instituteId, message: String(error) });
     } finally {
@@ -368,13 +430,17 @@ export function InstitutePaperUploadFlow() {
     const examDef = cbtTestToExamDefinition(test);
     if (examDef) repos.exams.save(examDef);
 
-    if (selectedBatchIds.length > 0 && scheduleStart && scheduleEnd) {
+    if (selectedBatchIds.length > 0 && scheduleStart) {
+      const startMs = new Date(scheduleStart).getTime();
+      const endAt = scheduleEnd
+        ? new Date(scheduleEnd).toISOString()
+        : new Date(startMs + test.durationMinutes * 60 * 1000).toISOString();
       repos.schedules.save({
         ...createScheduleInput({
           examId: test.id,
           batchIds: selectedBatchIds,
           startAt: new Date(scheduleStart).toISOString(),
-          endAt: new Date(scheduleEnd).toISOString(),
+          endAt,
           durationMinutes: test.durationMinutes,
           visibilityRule: "assigned_batches",
         }),
@@ -391,7 +457,7 @@ export function InstitutePaperUploadFlow() {
   };
 
   const resetFlow = () => {
-    setStep("configure");
+    setStep("upload");
     setPkg(null);
     setPaperFile(null);
     setKeyFile(null);
@@ -401,7 +467,8 @@ export function InstitutePaperUploadFlow() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap gap-2 text-sm">
+      <WizardStepper step={step} />
+      <div className="hidden flex-wrap gap-2 text-sm">
         {(["configure", "review", "done"] as FlowStep[]).map((id, index) => (
           <button
             key={id}
@@ -422,16 +489,56 @@ export function InstitutePaperUploadFlow() {
         ))}
       </div>
 
-      {step === "configure" && (
+      {step === "upload" && (
         <Card className="border-[#d8d2c7]">
           <CardHeader>
-            <CardTitle className="text-xl text-[#14213d]">Conduct CBT</CardTitle>
+            <CardTitle className="text-xl text-[#14213d]">Upload CBT files</CardTitle>
             <CardDescription>
-              Set up the test, upload your paper and answer key, then continue to preview.
+              Add the required question paper and optional answer key before configuring the test.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <UploadCard
+                title="Question Paper"
+                required
+                accept={ACCEPT_PAPER}
+                formats="PDF, DOCX, TXT"
+                limit="Max 10 MB"
+                file={paperFile}
+                onChange={setPaperFile}
+              />
+              <UploadCard
+                title="Answer Key"
+                accept={ACCEPT_KEY}
+                formats="PDF, DOCX, TXT"
+                limit="Max 2 MB"
+                file={keyFile}
+                onChange={setKeyFile}
+              />
+            </div>
+            {publishError ? (
+              <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">{publishError}</p>
+            ) : null}
+            <div className="flex justify-end">
+              <Button className="bg-[#14213d] px-6" disabled={!paperFile} onClick={() => setStep("configure")}>
+                Continue to configure
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {step === "configure" && (
+        <Card className="border-[#d8d2c7]">
+          <CardHeader>
+            <CardTitle className="text-xl text-[#14213d]">Configure subjects</CardTitle>
+            <CardDescription>
+              Map question ranges to subjects before processing the paper.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="hidden gap-4 md:grid-cols-2 lg:grid-cols-4">
               <label className="space-y-1.5 md:col-span-2">
                 <Label>Test name</Label>
                 <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="JEE Main Mock 1" />
@@ -458,7 +565,7 @@ export function InstitutePaperUploadFlow() {
               </label>
             </div>
 
-            <div className="space-y-2">
+            <div className="hidden space-y-2">
               <Label>Batches</Label>
               <div className="flex flex-wrap gap-2">
                 {batches.map((batch) => (
@@ -486,7 +593,7 @@ export function InstitutePaperUploadFlow() {
               </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="hidden gap-4 md:grid-cols-2">
               <label className="space-y-1.5 rounded-lg border border-[#ece6da] bg-[#fbf9f4] p-4">
                 <Label>Question paper</Label>
                 <Input type="file" accept={ACCEPT_PAPER} onChange={(e) => setPaperFile(e.target.files?.[0] ?? null)} />
@@ -499,7 +606,7 @@ export function InstitutePaperUploadFlow() {
               </label>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-[140px_1fr]">
+            <div className="space-y-4">
               <label className="space-y-1.5">
                 <Label>Expected questions</Label>
                 <Input
@@ -510,10 +617,14 @@ export function InstitutePaperUploadFlow() {
                 />
                 <p className="text-xs text-[#5e5a52]">Used for subject ranges before parsing.</p>
               </label>
-              <ConductCbtSubjectPanel
-                questionCount={questionCountForSubjects}
-                mapping={subjectMapping}
-                onChange={setSubjectMapping}
+              <SubjectRangeTable
+                ranges={subjectRanges}
+                totalQuestions={questionCountForSubjects}
+                validationMessage={rangeValidation.message}
+                mappedCount={rangeValidation.mappedCount}
+                onAdd={addSubjectRange}
+                onRemove={removeSubjectRange}
+                onUpdate={updateSubjectRange}
               />
             </div>
 
@@ -523,11 +634,110 @@ export function InstitutePaperUploadFlow() {
 
             <Button
               className="bg-[#14213d] px-6"
-              disabled={processing || !paperFile}
-              onClick={() => void buildAndOpenReview()}
+              disabled={Boolean(rangeValidation.message)}
+              onClick={() => setStep("metadata")}
             >
               {processing ? "Preparing preview…" : "Continue to preview"}
             </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {step === "metadata" && (
+        <Card className="border-[#d8d2c7]">
+          <CardHeader>
+            <CardTitle className="text-xl text-[#14213d]">Test Metadata</CardTitle>
+            <CardDescription>Set the live test details and batch visibility.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="space-y-1.5">
+                <Label>Test Title</Label>
+                <Input value={title} required onChange={(e) => setTitle(e.target.value)} placeholder="JEE Main Mock 1" />
+              </label>
+              <label className="space-y-1.5">
+                <Label>Exam Type</Label>
+                <select
+                  className="h-10 rounded-md border border-[#d7dde7] bg-white px-3 text-sm"
+                  value={examType}
+                  onChange={(e) => setExamType(e.target.value as ExamDefinition["examType"])}
+                >
+                  <option value="JEE_MAIN">JEE_MAIN</option>
+                  <option value="NEET">NEET</option>
+                  <option value="CET">CET</option>
+                </select>
+              </label>
+              <label className="space-y-1.5">
+                <Label>Duration</Label>
+                <Input type="number" min={1} value={duration} onChange={(e) => setDuration(e.target.value)} />
+              </label>
+              <label className="space-y-1.5">
+                <Label>Scheduled Date & Time</Label>
+                <Input type="datetime-local" value={scheduleStart} onChange={(e) => setScheduleStart(e.target.value)} />
+              </label>
+              <label className="space-y-1.5">
+                <Label>Marks per question</Label>
+                <Input type="number" min={0} value={marksPerQuestion} onChange={(e) => setMarksPerQuestion(e.target.value)} />
+              </label>
+              <label className="space-y-1.5">
+                <Label>Negative marks</Label>
+                <Input type="number" min={0} step={0.25} value={negativeMarks} onChange={(e) => setNegativeMarks(e.target.value)} />
+              </label>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Batches</Label>
+              <div className="flex flex-wrap gap-2">
+                {batches.map((batch) => (
+                  <label
+                    key={batch.id}
+                    className="flex cursor-pointer items-center gap-2 rounded-lg border border-[#ece6da] px-3 py-2 text-sm"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedBatchIds.includes(batch.id)}
+                      onChange={() =>
+                        setSelectedBatchIds((current) =>
+                          current.includes(batch.id)
+                            ? current.filter((id) => id !== batch.id)
+                            : [...current, batch.id],
+                        )
+                      }
+                    />
+                    {batch.name}
+                  </label>
+                ))}
+                {batches.length === 0 && (
+                  <p className="text-sm text-[#5e5a52]">No batches yet. You can assign later.</p>
+                )}
+              </div>
+            </div>
+
+            {publishError ? (
+              <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">{publishError}</p>
+            ) : null}
+
+            <div className="flex flex-wrap justify-between gap-2">
+              <Button variant="outline" onClick={() => setStep("configure")}>
+                Back
+              </Button>
+              <Button
+                className="bg-[#14213d] px-6"
+                disabled={processing || !paperFile}
+                onClick={() => void buildAndOpenReview()}
+              >
+                Continue to preview
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {step === "processing" && (
+        <Card className="border-[#d8d2c7]">
+          <CardContent className="py-10 text-center">
+            <p className="text-lg font-semibold text-[#14213d]">Processing paper...</p>
+            <p className="mt-1 text-sm text-[#5e5a52]">Parsing questions, answer keys, and subject ranges.</p>
           </CardContent>
         </Card>
       )}
@@ -541,7 +751,7 @@ export function InstitutePaperUploadFlow() {
                 {pkg.totalQuestions} questions · {pkg.totalMarks} marks · {errorCount > 0 ? `${errorCount} need attention` : "Ready to publish"}
               </p>
             </div>
-            <Button variant="outline" size="sm" onClick={() => setStep("configure")}>
+            <Button variant="outline" size="sm" onClick={() => setStep("metadata")}>
               Back to setup
             </Button>
           </div>
@@ -671,6 +881,242 @@ export function InstitutePaperUploadFlow() {
       )}
     </div>
   );
+}
+
+function WizardStepper({ step }: { step: FlowStep }) {
+  const items: { id: FlowStep; label: string; rank: number }[] = [
+    { id: "upload", label: "Upload", rank: 0 },
+    { id: "configure", label: "Configure", rank: 1 },
+    { id: "processing", label: "Processing", rank: 2 },
+    { id: "review", label: "Preview & Edit", rank: 3 },
+    { id: "done", label: "Publish", rank: 4 },
+  ];
+  const currentRank =
+    step === "metadata"
+      ? 1
+      : items.find((item) => item.id === step)?.rank ?? 0;
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[#ece6da] bg-white px-4 py-3 text-sm">
+      {items.map((item, index) => {
+        const isComplete = item.rank < currentRank;
+        const isCurrent = item.rank === currentRank;
+        return (
+          <div key={item.id} className="flex items-center gap-2">
+            <span
+              className={cn(
+                "inline-flex h-7 w-7 items-center justify-center rounded-full border text-xs font-bold",
+                isComplete
+                  ? "border-green-500 bg-green-50 text-green-700"
+                  : isCurrent
+                    ? "border-[#1a3c6e] bg-blue-50 text-[#1a3c6e]"
+                    : "border-gray-300 bg-gray-50 text-gray-500",
+              )}
+            >
+              {isComplete ? "✓" : index + 1}
+            </span>
+            <span
+              className={cn(
+                isComplete && "font-medium text-green-700",
+                isCurrent && "font-bold text-[#1a3c6e]",
+                !isComplete && !isCurrent && "text-gray-500",
+              )}
+            >
+              {item.label}
+            </span>
+            {index < items.length - 1 && <span className="text-gray-300">→</span>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function UploadCard({
+  title,
+  required,
+  accept,
+  formats,
+  limit,
+  file,
+  onChange,
+}: {
+  title: string;
+  required?: boolean;
+  accept: string;
+  formats: string;
+  limit: string;
+  file: File | null;
+  onChange: (file: File | null) => void;
+}) {
+  return (
+    <label className="block rounded-lg border border-[#ece6da] bg-[#fbf9f4] p-4">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div>
+          <p className="font-semibold text-[#14213d]">
+            {title} {required ? <span className="text-red-600">*</span> : null}
+          </p>
+          <p className="text-xs text-[#5e5a52]">{required ? "Required" : "Optional"}</p>
+        </div>
+        {file ? (
+          <button
+            type="button"
+            className="rounded-full border border-[#d8d2c7] bg-white p-1 text-[#5e5a52]"
+            onClick={(event) => {
+              event.preventDefault();
+              onChange(null);
+            }}
+            aria-label={`Remove ${title}`}
+          >
+            <X className="h-4 w-4" />
+          </button>
+        ) : null}
+      </div>
+      <div className="flex min-h-[160px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-[#c9bfae] bg-white px-4 py-6 text-center transition-colors hover:border-[#8a6f3e]">
+        <Upload className="mb-3 h-8 w-8 text-[#8a6f3e]" />
+        <p className="text-sm font-medium text-[#14213d]">{file?.name ?? "Choose a file"}</p>
+        <p className="mt-1 text-xs text-[#5e5a52]">{formats}</p>
+        <p className="text-xs text-[#5e5a52]">{limit}</p>
+        <Input
+          type="file"
+          accept={accept}
+          className="sr-only"
+          onChange={(event) => onChange(event.target.files?.[0] ?? null)}
+        />
+      </div>
+    </label>
+  );
+}
+
+function SubjectRangeTable({
+  ranges,
+  totalQuestions,
+  validationMessage,
+  mappedCount,
+  onAdd,
+  onRemove,
+  onUpdate,
+}: {
+  ranges: SubjectRangeMapping[];
+  totalQuestions: number;
+  validationMessage: string;
+  mappedCount: number;
+  onAdd: () => void;
+  onRemove: (index: number) => void;
+  onUpdate: (index: number, updater: (range: SubjectRangeMapping) => SubjectRangeMapping) => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="overflow-x-auto rounded-lg border border-[#ece6da]">
+        <table className="w-full min-w-[640px] text-left text-sm">
+          <thead className="bg-[#f8fafc] text-xs uppercase tracking-wide text-[#5e5a52]">
+            <tr>
+              <th className="px-3 py-2">Subject</th>
+              <th className="px-3 py-2">From Q#</th>
+              <th className="px-3 py-2">To Q#</th>
+              <th className="px-3 py-2">Count</th>
+              <th className="px-3 py-2">Remove</th>
+            </tr>
+          </thead>
+          <tbody>
+            {ranges.map((range, index) => (
+              <tr key={`${range.subject}-${index}`} className="border-t border-[#ece6da]">
+                <td className="px-3 py-2">
+                  <select
+                    className="h-9 w-full rounded-md border border-[#d7dde7] bg-white px-2 text-sm"
+                    value={SUBJECT_OPTIONS.includes(range.subject as (typeof SUBJECT_OPTIONS)[number]) ? range.subject : "Custom"}
+                    onChange={(event) =>
+                      onUpdate(index, (current) => ({
+                        ...current,
+                        subject: event.target.value,
+                      }))
+                    }
+                  >
+                    {SUBJECT_OPTIONS.map((subject) => (
+                      <option key={subject} value={subject}>
+                        {subject}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+                <td className="px-3 py-2">
+                  <Input
+                    type="number"
+                    min={1}
+                    value={range.start}
+                    onChange={(event) =>
+                      onUpdate(index, (current) => ({
+                        ...current,
+                        start: Math.max(1, parseInt(event.target.value, 10) || 1),
+                      }))
+                    }
+                  />
+                </td>
+                <td className="px-3 py-2">
+                  <Input
+                    type="number"
+                    min={1}
+                    value={range.end}
+                    onChange={(event) =>
+                      onUpdate(index, (current) => ({
+                        ...current,
+                        end: Math.max(1, parseInt(event.target.value, 10) || 1),
+                      }))
+                    }
+                  />
+                </td>
+                <td className="px-3 py-2 text-gray-500">{Math.max(0, range.end - range.start + 1)}</td>
+                <td className="px-3 py-2">
+                  <button
+                    type="button"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-red-200 bg-red-50 text-red-700"
+                    onClick={() => onRemove(index)}
+                    aria-label={`Remove ${range.subject} range`}
+                  >
+                    ×
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <Button type="button" variant="outline" onClick={onAdd}>
+        Add Row
+      </Button>
+      <p className="text-sm text-[#5e5a52]">
+        Total questions mapped: {mappedCount} / {totalQuestions} detected
+      </p>
+      {validationMessage ? (
+        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">{validationMessage}</p>
+      ) : null}
+    </div>
+  );
+}
+
+function validateSubjectRanges(ranges: SubjectRangeMapping[], totalQuestions: number) {
+  const sorted = [...ranges].sort((a, b) => a.start - b.start);
+  const mappedCount = ranges.reduce((sum, range) => sum + Math.max(0, range.end - range.start + 1), 0);
+  let expectedStart = 1;
+  for (const range of sorted) {
+    if (range.start > range.end) {
+      return { mappedCount, message: `${range.subject} has an invalid range.` };
+    }
+    if (range.start < expectedStart) {
+      return { mappedCount, message: "Subject ranges overlap. Adjust From Q# and To Q# values." };
+    }
+    if (range.start > expectedStart) {
+      return { mappedCount, message: `Subject ranges leave a gap before Q${range.start}.` };
+    }
+    expectedStart = range.end + 1;
+  }
+  if (expectedStart <= totalQuestions) {
+    return { mappedCount, message: `Subject ranges leave a gap from Q${expectedStart} to Q${totalQuestions}.` };
+  }
+  if (sorted.some((range) => range.end > totalQuestions)) {
+    return { mappedCount, message: `Subject ranges cannot exceed Q${totalQuestions}.` };
+  }
+  return { mappedCount, message: "" };
 }
 
 async function extractUploadText(

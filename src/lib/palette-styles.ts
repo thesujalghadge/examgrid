@@ -1,7 +1,7 @@
 import type { QuestionPaletteStatus } from "@/types/exam";
 
 export const PALETTE_LEGEND: {
-  status: QuestionPaletteStatus;
+  status?: QuestionPaletteStatus;
   label: string;
   className: string;
 }[] = [
@@ -30,6 +30,10 @@ export const PALETTE_LEGEND: {
     label: "Answered & Marked for Review",
     className:
       "bg-violet-600 border-2 border-green-500 text-white ring-2 ring-green-400 ring-inset",
+  },
+  {
+    label: "NAT question (orange dot indicator)",
+    className: "bg-white border-2 border-gray-400 text-gray-800 relative after:absolute after:-right-0.5 after:-top-0.5 after:h-2 after:w-2 after:rounded-full after:bg-orange-400",
   },
 ];
 

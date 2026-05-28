@@ -40,6 +40,7 @@ interface QuestionBlock {
   questionNumber: number;
   section: string;
   lines: string[];
+  forceNumerical?: boolean;
 }
 
 interface ParsedOption {
@@ -52,6 +53,11 @@ interface ParsedAnswerEntry {
   answer: string;
   raw: string;
 }
+
+type QuestionTypeDetection = {
+  type: PreparedQuestionMeta["questionType"];
+  detectionSource: NonNullable<PreparedQuestionMeta["detectionSource"]>;
+};
 
 interface ParsePaperInput {
   instituteId: string;
@@ -82,11 +88,23 @@ function normalizeText(text: string): string {
   return text
     .replace(/\u0000/g, " ")
     .replace(/\r/g, "\n")
+    .replace(/Page\s+\d+\s+of\s+\d+/gi, " ")
+    .replace(/https?:\/\/\S+/gi, " ")
+    .replace(/www\.\S+/gi, " ")
+    .replace(/\S+@\S+\.\S+/gi, " ")
+    .replace(/\u00a9.*$/gim, " ")
+    .replace(/©.*$/gim, " ")
+    .replace(/all rights reserved.*/gi, " ")
+    .replace(/[-_]{3,}/g, " ")
     .replace(/\n{2,}/g, "\n\n")
     .replace(/[^\S\n]+/g, " ")
     .replace(/[“”]/g, '"')
     .replace(/[‘’]/g, "'")
     .replace(/[–—]/g, "-")
+    .trim()
+    .split("\n")
+    .filter((line) => !/^[\s\d.\-|#*]{1,3}$/.test(line))
+    .join("\n")
     .trim();
 }
 
@@ -119,6 +137,12 @@ function looksLikeSectionHeader(line: string): string | null {
   return subject ?? null;
 }
 
+function sectionForcesNumerical(line: string): boolean {
+  return /\b(integer type|numerical|nat|section\s+b|section\s+c|section\s+ii|section\s+iii|part\s+b|part\s+c)\b/i.test(
+    line,
+  );
+}
+
 function isAnswerLine(line: string): boolean {
   return /^(?:answer|ans)\s*[:.-]/i.test(line);
 }
@@ -130,12 +154,14 @@ function parseQuestionBlocks(text: string): QuestionBlock[] {
     .filter(Boolean);
   const blocks: QuestionBlock[] = [];
   let currentSection = "Imported Questions";
+  let currentSectionIsNumerical = false;
   let active: QuestionBlock | null = null;
 
   for (const line of lines) {
     const section = looksLikeSectionHeader(line);
     if (section) {
       currentSection = section;
+      currentSectionIsNumerical = sectionForcesNumerical(line);
       continue;
     }
 
@@ -145,6 +171,7 @@ function parseQuestionBlocks(text: string): QuestionBlock[] {
       active = {
         questionNumber: Number(start[1]),
         section: currentSection,
+        forceNumerical: currentSectionIsNumerical,
         lines: [sanitizeLine(start[2])].filter(Boolean),
       };
       continue;
@@ -227,12 +254,16 @@ export function resolveQuestionType(
   options: ParsedOption[],
   correctAnswer: string,
   stem: string,
-): "MCQ_SINGLE" | "NUMERICAL" {
-  if (hasValidMcqOptions(options)) return "MCQ_SINGLE";
-  if (isNumericAnswer(correctAnswer)) return "NUMERICAL";
-  if (/^[A-D]$/i.test(correctAnswer.trim())) return "MCQ_SINGLE";
-  if (!correctAnswer.trim() && looksLikeNumericalStem(stem)) return "NUMERICAL";
-  return "MCQ_SINGLE";
+  forceNumerical?: boolean,
+): QuestionTypeDetection {
+  if (forceNumerical) return { type: "NUMERICAL", detectionSource: "section_header" };
+  if (hasValidMcqOptions(options)) return { type: "MCQ_SINGLE", detectionSource: "options_present" };
+  if (isNumericAnswer(correctAnswer)) return { type: "NUMERICAL", detectionSource: "answer_key_numeric" };
+  if (/^[A-D]$/i.test(correctAnswer.trim())) return { type: "MCQ_SINGLE", detectionSource: "answer_key_letter" };
+  if (!correctAnswer.trim() && looksLikeNumericalStem(stem)) {
+    return { type: "NUMERICAL", detectionSource: "stem_keywords" };
+  }
+  return { type: "MCQ_SINGLE", detectionSource: "fallback" };
 }
 
 function parseOptions(lines: string[]): { options: ParsedOption[]; stemLines: string[] } {
@@ -467,9 +498,17 @@ function buildQuestionMeta(
 ): PreparedQuestionMeta {
   const { options, stemLines } = parseOptions(block.lines);
   const questionText = sanitizeLine(stemLines.join(" "));
+  const hasEquation = /\\frac|\\sqrt|\\[a-zA-Z]+|\$[^$]+\$|\\\(|\\\[|\^[{0-9]|_[{0-9]/.test(
+    `${questionText} ${block.lines.join(" ")}`,
+  );
   const inlineAnswer = parseInlineAnswer(block.lines);
   let correctAnswer = answerKey.get(block.questionNumber) ?? inlineAnswer;
-  const questionType = resolveQuestionType(options, correctAnswer, questionText);
+  const { type: questionType, detectionSource } = resolveQuestionType(
+    options,
+    correctAnswer,
+    questionText,
+    block.forceNumerical,
+  );
   const isMcq = questionType === "MCQ_SINGLE";
 
   if (isMcq && /^[1-4]$/.test(correctAnswer.trim())) {
@@ -503,7 +542,10 @@ function buildQuestionMeta(
     difficulty: undefined,
     confidence,
     questionType,
+    detectionSource,
     questionText,
+    hasEquation,
+    hasImage: false,
     correctAnswer,
     solution: undefined,
     marks: 4,
@@ -520,6 +562,7 @@ function buildQuestionMeta(
           ? "inline_paper"
           : "missing",
       detectedQuestionType: questionType,
+      detectionSource,
     },
   };
 
@@ -528,6 +571,9 @@ function buildQuestionMeta(
     section: meta.section,
     marks: meta.marks,
     negativeMarks: meta.negativeMarks,
+    detectionSource: meta.detectionSource,
+    hasEquation: meta.hasEquation,
+    hasImage: meta.hasImage,
     metadata: meta.metadata,
   });
 }
@@ -617,7 +663,10 @@ export function createBlankPreparedQuestion(sequence: number, section = "Importe
     difficulty: undefined,
     confidence: 0.2,
     questionType: "MCQ_SINGLE",
+    detectionSource: "fallback",
     questionText: "",
+    hasEquation: false,
+    hasImage: false,
     correctAnswer: "",
     solution: undefined,
     marks: 4,
@@ -794,6 +843,9 @@ export function normalizeProcessedPaper(pkg: ProcessedPaperPackage): ProcessedPa
           section: section.name,
           marks: question.marks,
           negativeMarks: question.negativeMarks,
+          detectionSource: question.detectionSource,
+          hasEquation: question.hasEquation,
+          hasImage: question.hasImage,
           metadata: question.metadata,
         });
       }),
@@ -970,7 +1022,7 @@ export function inferQuestionTypeFromMeta(meta: PreparedQuestionMeta): "MCQ_SING
       text,
     }))
     .filter((option) => option.text.trim());
-  return resolveQuestionType(options, meta.correctAnswer, meta.questionText);
+  return resolveQuestionType(options, meta.correctAnswer, meta.questionText).type;
 }
 
 /** Test helper: parse answer key text. */

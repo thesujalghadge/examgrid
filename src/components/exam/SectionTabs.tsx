@@ -30,7 +30,7 @@ export function SectionTabs() {
             )}
             aria-current={isActive ? "true" : undefined}
           >
-            {section.name}
+            {section.name} ({section.questionIds.length})
           </button>
         );
       })}

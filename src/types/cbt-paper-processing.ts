@@ -50,7 +50,16 @@ export interface PreparedQuestionMeta {
   difficulty?: PreparedDifficulty;
   confidence: number;
   questionType: "MCQ_SINGLE" | "NUMERICAL";
+  detectionSource?:
+    | "options_present"
+    | "answer_key_letter"
+    | "answer_key_numeric"
+    | "section_header"
+    | "stem_keywords"
+    | "fallback";
   questionText: string;
+  hasEquation?: boolean;
+  hasImage?: boolean;
   correctAnswer: string;
   solution?: string;
   marks: number;

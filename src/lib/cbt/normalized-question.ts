@@ -32,6 +32,9 @@ export function fromNormalizedQuestion(
     section: string;
     marks?: number;
     negativeMarks?: number;
+    detectionSource?: PreparedQuestionMeta["detectionSource"];
+    hasEquation?: boolean;
+    hasImage?: boolean;
     metadata?: PreparedQuestionMeta["metadata"];
   },
 ): PreparedQuestionMeta {
@@ -45,7 +48,10 @@ export function fromNormalizedQuestion(
     difficulty: undefined,
     confidence: normalized.confidence,
     questionType: normalized.type,
+    detectionSource: extras.detectionSource,
     questionText: normalized.stem,
+    hasEquation: extras.hasEquation,
+    hasImage: extras.hasImage,
     correctAnswer: normalized.answer,
     solution: undefined,
     marks: extras.marks ?? 4,

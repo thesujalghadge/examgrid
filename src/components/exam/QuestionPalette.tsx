@@ -81,13 +81,14 @@ export function QuestionPalette({
               {sec.questionIds.map((qId, idx) => {
                 const status = questionStatuses[qId] ?? "not-visited";
                 const isActive = qId === currentQuestionId;
+                const isNumerical = exam.questions[qId]?.type === "NUMERICAL";
                 return (
                   <button
                     key={qId}
                     type="button"
                     onClick={() => goToQuestion(qId)}
                     className={cn(
-                      "flex h-8 w-8 items-center justify-center rounded-sm text-xs font-bold",
+                      "relative flex h-8 w-8 items-center justify-center rounded-sm text-xs font-bold",
                       getPaletteButtonClass(status),
                       isActive &&
                         "ring-2 ring-[#1a3c6e] ring-offset-1 ring-offset-white",
@@ -96,6 +97,9 @@ export function QuestionPalette({
                     aria-current={isActive ? "true" : undefined}
                   >
                     {idx + 1}
+                    {isNumerical && (
+                      <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-orange-400" />
+                    )}
                   </button>
                 );
               })}

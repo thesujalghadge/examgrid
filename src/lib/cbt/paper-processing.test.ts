@@ -93,9 +93,55 @@ describe("paper-processing JEE-style extraction", () => {
   });
 
   it("does not classify as numerical when answer key is a letter but options are missing", () => {
-    const type = resolveQuestionType([], "B", "A particle moves with velocity v.");
-    expect(type).toBe("MCQ_SINGLE");
+    const result = resolveQuestionType([], "B", "A particle moves with velocity v.");
+    expect(result.type).toBe("MCQ_SINGLE");
     expect(isNumericAnswer("B")).toBe(false);
+  });
+
+  it("removes page footer and URL noise from parsed question text", () => {
+    const questions = parsePaperTextForTest(`
+PHYSICS
+Page 3 of 90
+www.fiitjee.com
+(1) A block is released from rest on a smooth incline.
+(A) g/2
+(B) g/3
+(C) g/4
+(D) g/5
+    `);
+
+    expect(questions).toHaveLength(1);
+    expect(questions[0].questionText).not.toContain("Page 3 of 90");
+    expect(questions[0].questionText).not.toContain("www.fiitjee.com");
+  });
+
+  it("forces numerical type from integer section headers", () => {
+    const questions = parsePaperTextForTest(`
+SECTION B - INTEGER TYPE
+1. Find the value of x if x + 2 = 5.
+2. Calculate the nearest integer value of 9.8.
+    `);
+
+    expect(questions).toHaveLength(2);
+    expect(questions[0].questionType).toBe("NUMERICAL");
+    expect(questions[0].detectionSource).toBe("section_header");
+    expect(questions[1].questionType).toBe("NUMERICAL");
+    expect(questions[1].detectionSource).toBe("section_header");
+  });
+
+  it("sets options_present detection source for normal MCQs", () => {
+    const questions = parsePaperTextForTest(`
+CHEMISTRY
+1. Which molecule is methane?
+(A) CH4
+(B) CO2
+(C) H2O
+(D) O2
+    `);
+
+    expect(questions).toHaveLength(1);
+    expect(questions[0].questionType).toBe("MCQ_SINGLE");
+    expect(questions[0].detectionSource).toBe("options_present");
   });
 
   it("applies multi-subject range mapping by global question number", () => {
