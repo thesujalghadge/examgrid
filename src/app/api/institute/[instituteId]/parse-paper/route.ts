@@ -111,6 +111,7 @@ export async function POST(
         parsed = parsedPaperSchema.parse(JSON.parse(text));
       }
     } catch (e: any) {
+      console.error("[Parse-Paper Route Error]", e);
       return NextResponse.json(
         {
           error: "AI returned malformed response or layout extraction failed. " + (e.message || ""),

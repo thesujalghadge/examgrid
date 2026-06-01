@@ -39,6 +39,7 @@ export async function runVisualExtractor(buffer: Buffer, apiKey: string): Promis
   try {
     const { stdout, stderr } = await execFileAsync(python, [scriptPath, tempPdf, apiKey], {
       maxBuffer: 50 * 1024 * 1024, // 50MB for large json
+      shell: true,
     });
     if (stderr) console.error("[Visual Extractor stderr]", stderr);
     
@@ -47,6 +48,10 @@ export async function runVisualExtractor(buffer: Buffer, apiKey: string): Promis
     const validJsonStr = startIndex >= 0 ? stdout.substring(startIndex) : stdout;
     
     return JSON.parse(validJsonStr);
+  } catch (error: any) {
+    console.error("[Visual Extractor Error]", error);
+    if (error.stderr) console.error("[Visual Extractor Stderr]", error.stderr);
+    throw error;
   } finally {
     try {
       await fs.rm(tempDir, { recursive: true, force: true });
