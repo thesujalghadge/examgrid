@@ -10,5 +10,9 @@
   "4e515a8a-60b7-4955-8526-44a45fd1f339": {
     "gemini_api_key_encrypted": "sjTS+adzqUcMeadG0a/HG0vGro0lDrFkYn3RWYxDZv0yoKs34h7CcYCYEDoEUBSrLR3jleWF4Q==",
     "gemini_api_key_iv": "DjWXa8OhMBSuxyw/"
+  },
+  "e4c7431f-7355-4109-8d39-7a45cab8acba": {
+    "gemini_api_key_encrypted": "5LOYyJkVW5V4KAZLq+JZRhQEkC/WGIvRjpSwcrkP/+cw0iVoFFA4XSH7VHICH7TLnJghlzAvzg==",
+    "gemini_api_key_iv": "ihoYkQOVE/EUGcl7"
   }
 }

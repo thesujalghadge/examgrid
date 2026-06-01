@@ -21,8 +21,8 @@ class QuestionBox(typing.TypedDict):
     stem_box: list[int]
     options: list[OptionBox]
 
-class ExtractResult(typing.TypedDict):
-    question: QuestionBox
+class BatchExtractResult(typing.TypedDict):
+    questions: list[QuestionBox]
 
 def get_base64_crop(img: Image.Image, box) -> str:
     if len(box) != 4: return ""
@@ -47,48 +47,57 @@ def get_base64_crop(img: Image.Image, box) -> str:
     cropped.save(buf, format="PNG")
     return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode("utf-8")
 
-def process_chunk(chunk_img: Image.Image, model, expected_id: str):
-    img_byte_arr = io.BytesIO()
-    chunk_img.save(img_byte_arr, format='PNG')
-    img_bytes = img_byte_arr.getvalue()
+def process_batch(chunk_batch: list[tuple[Image.Image, str]], model) -> list:
+    parts = []
+    expected_ids = []
     
-    prompt = f"""You are a visual layout extractor. This image contains ONE specific question (Question {expected_id}).
-Extract the exact bounding boxes for the question stem and its options.
-Return a JSON object with:
-- id: "{expected_id}"
-- type: "mcq" or "numerical"
-- subject: inferred subject (Physics, Chemistry, Mathematics)
-- answer: correct option ID if indicated, else null
-- stem_box: bounding box of the question text and diagrams [ymin, xmin, ymax, xmax] scaled to 1000.
-- options: list of options with id (A, B, C, D or 1, 2, 3, 4) and bounding box [ymin, xmin, ymax, xmax] scaled to 1000. Ensure you capture ALL options.
-"""
+    prompt = f"You are a visual layout extractor. You are given {len(chunk_batch)} images in order. Each image contains ONE specific question.\n"
+    prompt += "Extract the exact bounding boxes for the question stem and its options for EACH image.\n"
+    prompt += "Return a JSON object with a 'questions' array. The array must contain exactly one object per image, in the exact same order.\n"
+    prompt += "Each question object MUST have:\n"
+    prompt += "- id: the question number (provided below)\n"
+    prompt += "- type: 'mcq' or 'numerical'\n"
+    prompt += "- subject: inferred subject (Physics, Chemistry, Mathematics)\n"
+    prompt += "- answer: correct option ID if indicated, else null\n"
+    prompt += "- stem_box: bounding box of the question text and diagrams [ymin, xmin, ymax, xmax] scaled to 1000.\n"
+    prompt += "- options: list of options with id (A, B, C, D or 1, 2, 3, 4) and bounding box [ymin, xmin, ymax, xmax] scaled to 1000. Ensure you capture ALL options.\n\n"
+    
+    for i, (img, q_id) in enumerate(chunk_batch):
+        expected_ids.append(q_id)
+        prompt += f"Image {i+1} corresponds to Question ID: {q_id}\n"
+        
+        img_byte_arr = io.BytesIO()
+        img.save(img_byte_arr, format='PNG')
+        parts.append({"mime_type": "image/png", "data": img_byte_arr.getvalue()})
+        
     try:
-        response = model.generate_content([
-            prompt,
-            {"mime_type": "image/png", "data": img_bytes}
-        ], generation_config={
+        response = model.generate_content([prompt] + parts, generation_config={
             "response_mime_type": "application/json",
-            "response_schema": ExtractResult
+            "response_schema": BatchExtractResult
         })
         
         data = json.loads(response.text)
-        q = data.get("question")
-        if not q: return None
+        questions = data.get("questions", [])
         
-        # Override ID to match our heuristic
-        q["id"] = expected_id
-        
-        if "stem_box" in q and len(q["stem_box"]) == 4:
-            q["stem_image"] = get_base64_crop(chunk_img, q["stem_box"])
-        
-        for opt in q.get("options", []):
-            if "box" in opt and len(opt["box"]) == 4:
-                opt["image"] = get_base64_crop(chunk_img, opt["box"])
-                
-        return q
+        results = []
+        for i, q in enumerate(questions):
+            if i >= len(chunk_batch): break
+            chunk_img, q_id = chunk_batch[i]
+            q["id"] = q_id  # override to ensure correct ID mapping
+            
+            if "stem_box" in q and len(q["stem_box"]) == 4:
+                q["stem_image"] = get_base64_crop(chunk_img, q["stem_box"])
+            
+            for opt in q.get("options", []):
+                if "box" in opt and len(opt["box"]) == 4:
+                    opt["image"] = get_base64_crop(chunk_img, opt["box"])
+                    
+            results.append(q)
+            
+        return results
     except Exception as e:
-        print(f"Error processing chunk Q{expected_id}: {str(e)}", file=sys.stderr)
-        return None
+        print(f"Error processing batch of {len(chunk_batch)} questions: {str(e)}", file=sys.stderr)
+        return []
 
 def main():
     pdf_path = sys.argv[1]
@@ -148,15 +157,18 @@ def main():
             chunk_img = img.crop((0, crop_y0, img.width, crop_y1))
             all_chunks.append((chunk_img, q["id"]))
             
-    # 2. Gemini parses each chunk in parallel
+    # 2. Gemini parses batches of chunks to respect rate limits
+    BATCH_SIZE = 15
+    batches = [all_chunks[i:i + BATCH_SIZE] for i in range(0, len(all_chunks), BATCH_SIZE)]
+    
     all_questions = []
     
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-        future_to_chunk = {executor.submit(process_chunk, chunk_img, model, q_id): q_id for chunk_img, q_id in all_chunks}
-        for future in concurrent.futures.as_completed(future_to_chunk):
+    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+        future_to_batch = {executor.submit(process_batch, batch, model): batch for batch in batches}
+        for future in concurrent.futures.as_completed(future_to_batch):
             res = future.result()
             if res:
-                all_questions.append(res)
+                all_questions.extend(res)
                 
     # Sort questions by ID to maintain order
     all_questions.sort(key=lambda x: int(x["id"]) if x["id"].isdigit() else 0)
