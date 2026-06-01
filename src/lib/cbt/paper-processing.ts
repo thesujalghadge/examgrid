@@ -33,6 +33,7 @@ export const SCANNED_DOCUMENT_WARNING =
   "We detected a scanned or complex document. Please review extracted content before publishing.";
 const DEFAULT_DURATION_MINUTES = 60;
 const SUBJECTS = ["Physics", "Chemistry", "Mathematics", "Biology"] as const;
+const DIAGRAM_NOTICE = "\n\n[📷 Diagram — refer to original PDF]";
 
 type SupportedFileType = SupportedPaperFileType;
 
@@ -109,7 +110,7 @@ function normalizeText(text: string): string {
 }
 
 function sanitizeLine(text: string): string {
-  if (/\\[a-zA-Z([]|[$∫∑∆→⇒θαβγλ]|\[Figure\s*\d*\]|\[Diagram\]|see figure below/i.test(text)) {
+  if (/[\\∫∑∆→⇒θαβγλ$]/.test(text) || /\[Figure\s*\d*\]|\[Diagram\]|see figure/i.test(text)) {
     return text.trim();
   }
   return text.replace(/\s+/g, " ").trim();
@@ -170,13 +171,18 @@ function parseQuestionBlocks(text: string): QuestionBlock[] {
 
     const start = looksLikeQuestionStart(line);
     if (start) {
+      const questionNumber = Number(start[1]);
+      if (active && questionNumber !== active.questionNumber + 1) {
+        active.lines.push(line);
+        continue;
+      }
       if (active && !active.lines.some((activeLine) => activeLine.trim())) {
         active.lines.push(line);
         continue;
       }
       if (active) blocks.push(active);
       active = {
-        questionNumber: Number(start[1]),
+        questionNumber,
         section: currentSection,
         forceNumerical: currentSectionIsNumerical,
         lines: [sanitizeLine(start[2])].filter(Boolean),
@@ -192,14 +198,14 @@ function parseQuestionBlocks(text: string): QuestionBlock[] {
 }
 
 const OPTION_START =
-  /^[\(\[]?([A-D])[\)\].:\-]\s+(.+)$/i;
+  /^[\(\[]?([A-D])[\)\].:\-]\s*(.+)$/i;
 const OPTION_WORD =
   /^option\s+([A-D])[:.)\-\s]+\s*(.+)$/i;
 
 function parseInlineOptions(text: string): ParsedOption[] {
   const matches = [
-    ...text.matchAll(/(?:^|\s)([A-D])[\).:-]\s*(.+?)(?=(?:\s+[A-D][\).:-]\s+)|$)/gi),
-    ...text.matchAll(/(?:^|\s)\(([A-D])\)\s*(.+?)(?=(?:\s+\([A-D]\)\s+)|$)/gi),
+    ...text.matchAll(/(?:^|\s)([A-D])[\).:-]\s*(.+?)(?=(?:\s+[A-D][\).:-]\s*)|$)/gi),
+    ...text.matchAll(/(?:^|\s)[\(\[]([A-D])[\)\]]\s*(.+?)(?=(?:\s+[\(\[][A-D][\)\]]\s*)|$)/gi),
   ];
   return matches.map((match) => ({
     label: match[1].toUpperCase(),
@@ -211,12 +217,12 @@ function stripInlineOptionsFromStem(text: string): string {
   return sanitizeLine(
     text
       .replace(/(?:^|\s)([A-D])[\).:-]\s*.+?(?=(?:\s+[A-D][\).:-]\s+)|$)/gi, " ")
-      .replace(/(?:^|\s)\([A-D]\)\s*.+?(?=(?:\s+\([A-D]\)\s+)|$)/gi, " "),
+      .replace(/(?:^|\s)[\(\[][A-D][\)\]]\s*.+?(?=(?:\s+[\(\[][A-D][\)\]]\s*)|$)/gi, " "),
   );
 }
 
 function splitStemAndInlineOptions(line: string): { stemPart: string; options: ParsedOption[] } {
-  const marker = line.search(/(?:^|\s)(?:\(?[A-D][\).:-]|\([A-D]\)\s+)/i);
+  const marker = line.search(/(?:^|\s)(?:[A-D][\).:-]|[\(\[][A-D][\)\]])\s*/i);
   if (marker < 0) {
     return { stemPart: sanitizeLine(line), options: [] };
   }
@@ -359,7 +365,7 @@ function dedupeOptions(options: ParsedOption[]): ParsedOption[] {
     .filter((option): option is ParsedOption => Boolean(option?.text.trim()));
 }
 
-function detectSubject(section: string, _text: string): string {
+function detectSubject(section: string): string {
   const exact = SUBJECTS.find((subject) => section.toLowerCase().includes(subject.toLowerCase()));
   if (exact) return exact;
   if (section !== "Imported Questions") return section;
@@ -504,9 +510,15 @@ function buildQuestionMeta(
   usedOCR: boolean,
 ): PreparedQuestionMeta {
   const { options, stemLines } = parseOptions(block.lines);
-  const questionText = sanitizeLine(stemLines.join(" "));
+  const blockText = block.lines.join(" ");
+  const hasImage = /\[Figure\b|\[Diagram\b|see figure/i.test(blockText);
+  const baseQuestionText = sanitizeLine(stemLines.join(" "));
+  const questionText =
+    hasImage && !baseQuestionText.includes(DIAGRAM_NOTICE)
+      ? `${baseQuestionText}${DIAGRAM_NOTICE}`
+      : baseQuestionText;
   const hasEquation = /\\frac|\\sqrt|\\[a-zA-Z]+|\$[^$]+\$|\\\(|\\\[|\^[{0-9]|_[{0-9]/.test(
-    `${questionText} ${block.lines.join(" ")}`,
+    `${questionText} ${blockText}`,
   );
   const inlineAnswer = parseInlineAnswer(block.lines);
   let correctAnswer = answerKey.get(block.questionNumber) ?? inlineAnswer;
@@ -542,7 +554,7 @@ function buildQuestionMeta(
   const meta: PreparedQuestionMeta = {
     questionId: `${pkgId}-q-${block.questionNumber}`,
     sequence: block.questionNumber,
-    subject: detectSubject(block.section, questionText),
+    subject: detectSubject(block.section),
     section: block.section,
     chapter: undefined,
     topic: undefined,
@@ -552,7 +564,7 @@ function buildQuestionMeta(
     detectionSource,
     questionText,
     hasEquation,
-    hasImage: false,
+    hasImage,
     correctAnswer,
     solution: undefined,
     marks: 4,
@@ -570,6 +582,7 @@ function buildQuestionMeta(
           : "missing",
       detectedQuestionType: questionType,
       detectionSource,
+      hasImage,
     },
   };
 

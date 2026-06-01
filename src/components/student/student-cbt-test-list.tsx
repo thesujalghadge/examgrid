@@ -38,6 +38,7 @@ export function StudentCbtTestList() {
   }, []);
 
   const rows = useMemo(() => {
+    void tick;
     if (!candidate) return [];
     const repos = getRepositories();
     const student = findStudentForCandidate(candidate);

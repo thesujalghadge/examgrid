@@ -47,10 +47,27 @@ import type {
 
 type FlowStep = "upload" | "configure" | "metadata" | "processing" | "review" | "done";
 
-const ACCEPT_PAPER = ".pdf,.docx,.txt";
-const ACCEPT_KEY = ".pdf,.docx,.txt";
-const PAPER_FILE_TYPES = ["pdf", "docx", "txt"] as const;
-const ANSWER_KEY_FILE_TYPES = ["pdf", "docx", "txt"] as const;
+interface ParsedGeminiQuestion {
+  number: number;
+  text: string;
+  options: Record<string, string> | null;
+  type: "mcq" | "integer" | "multi_correct";
+  correct_answer: string | null;
+  marks: number;
+  negative_marks: number;
+}
+
+interface ParsedGeminiPaper {
+  paper_title: string | null;
+  subject: string | null;
+  total_marks: number | null;
+  questions: ParsedGeminiQuestion[];
+}
+
+const ACCEPT_PAPER = ".pdf,.doc,.docx,.txt,.csv,.xlsx";
+const ACCEPT_KEY = ".pdf,.doc,.docx,.txt,.csv,.xlsx";
+const PAPER_FILE_TYPES = ["pdf", "doc", "docx", "txt", "csv", "xlsx"] as const;
+const ANSWER_KEY_FILE_TYPES = ["pdf", "doc", "docx", "txt", "csv", "xlsx"] as const;
 const PLANNED_JEE_QUESTIONS = 90;
 const SUBJECT_OPTIONS = ["Physics", "Chemistry", "Mathematics", "Biology", "Custom"] as const;
 
@@ -98,7 +115,10 @@ export function InstitutePaperUploadFlow() {
   }, [instituteId, selectedBatchIds.length]);
 
   const questionCountForSubjects = pkg?.totalQuestions ?? Math.max(1, parseInt(plannedQuestions, 10) || PLANNED_JEE_QUESTIONS);
-  const subjectRanges = subjectMapping.ranges ?? defaultSubjectMapping(questionCountForSubjects, "full").ranges ?? [];
+  const subjectRanges = useMemo(
+    () => subjectMapping.ranges ?? defaultSubjectMapping(questionCountForSubjects, "full").ranges ?? [],
+    [questionCountForSubjects, subjectMapping.ranges],
+  );
   const rangeValidation = useMemo(
     () => validateSubjectRanges(subjectRanges, questionCountForSubjects),
     [questionCountForSubjects, subjectRanges],
@@ -326,18 +346,24 @@ export function InstitutePaperUploadFlow() {
         });
       }
 
+      const paperType = detectFileType(paperFile.name, PAPER_FILE_TYPES) as SupportedPaperFileType;
+      const keyType = keyFile
+        ? (detectFileType(keyFile.name, ANSWER_KEY_FILE_TYPES) as SupportedPaperFileType)
+        : undefined;
+      const tenantId = useWorkspaceAuthStore.getState().session?.instituteId;
+      if (!tenantId) {
+        setPublishError("Session not loaded. Refresh and try again.");
+        return;
+      }
+
       const paperSource = await extractUploadText(paperFile, "paper", false);
       if (!paperSource) {
         throw new Error("Could not read the question paper.");
       }
       const keySource = keyFile ? await extractUploadText(keyFile, "answer_key", true) : null;
-      const paperType = detectFileType(paperFile.name, PAPER_FILE_TYPES) as SupportedPaperFileType;
-      const keyType = keyFile
-        ? (detectFileType(keyFile.name, ANSWER_KEY_FILE_TYPES) as SupportedPaperFileType)
-        : undefined;
 
       const result = await runPaperProcessing({
-        instituteId,
+        instituteId: tenantId,
         paperFileName: paperFile.name,
         paperFileType: paperType,
         paperText: paperSource.text,
@@ -348,40 +374,39 @@ export function InstitutePaperUploadFlow() {
         extractionSummary: paperSource.summary,
       });
 
-      const perQMarks = safeNumber(marksPerQuestion, 4);
-      const perQNeg = safeNumber(negativeMarks, 1);
-      const totalQ = result.sections.reduce((n, s) => n + s.questions.length, 0);
-      const mapping =
-        subjectMapping.layout === "single"
-          ? defaultSubjectMapping(totalQ, "single", subjectMapping.singleSubject ?? "Physics")
-          : {
-              ...subjectMapping,
-              mode: "multi" as const,
-              ranges: (subjectMapping.ranges ?? defaultSubjectMapping(totalQ, subjectMapping.layout).ranges ?? []).map(
-                (range) => ({
-                  ...range,
-                  end: Math.min(range.end, totalQ),
-                }),
-              ),
-            };
-
-      const configured = normalizeProcessedPaper(
-        applySubjectMapping({
-          ...result,
-          title: title.trim(),
-          durationMinutes: Math.max(1, parseInt(duration, 10) || 60),
-          totalMarks: totalQ * perQMarks,
-          sections: result.sections.map((section) => ({
-            ...section,
-            questions: section.questions.map((q) => ({
-              ...q,
-              marks: perQMarks,
-              negativeMarks: q.questionType === "NUMERICAL" ? 0 : perQNeg,
-            })),
-          })),
-          subjectMapping: mapping,
-        }),
+      let configured = configureProcessedPackage(
+        result,
+        title.trim(),
+        duration,
+        marksPerQuestion,
+        negativeMarks,
+        subjectMapping,
       );
+
+      const hasGeminiKey = await checkGeminiKeyConfigured(tenantId);
+      if (hasGeminiKey && paperType === "pdf" && shouldUseGeminiRepair(configured)) {
+        try {
+          const { parsedPaper } = await parseWithGemini(paperFile, keySource?.text ?? "", tenantId);
+          configured = configureProcessedPackage(
+            geminiPaperToProcessedPackage(parsedPaper, paperFile.name, paperType, tenantId),
+            title.trim(),
+            duration,
+            marksPerQuestion,
+            negativeMarks,
+            subjectMapping,
+          );
+        } catch (repairError) {
+          configured = {
+            ...configured,
+            processingLog: [
+              ...configured.processingLog,
+              `Gemini repair fallback was unavailable: ${
+                repairError instanceof Error ? repairError.message : "unknown error"
+              }. Continuing with deterministic draft.`,
+            ],
+          };
+        }
+      }
 
       setPkg(configured);
       setStep("review");
@@ -499,22 +524,22 @@ export function InstitutePaperUploadFlow() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid gap-4 md:grid-cols-2">
-              <UploadCard
-                title="Question Paper"
-                required
-                accept={ACCEPT_PAPER}
-                formats="PDF, DOCX, TXT"
-                limit="Max 10 MB"
-                file={paperFile}
-                onChange={setPaperFile}
-              />
-              <UploadCard
-                title="Answer Key"
-                accept={ACCEPT_KEY}
-                formats="PDF, DOCX, TXT"
-                limit="Max 2 MB"
-                file={keyFile}
-                onChange={setKeyFile}
+            <UploadCard
+              title="Question Paper"
+              required
+              accept={ACCEPT_PAPER}
+              formats="PDF, DOC, DOCX, TXT, CSV, XLSX"
+              limit="Max 10 MB"
+              file={paperFile}
+              onChange={setPaperFile}
+            />
+            <UploadCard
+              title="Answer Key"
+              accept={ACCEPT_KEY}
+              formats="PDF, DOC, DOCX, TXT, CSV, XLSX"
+              limit="Max 2 MB"
+              file={keyFile}
+              onChange={setKeyFile}
               />
             </div>
             {publishError ? (
@@ -1028,16 +1053,12 @@ function SubjectRangeTable({
     const draft = draftRanges[index];
     if (!draft) return;
 
-    let start = Math.max(1, parseInt(draft.start, 10) || 1);
+    const start = Math.max(1, parseInt(draft.start, 10) || 1);
     let end = Math.max(1, parseInt(draft.end, 10) || start);
     let error = "";
 
     if (changedField === "start" && start > end) {
       end = start;
-    }
-    if (end - start + 1 > 15) {
-      end = start + 14;
-      error = "A single subject cannot have more than 15 questions.";
     }
     if (end > totalQuestions) {
       end = totalQuestions;
@@ -1163,26 +1184,165 @@ function SubjectRangeTable({
 function validateSubjectRanges(ranges: SubjectRangeMapping[], totalQuestions: number) {
   const sorted = [...ranges].sort((a, b) => a.start - b.start);
   const mappedCount = ranges.reduce((sum, range) => sum + Math.max(0, range.end - range.start + 1), 0);
-  let expectedStart = 1;
+  let previousEnd = 0;
   for (const range of sorted) {
+    if (range.start < 1) {
+      return { mappedCount, message: `${range.subject} must start from Q1 or later.` };
+    }
     if (range.start > range.end) {
       return { mappedCount, message: `${range.subject} has an invalid range.` };
     }
-    if (range.start < expectedStart) {
+    if (range.end > totalQuestions) {
+      return { mappedCount, message: `Subject ranges cannot exceed Q${totalQuestions}.` };
+    }
+    if (range.start <= previousEnd) {
       return { mappedCount, message: "Subject ranges overlap. Adjust From Q# and To Q# values." };
     }
-    if (range.start > expectedStart) {
-      return { mappedCount, message: `Subject ranges leave a gap before Q${range.start}.` };
-    }
-    expectedStart = range.end + 1;
-  }
-  if (expectedStart <= totalQuestions) {
-    return { mappedCount, message: `Subject ranges leave a gap from Q${expectedStart} to Q${totalQuestions}.` };
-  }
-  if (sorted.some((range) => range.end > totalQuestions)) {
-    return { mappedCount, message: `Subject ranges cannot exceed Q${totalQuestions}.` };
+    previousEnd = range.end;
   }
   return { mappedCount, message: "" };
+}
+
+async function checkGeminiKeyConfigured(instituteId: string): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/institute/${instituteId}/api-key/status`, {
+      credentials: "include",
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    return Boolean(data.hasKey);
+  } catch {
+    return false;
+  }
+}
+
+async function parseWithGemini(
+  file: File,
+  answerKeyText: string,
+  instituteId: string,
+): Promise<{ parsedPaper: ParsedGeminiPaper; usedGemini: true }> {
+  const formData = new FormData();
+  formData.set("file", file);
+  if (answerKeyText.trim()) {
+    formData.set("answerKey", answerKeyText);
+  }
+
+  const res = await fetch(`/api/institute/${instituteId}/parse-paper`, {
+    method: "POST",
+    body: formData,
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Parse failed" }));
+    throw new Error(err.error ?? "Gemini parse failed");
+  }
+
+  const parsed = await res.json();
+  return { parsedPaper: parsed, usedGemini: true };
+}
+
+function geminiPaperToProcessedPackage(
+  parsed: ParsedGeminiPaper,
+  paperFileName: string,
+  paperFileType: string,
+  instituteId: string,
+): ProcessedPaperPackage {
+  const id = `paper-${Date.now()}`;
+  const title =
+    parsed.paper_title ??
+    (paperFileName.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim() ||
+      "Institute CBT Paper");
+  const sectionMap = new Map<string, PreparedQuestionMeta[]>();
+
+  for (const q of parsed.questions) {
+    const sectionName = parsed.subject ?? "Imported Questions";
+    if (!sectionMap.has(sectionName)) sectionMap.set(sectionName, []);
+
+    const isNumerical = q.type === "integer";
+    const optionLabels = isNumerical ? [] : ["1", "2", "3", "4"].map((k) => q.options?.[k] ?? "");
+    const answerMap: Record<string, string> = { "1": "A", "2": "B", "3": "C", "4": "D" };
+    const correctAnswer = q.correct_answer ? (answerMap[q.correct_answer] ?? q.correct_answer) : "";
+
+    sectionMap.get(sectionName)!.push({
+      questionId: `${id}-q${q.number}`,
+      sequence: q.number,
+      section: sectionName,
+      subject: sectionName,
+      chapter: undefined,
+      topic: undefined,
+      difficulty: undefined,
+      confidence: 0.95,
+      questionType: isNumerical ? "NUMERICAL" : "MCQ_SINGLE",
+      detectionSource: "gemini_vision",
+      questionText: q.text,
+      hasEquation: q.text.includes("$"),
+      hasImage: false,
+      correctAnswer,
+      solution: undefined,
+      marks: q.marks ?? 4,
+      negativeMarks: q.negative_marks ?? (isNumerical ? 0 : 1),
+      optionLabels,
+      images: [],
+      explanation: undefined,
+      metadata: {
+        parser: "gemini_vision",
+        sourceQuestionNumber: q.number,
+        answerKeySource: q.correct_answer ? "gemini_extracted" : "manual",
+      },
+    });
+  }
+
+  const sections = Array.from(sectionMap.entries()).map(([name, questions]) => ({
+    id: `section-${name.toLowerCase().replace(/\s+/g, "-")}`,
+    name,
+    questions,
+  }));
+  const totalQuestions = parsed.questions.length;
+  const totalMarks = parsed.questions.reduce((sum, q) => sum + (q.marks ?? 4), 0);
+  const pkg: ProcessedPaperPackage = {
+    id,
+    status: "DRAFT_REVIEW",
+    title,
+    instituteId,
+    paperFileName,
+    paperFileType: paperFileType as SupportedPaperFileType,
+    answerKeyFileName: undefined,
+    answerKeyFileType: undefined,
+    durationMinutes: 180,
+    instructions: [
+      "Read each question carefully before answering.",
+      "Use the palette to review marked and unanswered questions.",
+      "Submit before the timer ends.",
+    ],
+    sections,
+    processingLog: [`Parsed by Gemini Vision: ${totalQuestions} questions extracted.`],
+    validationIssues: [],
+    extractionMode: "gemini_vision",
+    extractionSummary: {
+      pages: 1,
+      extractedChars: parsed.questions.reduce((n, q) => n + q.text.length, 0),
+      usedOCR: true,
+      questionsDetected: totalQuestions,
+      warnings: [],
+    },
+    parsingDiagnostics: {
+      rawTextPreview: parsed.questions.slice(0, 2).map((q) => q.text).join("\n"),
+      parsedQuestionCount: totalQuestions,
+      unmatchedAnswerCount: 0,
+      unmatchedAnswers: [],
+      duplicateAnswers: [],
+    },
+    preparedAt: Date.now(),
+    totalMarks,
+    totalQuestions,
+    subjectMapping: defaultSubjectMapping(totalQuestions, "full"),
+  };
+
+  return {
+    ...pkg,
+    validationIssues: validateProcessedPaper(pkg),
+  };
 }
 
 async function extractUploadText(
@@ -1214,4 +1374,66 @@ async function extractUploadText(
 function safeNumber(value: string, fallback: number): number {
   const n = Number(value);
   return Number.isFinite(n) && n >= 0 ? n : fallback;
+}
+
+function configureProcessedPackage(
+  result: ProcessedPaperPackage,
+  title: string,
+  duration: string,
+  marksPerQuestion: string,
+  negativeMarks: string,
+  subjectMapping: PaperSubjectMapping,
+): ProcessedPaperPackage {
+  const perQMarks = safeNumber(marksPerQuestion, 4);
+  const perQNeg = safeNumber(negativeMarks, 1);
+  const totalQ = result.sections.reduce((n, s) => n + s.questions.length, 0);
+  const mapping =
+    subjectMapping.layout === "single"
+      ? defaultSubjectMapping(totalQ, "single", subjectMapping.singleSubject ?? "Physics")
+      : {
+          ...subjectMapping,
+          mode: "multi" as const,
+          ranges: (subjectMapping.ranges ?? defaultSubjectMapping(totalQ, subjectMapping.layout).ranges ?? []).map(
+            (range) => ({
+              ...range,
+              end: Math.min(range.end, totalQ),
+            }),
+          ),
+        };
+
+  return normalizeProcessedPaper(
+    applySubjectMapping({
+      ...result,
+      title,
+      durationMinutes: Math.max(1, parseInt(duration, 10) || 60),
+      totalMarks: totalQ * perQMarks,
+      sections: result.sections.map((section) => ({
+        ...section,
+        questions: section.questions.map((q) => ({
+          ...q,
+          marks: perQMarks,
+          negativeMarks: q.questionType === "NUMERICAL" ? 0 : perQNeg,
+        })),
+      })),
+      subjectMapping: mapping,
+    }),
+  );
+}
+
+function shouldUseGeminiRepair(pkg: ProcessedPaperPackage): boolean {
+  const questions = pkg.sections.flatMap((section) => section.questions);
+  if (questions.length === 0) return true;
+
+  const blockingIssues = pkg.validationIssues.filter((issue) => issue.level === "error").length;
+  const lowConfidence = questions.filter((question) => question.confidence < 0.45).length;
+  const malformed = pkg.validationIssues.filter(
+    (issue) => issue.code === "malformed_options" || issue.code === "missing_answer",
+  ).length;
+  const questionCount = Math.max(1, questions.length);
+
+  return (
+    lowConfidence / questionCount >= 0.4 ||
+    blockingIssues / questionCount >= 0.25 ||
+    malformed / questionCount >= 0.25
+  );
 }

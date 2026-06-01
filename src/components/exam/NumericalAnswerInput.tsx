@@ -36,7 +36,7 @@ export function NumericalAnswerInput({
 
   useEffect(() => {
     selectionRef.current = { start: value.length, end: value.length };
-  }, [questionId]);
+  }, [questionId, value.length]);
 
   const syncSelectionFromInput = useCallback(() => {
     const el = inputRef.current;

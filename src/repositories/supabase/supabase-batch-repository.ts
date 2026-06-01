@@ -1,5 +1,5 @@
-import { DEFAULT_INSTITUTE_ID } from "@/config/institute";
 import { logRepositoryFailure } from "@/lib/logging/runtime-logger";
+import { getClientWorkspaceSession } from "@/lib/workspace-session";
 import { assertBatch } from "@/lib/validation/institute-ops-schema";
 import type { BatchRepository } from "@/repositories/interfaces/batch-repository";
 import {
@@ -71,12 +71,19 @@ export class SupabaseBatchRepository implements BatchRepository {
   }
 
   private async doRefresh(): Promise<void> {
+    const session = getClientWorkspaceSession();
+    if (!session?.instituteId) {
+      this.cache = [];
+      this.hydrated = true;
+      return;
+    }
+
     try {
       const client = requireSupabaseClient("batches.list");
       const { data, error } = await client
         .from("batches")
         .select("*")
-        .eq("institute_id", DEFAULT_INSTITUTE_ID)
+        .eq("institute_id", session.instituteId)
         .order("name", { ascending: true });
       throwIfSupabaseError(error, "batches", "list");
       this.cache = ((data ?? []) as BatchRow[]).map(rowToBatch);
@@ -90,9 +97,21 @@ export class SupabaseBatchRepository implements BatchRepository {
 
   private async persistOne(batch: Batch): Promise<void> {
     const client = requireSupabaseClient("batches.upsert");
+    const { data: existing, error: lookupError } = await client
+      .from("batches")
+      .select("id")
+      .eq("institute_id", batch.instituteId)
+      .eq("name", batch.name)
+      .eq("academic_year", batch.academicYear)
+      .maybeSingle();
+    throwIfSupabaseError(lookupError, "batches", "lookup");
+
     const { error } = await client
       .from("batches")
-      .upsert(batchToRow(batch), { onConflict: "id" });
+      .upsert(
+        batchToRow({ ...batch, id: existing?.id ?? batch.id }),
+        { onConflict: "institute_id,name,academic_year" },
+      );
     throwIfSupabaseError(error, "batches", "upsert");
   }
 

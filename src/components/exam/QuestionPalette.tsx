@@ -1,8 +1,16 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { getPaletteButtonClass, PALETTE_LEGEND } from "@/lib/palette-styles";
+import { getPaletteButtonClass } from "@/lib/palette-styles";
 import { useQuestionStore } from "@/stores/question-store";
+
+const PALETTE_LEGEND = [
+  { status: "not-visited", label: "Not Visited", color: "bg-gray-300" },
+  { status: "not-answered", label: "Not Answered", color: "bg-red-400" },
+  { status: "answered", label: "Answered", color: "bg-green-500" },
+  { status: "marked", label: "Marked for Review", color: "bg-purple-500" },
+  { status: "answered-marked", label: "Answered & Marked", color: "bg-purple-700" },
+] as const;
 
 interface QuestionPaletteProps {
   collapsed?: boolean;
@@ -57,12 +65,12 @@ export function QuestionPalette({
       <div className="border-b border-gray-300 bg-white px-3 py-2 text-[11px]">
         <p className="mb-1.5 font-semibold text-gray-800">Legend</p>
         <ul className="space-y-1">
-          {PALETTE_LEGEND.map((item) => (
-            <li key={item.status} className="flex items-center gap-2">
+          {PALETTE_LEGEND.map((item, index) => (
+            <li key={`legend-${item.status}-${index}`} className="flex items-center gap-2">
               <span
                 className={cn(
                   "inline-block h-4 w-4 shrink-0 rounded-sm",
-                  item.className,
+                  item.color,
                 )}
               />
               <span className="text-gray-700">{item.label}</span>

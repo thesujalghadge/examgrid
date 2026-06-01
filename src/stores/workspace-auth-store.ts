@@ -85,7 +85,8 @@ export const useWorkspaceAuthStore = create<WorkspaceAuthState>((set, get) => ({
     return false;
   },
 
-  login: async ({ userId, role, password: _password, instituteId }) => {
+  login: async ({ userId, role, password, instituteId }) => {
+    void password;
     if (!userId.trim()) return false;
     if (isInstituteScopedRole(role) && !instituteId?.trim()) return false;
 

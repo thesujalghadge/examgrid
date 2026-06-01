@@ -67,6 +67,11 @@ const DEFAULT_EXAM_NAV: ExamInterfaceNavigate = {
   login: "/student/login",
 };
 
+async function exitFullscreenBeforeRedirect() {
+  if (typeof document === "undefined" || !document.fullscreenElement) return;
+  await document.exitFullscreen().catch(() => {});
+}
+
 interface ExamInterfaceProps {
   examId: string;
   navigate?: Partial<ExamInterfaceNavigate>;
@@ -86,7 +91,9 @@ export function ExamInterface({
   const currentQuestionId = useQuestionStore((s) => s.currentQuestionId);
   const currentSectionId = useQuestionStore((s) => s.currentSectionId);
   const [paletteCollapsed, setPaletteCollapsed] = useState(false);
+  const [mobilePaletteOpen, setMobilePaletteOpen] = useState(false);
   const [submitOpen, setSubmitOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [resumed, setResumed] = useState(false);
   const [ready, setReady] = useState(false);
   const submitInProgressRef = useRef(false);
@@ -121,7 +128,10 @@ export function ExamInterface({
   });
 
   const finalizeSubmit = useCallback(async () => {
-    if (!candidate || !exam) return;
+    if (!candidate || !exam) {
+      setIsSubmitting(false);
+      return;
+    }
 
     const previous = loadExamAttempt(examId, candidate.rollNumber);
     const lifecyclePhase = useExamLifecycleStore.getState().phase;
@@ -135,12 +145,16 @@ export function ExamInterface({
     ) {
       logCbtGuard("submit blocked - duplicate or already submitted");
       if (previous?.lifecycle === "submitted") {
+        await exitFullscreenBeforeRedirect();
         router.replace(nav.result(examId));
+      } else {
+        setIsSubmitting(false);
       }
       return;
     }
 
     submitInProgressRef.current = true;
+    setIsSubmitting(true);
     if (isInstituteCbt) {
       testEngine.flushSave();
       await testEngine.lockSubmit("submitted");
@@ -167,6 +181,7 @@ export function ExamInterface({
 
     if (!safeCurrentQuestionId) {
       submitInProgressRef.current = false;
+      setIsSubmitting(false);
       return;
     }
 
@@ -196,6 +211,7 @@ export function ExamInterface({
         candidateRoll: candidate.rollNumber,
       });
       submitInProgressRef.current = false;
+      setIsSubmitting(false);
       return;
     }
 
@@ -229,6 +245,7 @@ export function ExamInterface({
       totalScore: result.totalScore,
       submittedAt: result.submittedAt,
     });
+    await exitFullscreenBeforeRedirect();
     router.replace(nav.result(examId));
   }, [candidate, exam, examId, isInstituteCbt, nav, persistNow, router, setResult, testEngine]);
 
@@ -449,7 +466,7 @@ export function ExamInterface({
 
       <SectionTabs />
 
-      <div className="relative flex flex-1 overflow-hidden">
+      <div className="relative flex min-h-0 flex-1 overflow-hidden">
         <main className="flex min-h-0 min-w-0 flex-1 flex-col border-r border-[#1a3c6e]/10 bg-white shadow-sm">
           <QuestionCard
             review={
@@ -472,6 +489,7 @@ export function ExamInterface({
           />
           <QuestionNavigator
             onSubmitClick={() => setSubmitOpen(true)}
+            isSubmitting={isSubmitting}
             review={
               review && currentQuestionId && currentReviewSection
                 ? {
@@ -489,11 +507,30 @@ export function ExamInterface({
             }
           />
         </main>
-        <QuestionPalette
-          collapsed={paletteCollapsed}
-          onToggleCollapse={() => setPaletteCollapsed((collapsed) => !collapsed)}
-        />
+        <div className="hidden md:contents">
+          <QuestionPalette
+            collapsed={paletteCollapsed}
+            onToggleCollapse={() => setPaletteCollapsed((collapsed) => !collapsed)}
+          />
+        </div>
+        {mobilePaletteOpen ? (
+          <QuestionPalette
+            collapsed={false}
+            onToggleCollapse={() => setMobilePaletteOpen(false)}
+          />
+        ) : null}
       </div>
+
+      {!isTeacherReview ? (
+        <button
+          type="button"
+          className="fixed bottom-4 right-4 z-30 inline-flex h-12 w-12 items-center justify-center rounded-full bg-[#1a3c6e] text-2xl font-bold text-white shadow-lg md:hidden"
+          aria-label="Open question palette"
+          onClick={() => setMobilePaletteOpen(true)}
+        >
+          ☰
+        </button>
+      ) : null}
 
       {showCalculator ? <ExamCalculator /> : null}
       {!isTeacherReview ? <ExamGuardDialogs guard={guard} /> : null}
@@ -502,7 +539,10 @@ export function ExamInterface({
         <SubmitModal
           open={submitOpen}
           onOpenChange={setSubmitOpen}
+          isSubmitting={isSubmitting}
           onConfirm={() => {
+            if (isSubmitting) return;
+            setIsSubmitting(true);
             setSubmitOpen(false);
             finalizeSubmit();
           }}

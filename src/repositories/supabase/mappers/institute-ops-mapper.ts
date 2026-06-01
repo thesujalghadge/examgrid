@@ -1,4 +1,3 @@
-import { DEFAULT_INSTITUTE_ID } from "@/config/institute";
 import type {
   BatchRow,
   ExamScheduleRow,
@@ -6,13 +5,18 @@ import type {
 } from "@/repositories/supabase/types";
 import type { Batch, ExamSchedule, InstituteStudent } from "@/types/institute-ops";
 
+function requireInstituteId(value: string | undefined, entity: string): string {
+  if (!value) throw new Error(`${entity} is missing instituteId`);
+  return value;
+}
+
 export function studentToRow(student: InstituteStudent): Omit<StudentRow, "created_at" | "updated_at"> & {
   created_at?: string;
   updated_at?: string;
 } {
   return {
     id: student.id,
-    institute_id: DEFAULT_INSTITUTE_ID,
+    institute_id: requireInstituteId(student.instituteId, "student"),
     name: student.fullName,
     full_name: student.fullName,
     email: student.email || null,
@@ -30,6 +34,7 @@ export function studentToRow(student: InstituteStudent): Omit<StudentRow, "creat
 export function rowToStudent(row: StudentRow): InstituteStudent {
   return {
     id: row.id,
+    instituteId: row.institute_id,
     fullName: row.full_name,
     email: row.email ?? "",
     phone: row.phone ?? "",
@@ -48,7 +53,7 @@ export function batchToRow(batch: Batch): Omit<BatchRow, "created_at" | "updated
 } {
   return {
     id: batch.id,
-    institute_id: DEFAULT_INSTITUTE_ID,
+    institute_id: requireInstituteId(batch.instituteId, "batch"),
     name: batch.name,
     course_type: batch.courseType,
     academic_year: batch.academicYear,
@@ -61,6 +66,7 @@ export function batchToRow(batch: Batch): Omit<BatchRow, "created_at" | "updated
 export function rowToBatch(row: BatchRow): Batch {
   return {
     id: row.id,
+    instituteId: row.institute_id,
     name: row.name,
     courseType: row.course_type,
     academicYear: row.academic_year,
@@ -78,7 +84,7 @@ export function scheduleToRow(
 } {
   return {
     id: schedule.id,
-    institute_id: DEFAULT_INSTITUTE_ID,
+    institute_id: requireInstituteId(schedule.instituteId, "schedule"),
     exam_id: schedule.examId,
     start_at: schedule.startAt,
     end_at: schedule.endAt,
@@ -96,6 +102,7 @@ export function rowToSchedule(
 ): ExamSchedule {
   return {
     id: row.id,
+    instituteId: row.institute_id,
     examId: row.exam_id,
     batchIds,
     startAt: row.start_at,

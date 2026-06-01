@@ -29,11 +29,14 @@ export function ClientProviders({ children }: { children: React.ReactNode }) {
     let cancelled = false;
 
     async function init() {
-      getRepositories();
+      try {
+        getRepositories();
 
-      const startup = await runStartupDiagnostics();
-      if (!cancelled) {
+        const startup = await runStartupDiagnostics();
+        if (cancelled) return;
         logStartupSummary(startup);
+      } finally {
+        if (cancelled) return;
         hydrateAuth();
         hydrateParentAccess();
         await hydrateWorkspaceAuth();

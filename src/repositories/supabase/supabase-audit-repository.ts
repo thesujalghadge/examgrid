@@ -1,5 +1,5 @@
-import { DEFAULT_INSTITUTE_ID } from "@/config/institute";
 import { logRepositoryFailure } from "@/lib/logging/runtime-logger";
+import { getClientWorkspaceSession } from "@/lib/workspace-session";
 import { assertAuditLogEntry } from "@/lib/validation/audit-schema";
 import type { AuditRepository } from "@/repositories/interfaces/audit-repository";
 import {
@@ -23,10 +23,10 @@ interface AuditRow {
   outcome: AuditLogEntry["outcome"];
 }
 
-function entryToRow(entry: AuditLogEntry): AuditRow {
+function entryToRow(entry: AuditLogEntry, instituteId: string): AuditRow {
   return {
     event_id: entry.eventId,
-    institute_id: DEFAULT_INSTITUTE_ID,
+    institute_id: instituteId,
     actor_id: entry.actorId,
     actor_role: entry.actorRole,
     action_type: entry.actionType,
@@ -78,13 +78,17 @@ export class SupabaseAuditRepository implements AuditRepository {
   }
 
   async listAsync(query: AuditLogQuery = {}): Promise<AuditLogPage> {
+    const session = getClientWorkspaceSession();
+    if (!session?.instituteId) {
+      return { rows: [], total: 0, page: query.page ?? 1, pageSize: query.pageSize ?? 25 };
+    }
     const client = requireSupabaseClient("audit_logs.list");
     const page = Math.max(1, query.page ?? 1);
     const pageSize = Math.min(100, Math.max(10, query.pageSize ?? 25));
     let req = client
       .from("audit_logs")
       .select("*", { count: "exact" })
-      .eq("institute_id", DEFAULT_INSTITUTE_ID)
+      .eq("institute_id", session.instituteId)
       .order("timestamp_utc", { ascending: false });
 
     if (query.actorId) req = req.ilike("actor_id", `%${query.actorId}%`);
@@ -117,8 +121,10 @@ export class SupabaseAuditRepository implements AuditRepository {
   }
 
   private async persistOne(entry: AuditLogEntry): Promise<void> {
+    const session = getClientWorkspaceSession();
+    if (!session?.instituteId) return;
     const client = requireSupabaseClient("audit_logs.insert");
-    const { error } = await client.from("audit_logs").insert(entryToRow(entry));
+    const { error } = await client.from("audit_logs").insert(entryToRow(entry, session.instituteId));
     throwIfSupabaseError(error, "audit_logs", "insert");
   }
 }

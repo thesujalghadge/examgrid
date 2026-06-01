@@ -10,17 +10,22 @@ export class SupabaseAttemptRepository implements AttemptRepository {
   private readonly table = "attempts";
 
   load(_examId: string, _candidateRoll: string): PersistedExamAttempt | null {
+    void _examId;
+    void _candidateRoll;
     getSupabaseOrWarn(`AttemptRepository.load (${this.table})`);
     logSupabaseNotImplemented("AttemptRepository.load");
     return null;
   }
 
   save(_attempt: PersistedExamAttempt): void {
+    void _attempt;
     getSupabaseOrWarn(`AttemptRepository.save (${this.table})`);
     logSupabaseNotImplemented("AttemptRepository.save");
   }
 
   clear(_examId: string, _candidateRoll: string): void {
+    void _examId;
+    void _candidateRoll;
     getSupabaseOrWarn(`AttemptRepository.clear (${this.table})`);
     logSupabaseNotImplemented("AttemptRepository.clear");
   }

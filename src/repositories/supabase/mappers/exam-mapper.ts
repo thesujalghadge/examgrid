@@ -1,4 +1,4 @@
-import { DEFAULT_INSTITUTE_ID, isUuid } from "@/config/institute";
+import { isUuid } from "@/config/institute";
 import type {
   ExamDefinition,
   ExamQuestion,
@@ -11,7 +11,7 @@ import type {
 } from "@/repositories/supabase/types";
 import { parseExamDefinition } from "@/lib/validation/exam-schema";
 
-export function examDefinitionToRows(exam: ExamDefinition, examUuid: string): {
+export function examDefinitionToRows(exam: ExamDefinition, examUuid: string, instituteId: string): {
   examRow: Omit<ExamRow, "created_at" | "updated_at">;
   sections: Omit<ExamSectionRow, "created_at" | "updated_at">[];
   questions: Omit<ExamQuestionRow, "created_at" | "updated_at">[];
@@ -21,7 +21,7 @@ export function examDefinitionToRows(exam: ExamDefinition, examUuid: string): {
   const examRow = {
     id: examUuid,
     legacy_id: legacyId,
-    institute_id: DEFAULT_INSTITUTE_ID,
+    institute_id: instituteId,
     title: exam.title,
     subtitle: exam.subtitle,
     exam_type: exam.examType,
@@ -36,7 +36,7 @@ export function examDefinitionToRows(exam: ExamDefinition, examUuid: string): {
     exam.sections.map((sec, idx) => ({
       id: sec.id,
       exam_id: examUuid,
-      institute_id: DEFAULT_INSTITUTE_ID,
+      institute_id: instituteId,
       name: sec.name,
       sort_order: idx,
     }));
@@ -46,7 +46,7 @@ export function examDefinitionToRows(exam: ExamDefinition, examUuid: string): {
     sec.questionIds.forEach((qid, idx) => {
       const q = exam.questions[qid];
       if (!q) return;
-      questions.push(examQuestionToRow(q, examUuid, sec.id, idx));
+      questions.push(examQuestionToRow(q, examUuid, sec.id, idx, instituteId));
     });
   }
 
@@ -58,12 +58,13 @@ function examQuestionToRow(
   examUuid: string,
   sectionId: string,
   sortOrder: number,
+  instituteId: string,
 ): Omit<ExamQuestionRow, "created_at" | "updated_at"> {
   return {
     id: q.id,
     exam_id: examUuid,
     section_id: sectionId,
-    institute_id: DEFAULT_INSTITUTE_ID,
+    institute_id: instituteId,
     question_number: q.number,
     question_type: q.type,
     question_text: q.text,

@@ -5,12 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { InstituteApiKeySection } from "@/components/platform/institute-api-key-section";
 import {
   createPlatformInstitute,
-  deletePlatformInstitute,
+  deletePlatformInstituteRemote,
   listPlatformInstitutes,
-  savePlatformInstitute,
-  setPlatformInstituteStatus,
+  savePlatformInstituteRemote,
+  setPlatformInstituteStatusRemote,
 } from "@/lib/platform-institute-registry";
 import { getRepositories } from "@/lib/repositories/provider";
 import { getScheduleStatus } from "@/services/institute-ops-service";
@@ -51,12 +52,12 @@ export function PlatformInstitutesManager() {
     setEditingId(null);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name.trim() || !adminEmail.trim()) return;
     if (editingId) {
       const existing = rows.find((r) => r.id === editingId);
       if (existing) {
-        savePlatformInstitute({
+        await savePlatformInstituteRemote({
           ...existing,
           name: name.trim(),
           city: city.trim(),
@@ -64,7 +65,7 @@ export function PlatformInstitutesManager() {
         });
       }
     } else {
-      createPlatformInstitute({
+      await createPlatformInstitute({
         name: name.trim(),
         city: city.trim(),
         adminEmail: adminEmail.trim(),
@@ -105,6 +106,7 @@ export function PlatformInstitutesManager() {
               </Button>
             ) : null}
           </div>
+          {editingId ? <InstituteApiKeySection instituteId={editingId} /> : null}
         </CardContent>
       </Card>
 
@@ -173,11 +175,10 @@ export function PlatformInstitutesManager() {
                               size="sm"
                               variant="outline"
                               onClick={() => {
-                                setPlatformInstituteStatus(
+                                void setPlatformInstituteStatusRemote(
                                   row.id,
                                   row.status === "active" ? "inactive" : "active",
-                                );
-                                refresh();
+                                ).then(refresh);
                               }}
                             >
                               {row.status === "active" ? "Deactivate" : "Activate"}
@@ -188,8 +189,7 @@ export function PlatformInstitutesManager() {
                               className="text-red-700"
                               onClick={() => {
                                 if (confirm(`Remove ${row.name}?`)) {
-                                  deletePlatformInstitute(row.id);
-                                  refresh();
+                                  void deletePlatformInstituteRemote(row.id).then(refresh);
                                 }
                               }}
                             >

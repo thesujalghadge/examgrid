@@ -24,8 +24,8 @@ export default function InstituteOverviewPage() {
     }
 
     const repos = getRepositories();
-    const tests = repos.cbtTests.list();
-    const schedules = repos.schedules.list();
+    const tests = scopeByInstituteId(repos.cbtTests.list(), instituteId);
+    const schedules = scopeByInstituteId(repos.schedules.list(), instituteId);
     const students = scopeByInstituteId(repos.students.list(), instituteId);
     const nameByRoll = new Map(students.map((s) => [s.rollNumber, s.fullName]));
 

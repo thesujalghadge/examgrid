@@ -27,7 +27,10 @@ export default function StudentLoginPage() {
   const [instituteId, setInstituteId] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const institutes = useMemo(() => listPlatformInstitutes(), []);
+  const institutes = useMemo(
+    () => listPlatformInstitutes().filter((institute) => institute.status === "active"),
+    [],
+  );
 
   useEffect(() => {
     if (institutes.length > 0 && !instituteId) setInstituteId(institutes[0].id);
@@ -54,9 +57,9 @@ export default function StudentLoginPage() {
     }
 
     const matched = getRepositories().students.getByRollNumber(roll);
-    if (!matched || matched.instituteId !== instituteId) {
+    if (!matched || matched.instituteId !== instituteId || !matched.active) {
       await workspaceLogout();
-      setError("No student found for this roll in the selected institute. Add the student in institute workspace.");
+      setError("No active student found for this roll in the selected institute.");
       return;
     }
 
@@ -88,6 +91,7 @@ export default function StudentLoginPage() {
                 className="w-full rounded-md border border-[#ece6da] px-3 py-2 text-sm"
                 value={instituteId}
                 onChange={(e) => setInstituteId(e.target.value)}
+                disabled={institutes.length === 0}
               >
                 {institutes.map((i) => (
                   <option key={i.id} value={i.id}>
@@ -95,6 +99,11 @@ export default function StudentLoginPage() {
                   </option>
                 ))}
               </select>
+              {institutes.length === 0 ? (
+                <p className="text-sm text-amber-800">
+                  No active institute is available for student login.
+                </p>
+              ) : null}
             </div>
             <div className="space-y-2">
               <Label htmlFor="roll">Roll number</Label>
@@ -105,7 +114,7 @@ export default function StudentLoginPage() {
               <Input id="app" value={applicationNumber} onChange={(e) => setApplicationNumber(e.target.value)} />
             </div>
             {error ? <p className="text-sm text-red-700">{error}</p> : null}
-            <Button type="submit" className="w-full bg-[#14213d]">
+            <Button type="submit" className="w-full bg-[#14213d]" disabled={institutes.length === 0}>
               Enter tests
             </Button>
           </form>

@@ -28,6 +28,7 @@ export default function InstituteBatchesPage() {
   );
   const [form, setForm] = useState(blank);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const activeCount = useMemo(() => batches.filter((batch) => batch.active).length, [batches]);
 
@@ -38,26 +39,56 @@ export default function InstituteBatchesPage() {
 
   const save = async (event: React.FormEvent) => {
     event.preventDefault();
-    const existing = editingId ? repos.batches.getById(editingId) : undefined;
-    repos.batches.save(withInstituteId({
-      ...(existing ?? createBatchInput(form)),
-      name: form.name,
-      courseType: form.courseType,
-      academicYear: form.academicYear,
-      active: form.active,
-      updatedAt: Date.now(),
-    }, tenantId ?? "default-institute"));
-    recordAuditEvent({
-      actorRole: "admin",
-      actionType: existing ? "batch_edit" : "batch_create",
-      resourceType: "batch",
-      resourceId: existing?.id ?? form.name,
-      metadata: { name: form.name, courseType: form.courseType },
-    });
-    await awaitRepositoryPersist();
-    setForm(blank);
-    setEditingId(null);
-    refresh();
+    if (saving) return;
+    if (!tenantId) {
+      alert("Session not loaded. Please refresh the page and try again.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const currentTenantId = tenantId;
+      const duplicate = batches.find(
+        (batch) =>
+          batch.id !== editingId &&
+          batch.instituteId === currentTenantId &&
+          batch.name.trim().toLowerCase() === form.name.trim().toLowerCase() &&
+          batch.academicYear.trim() === form.academicYear.trim(),
+      );
+      if (duplicate) {
+        alert("A batch with this name and academic year already exists. Update that batch instead.");
+        return;
+      }
+
+      const existing = editingId ? repos.batches.getById(editingId) : undefined;
+      repos.batches.save(withInstituteId({
+        ...(existing ?? createBatchInput(form)),
+        name: form.name,
+        courseType: form.courseType,
+        academicYear: form.academicYear,
+        active: form.active,
+        updatedAt: Date.now(),
+      }, currentTenantId));
+      recordAuditEvent({
+        actorRole: "admin",
+        actionType: existing ? "batch_edit" : "batch_create",
+        resourceType: "batch",
+        resourceId: existing?.id ?? form.name,
+        metadata: { name: form.name, courseType: form.courseType },
+      });
+      await awaitRepositoryPersist();
+      setForm(blank);
+      setEditingId(null);
+      refresh();
+    } catch (error) {
+      const code = typeof error === "object" && error && "code" in error ? error.code : null;
+      if (code === "23505") {
+        alert("A batch with this name and academic year already exists.");
+      } else {
+        alert(error instanceof Error ? error.message : "Failed to save batch.");
+      }
+    } finally {
+      setSaving(false);
+    }
   };
 
   const edit = (batch: Batch) => {
@@ -100,6 +131,10 @@ export default function InstituteBatchesPage() {
     refresh();
   };
 
+  if (!tenantId) {
+    return <div className="p-8 text-sm text-gray-500">Loading session...</div>;
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -129,7 +164,9 @@ export default function InstituteBatchesPage() {
                 <input type="checkbox" checked={form.active} onChange={(e) => setForm({ ...form, active: e.target.checked })} />
                 Active
               </label>
-              <Button type="submit">{editingId ? "Update" : "Create"}</Button>
+              <Button type="submit" disabled={saving}>
+                {saving ? "Saving..." : editingId ? "Update" : "Create"}
+              </Button>
             </div>
           </form>
         </CardContent>

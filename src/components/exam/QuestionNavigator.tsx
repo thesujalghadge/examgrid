@@ -1,5 +1,6 @@
 "use client";
 
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQuestionStore } from "@/stores/question-store";
 
@@ -15,13 +16,14 @@ interface ReviewNavigatorProps {
 
 interface QuestionNavigatorProps {
   onSubmitClick: () => void;
+  isSubmitting?: boolean;
   review?: ReviewNavigatorProps;
   preview?: {
     onEdit: () => void;
   };
 }
 
-export function QuestionNavigator({ onSubmitClick, review, preview }: QuestionNavigatorProps) {
+export function QuestionNavigator({ onSubmitClick, isSubmitting = false, review, preview }: QuestionNavigatorProps) {
   const exam = useQuestionStore((s) => s.exam);
   const currentQuestionId = useQuestionStore((s) => s.currentQuestionId);
   const clearResponse = useQuestionStore((s) => s.clearResponse);
@@ -135,9 +137,17 @@ export function QuestionNavigator({ onSubmitClick, review, preview }: QuestionNa
                   type="button"
                   size="sm"
                   className="h-9 bg-[#c62828] px-5 font-bold text-white shadow-sm hover:bg-[#a82020]"
+                  disabled={isSubmitting}
                   onClick={onSubmitClick}
                 >
-                  Submit
+                  {isSubmitting ? (
+                    <span className="inline-flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Submitting...
+                    </span>
+                  ) : (
+                    "Submit"
+                  )}
                 </Button>
               )}
             </>

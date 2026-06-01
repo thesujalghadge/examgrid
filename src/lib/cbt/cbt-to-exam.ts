@@ -11,6 +11,7 @@ function bankToExamQuestion(
   marks: number,
   negativeMarks: number,
 ): ExamQuestion {
+  const hasImage = bank.metadata?.hasImage === true;
   if (bank.questionType === "NUMERICAL") {
     return {
       id: examQuestionId,
@@ -19,6 +20,7 @@ function bankToExamQuestion(
       type: "NUMERICAL",
       text: bank.questionText,
       options: [],
+      hasImage,
       correctNumericalAnswer: bank.correctAnswer,
       marks,
       negativeMarks,
@@ -42,6 +44,7 @@ function bankToExamQuestion(
     type: "MCQ_SINGLE",
     text: bank.questionText,
     options,
+    hasImage,
     correctOptionId: correctOption?.id,
     marks,
     negativeMarks,

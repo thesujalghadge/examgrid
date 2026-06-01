@@ -1,5 +1,6 @@
-import { DEFAULT_INSTITUTE_ID, isUuid } from "@/config/institute";
+import { isUuid } from "@/config/institute";
 import { logRepositoryFailure } from "@/lib/logging/runtime-logger";
+import { getClientWorkspaceSession } from "@/lib/workspace-session";
 import type { ExamRepository } from "@/repositories/interfaces/exam-repository";
 import {
   examDefinitionToRows,
@@ -73,12 +74,20 @@ export class SupabaseExamRepository implements ExamRepository {
   }
 
   private async doRefresh(): Promise<void> {
+    const session = getClientWorkspaceSession();
+    if (!session?.instituteId) {
+      this.cache = [];
+      this.idMap.clear();
+      this.hydrated = true;
+      return;
+    }
+
     try {
       const client = requireSupabaseClient("exams.list");
       const { data: exams, error: examErr } = await client
         .from("exams")
         .select("*")
-        .eq("institute_id", DEFAULT_INSTITUTE_ID)
+        .eq("institute_id", session.instituteId)
         .order("scheduled_at", { ascending: false });
 
       throwIfSupabaseError(examErr, "exams", "list");
@@ -129,7 +138,7 @@ export class SupabaseExamRepository implements ExamRepository {
     }
   }
 
-  private async resolveExamUuid(publicId: string): Promise<string> {
+  private async resolveExamUuid(publicId: string, instituteId: string): Promise<string> {
     const cached = this.idMap.get(publicId);
     if (cached) return cached;
 
@@ -150,7 +159,7 @@ export class SupabaseExamRepository implements ExamRepository {
     const { data } = await client
       .from("exams")
       .select("id, legacy_id")
-      .eq("institute_id", DEFAULT_INSTITUTE_ID)
+      .eq("institute_id", instituteId)
       .eq("legacy_id", publicId)
       .maybeSingle();
 
@@ -166,11 +175,14 @@ export class SupabaseExamRepository implements ExamRepository {
 
   private async persistExam(exam: ExamDefinition): Promise<void> {
     try {
+      const session = getClientWorkspaceSession();
+      if (!session?.instituteId) return;
       const client = requireSupabaseClient("exams.save");
-      const examUuid = await this.resolveExamUuid(exam.id);
+      const examUuid = await this.resolveExamUuid(exam.id, session.instituteId);
       const { examRow, sections, questions } = examDefinitionToRows(
         exam,
         examUuid,
+        session.instituteId,
       );
 
       const { error: examError } = await client.from("exams").upsert(
@@ -224,8 +236,10 @@ export class SupabaseExamRepository implements ExamRepository {
 
   private async removeExam(publicId: string): Promise<void> {
     try {
+      const session = getClientWorkspaceSession();
+      if (!session?.instituteId) return;
       const client = requireSupabaseClient("exams.delete");
-      const examUuid = await this.resolveExamUuid(publicId);
+      const examUuid = await this.resolveExamUuid(publicId, session.instituteId);
       const { error } = await client.from("exams").delete().eq("id", examUuid);
       throwIfSupabaseError(error, "exams", "delete");
       this.idMap.delete(publicId);

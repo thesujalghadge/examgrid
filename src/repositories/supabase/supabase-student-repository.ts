@@ -1,6 +1,7 @@
 import type { StudentRepository } from "@/repositories/interfaces/student-repository";
 import { logRepositoryFailure } from "@/lib/logging/runtime-logger";
 import { assertInstituteStudent } from "@/lib/validation/institute-ops-schema";
+import { getClientWorkspaceSession } from "@/lib/workspace-session";
 import {
   rowToStudent,
   studentToRow,
@@ -93,11 +94,19 @@ export class SupabaseStudentRepository implements StudentRepository {
   }
 
   private async doRefresh(): Promise<void> {
+    const session = getClientWorkspaceSession();
+    if (!session?.instituteId) {
+      this.cache = [];
+      this.hydrated = true;
+      return;
+    }
+
     try {
       const client = requireSupabaseClient("students.list");
       const { data, error } = await client
         .from("students")
         .select("*")
+        .eq("institute_id", session.instituteId)
         .order("full_name", { ascending: true });
       throwIfSupabaseError(error, "students", "list");
       this.cache = ((data ?? []) as StudentRow[]).map(rowToStudent);
@@ -111,6 +120,19 @@ export class SupabaseStudentRepository implements StudentRepository {
 
   private async persistOne(student: InstituteStudent): Promise<void> {
     const client = requireSupabaseClient("students.upsert");
+    if (student.batchId) {
+      const { data: batch, error: batchError } = await client
+        .from("batches")
+        .select("id")
+        .eq("id", student.batchId)
+        .eq("institute_id", student.instituteId)
+        .maybeSingle();
+      throwIfSupabaseError(batchError, "students", "batch_lookup");
+      if (!batch) {
+        throw new Error("Selected batch no longer exists. Refresh batches and try again.");
+      }
+    }
+
     const { error } = await client
       .from("students")
       .upsert(studentToRow(student), { onConflict: "id" });

@@ -35,7 +35,7 @@ export const PALETTE_LEGEND: {
     label: "NAT question (orange dot indicator)",
     className: "bg-white border-2 border-gray-400 text-gray-800 relative after:absolute after:-right-0.5 after:-top-0.5 after:h-2 after:w-2 after:rounded-full after:bg-orange-400",
   },
-];
+] as const;
 
 export function getPaletteButtonClass(status: QuestionPaletteStatus): string {
   const item = PALETTE_LEGEND.find((l) => l.status === status);

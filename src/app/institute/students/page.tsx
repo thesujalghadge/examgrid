@@ -1,12 +1,13 @@
 "use client";
 
-import { type ReactNode, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { awaitRepositoryPersist } from "@/lib/repositories/await-persist";
 import { getRepositories } from "@/lib/repositories/provider";
+import { createSupabaseClient } from "@/lib/supabase/client";
 import { scopeByInstituteId, withInstituteId } from "@/lib/tenant-scope";
 import { recordAuditEvent } from "@/services/audit-service";
 import { useWorkspaceAuthStore } from "@/stores/workspace-auth-store";
@@ -37,7 +38,7 @@ export default function InstituteStudentsPage() {
   const [students, setStudents] = useState<InstituteStudent[]>(() =>
     tenantId ? scopeByInstituteId(repos.students.list(), tenantId) : repos.students.list(),
   );
-  const [batches] = useState<Batch[]>(() =>
+  const [batches, setBatches] = useState<Batch[]>(() =>
     tenantId ? scopeByInstituteId(repos.batches.list(), tenantId) : repos.batches.list(),
   );
   const [form, setForm] = useState({
@@ -69,8 +70,56 @@ export default function InstituteStudentsPage() {
       tenantId ? scopeByInstituteId(repos.students.list(), tenantId) : repos.students.list(),
     );
 
+  const refreshBatches = useCallback(async () => {
+    const maybeRemote = repos.batches as typeof repos.batches & {
+      refreshFromRemote?: () => Promise<void>;
+    };
+    await maybeRemote.refreshFromRemote?.();
+    const fresh = tenantId
+      ? scopeByInstituteId(repos.batches.list(), tenantId)
+      : repos.batches.list();
+    setBatches(fresh);
+    setForm((current) => {
+      if (current.batchId && fresh.some((batch) => batch.id === current.batchId)) {
+        return current;
+      }
+      return { ...current, batchId: fresh.find((batch) => batch.active)?.id ?? "" };
+    });
+  }, [repos, tenantId]);
+
+  useEffect(() => {
+    void refreshBatches();
+  }, [refreshBatches]);
+
+  const verifyBatchExists = async (batchId: string): Promise<boolean> => {
+    if (!tenantId) return false;
+    const currentTenantId = tenantId;
+    const client = createSupabaseClient();
+    if (client) {
+      const { data, error } = await client
+        .from("batches")
+        .select("id")
+        .eq("id", batchId)
+        .eq("institute_id", currentTenantId)
+        .maybeSingle();
+      if (!error) return Boolean(data);
+    }
+    return repos.batches
+      .list()
+      .some((batch) => batch.id === batchId && batch.instituteId === currentTenantId);
+  };
+
   const save = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (!tenantId) {
+      alert("Session not loaded. Please refresh and try again.");
+      return;
+    }
+    await refreshBatches();
+    if (!form.batchId || !(await verifyBatchExists(form.batchId))) {
+      alert("Selected batch no longer exists. Please choose a valid batch and try again.");
+      return;
+    }
     const existing = editingId ? repos.students.getById(editingId) : undefined;
     repos.students.save(withInstituteId({
       ...(existing ?? createStudentInput(form)),
@@ -82,7 +131,7 @@ export default function InstituteStudentsPage() {
       batchId: form.batchId,
       active: form.active,
       updatedAt: Date.now(),
-    }, tenantId ?? "default-institute"));
+    }, tenantId));
     recordAuditEvent({
       actorRole: "admin",
       actionType: existing ? "student_edit" : "student_create",

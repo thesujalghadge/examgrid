@@ -1,4 +1,4 @@
-import { DEFAULT_INSTITUTE_ID, isUuid } from "@/config/institute";
+import { isUuid } from "@/config/institute";
 import type { BankQuestion } from "@/types/question-bank";
 import type { QuestionRow } from "@/repositories/supabase/types";
 import { assertBankQuestionForWrite } from "@/lib/validation/bank-question-stored-schema";
@@ -7,6 +7,7 @@ export function bankQuestionToRow(
   question: BankQuestion,
   resolvedId: string,
   legacyId: string | null,
+  instituteId: string,
 ): Omit<QuestionRow, "created_at" | "updated_at"> & {
   created_at?: string;
   updated_at?: string;
@@ -15,7 +16,7 @@ export function bankQuestionToRow(
   return {
     id: resolvedId,
     legacy_id: legacyId,
-    institute_id: DEFAULT_INSTITUTE_ID,
+    institute_id: instituteId,
     subject: question.subject,
     chapter: question.chapter,
     topic: question.topic,

@@ -18,14 +18,19 @@ interface SubmitModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
+  isSubmitting?: boolean;
 }
 
 export function SubmitModal({
   open,
   onOpenChange,
   onConfirm,
+  isSubmitting = false,
 }: SubmitModalProps) {
   const counts = useQuestionStore(selectPaletteCounts);
+  const exam = useQuestionStore((s) => s.exam);
+  const answered = counts.answered + counts.answeredAndMarked;
+  const totalQuestions = exam?.totalQuestions ?? 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -33,8 +38,8 @@ export function SubmitModal({
         <DialogHeader>
           <DialogTitle>Submit Examination</DialogTitle>
           <DialogDescription>
-            Are you sure you want to submit? You will not be able to change your
-            answers after submission.
+            Answered {answered} of {totalQuestions} questions. You will not be
+            able to change your answers after submission.
           </DialogDescription>
         </DialogHeader>
 
@@ -55,12 +60,13 @@ export function SubmitModal({
           <Button
             type="button"
             variant="outline"
+            disabled={isSubmitting}
             onClick={() => onOpenChange(false)}
           >
             Cancel
           </Button>
-          <Button type="button" variant="destructive" onClick={onConfirm}>
-            Yes, Submit
+          <Button type="button" variant="destructive" disabled={isSubmitting} onClick={onConfirm}>
+            {isSubmitting ? "Submitting..." : "Yes, Submit"}
           </Button>
         </DialogFooter>
       </DialogContent>

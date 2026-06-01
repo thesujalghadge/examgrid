@@ -1,76 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
-import { formatInlineMath, stripLeadingQuestionNumber } from "@/lib/cbt/format-math";
+import { stripLeadingQuestionNumber } from "@/lib/cbt/format-math";
 import { cn } from "@/lib/utils";
 import { useQuestionStore } from "@/stores/question-store";
+import { MathRenderer } from "./MathRenderer";
 import { NumericalAnswerInput } from "./NumericalAnswerInput";
-
-declare global {
-  interface Window {
-    renderMathInElement?: (
-      element: HTMLElement,
-      options: {
-        delimiters: { left: string; right: string; display: boolean }[];
-      },
-    ) => void;
-  }
-}
-
-const KATEX_DELIMITERS = [
-  { left: "$$", right: "$$", display: true },
-  { left: "$", right: "$", display: false },
-  { left: "\\(", right: "\\)", display: false },
-  { left: "\\[", right: "\\]", display: true },
-];
-
-function containsLatexDelimiters(text: string): boolean {
-  return /\\\(|\\\[|\$\$|\$/.test(text);
-}
-
-function ensureKatexLoaded(onReady: () => void) {
-  if (typeof document === "undefined") return;
-  if (!document.getElementById("katex-css")) {
-    const link = document.createElement("link");
-    link.id = "katex-css";
-    link.rel = "stylesheet";
-    link.href = "https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css";
-    document.head.appendChild(link);
-  }
-
-  const renderWhenReady = () => {
-    const renderScript = document.getElementById("katex-auto-render") as HTMLScriptElement | null;
-    if (window.renderMathInElement) {
-      onReady();
-      return;
-    }
-    if (renderScript) {
-      renderScript.addEventListener("load", onReady, { once: true });
-      return;
-    }
-    const script = document.createElement("script");
-    script.id = "katex-auto-render";
-    script.src = "https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js";
-    script.defer = true;
-    script.onload = onReady;
-    document.body.appendChild(script);
-  };
-
-  const katexScript = document.getElementById("katex-js") as HTMLScriptElement | null;
-  if (katexScript) {
-    if (window.renderMathInElement) onReady();
-    else katexScript.addEventListener("load", renderWhenReady, { once: true });
-    renderWhenReady();
-    return;
-  }
-
-  const script = document.createElement("script");
-  script.id = "katex-js";
-  script.src = "https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js";
-  script.defer = true;
-  script.onload = renderWhenReady;
-  document.body.appendChild(script);
-}
 
 interface QuestionCardReviewProps {
   issues?: string[];
@@ -88,12 +22,14 @@ interface QuestionCardProps {
 }
 
 export function QuestionCard({ review }: QuestionCardProps) {
-  const mathRef = useRef<HTMLDivElement>(null);
   const exam = useQuestionStore((s) => s.exam);
   const currentQuestionId = useQuestionStore((s) => s.currentQuestionId);
   const answers = useQuestionStore((s) => s.answers);
   const selectOption = useQuestionStore((s) => s.selectOption);
   const setNumericalAnswer = useQuestionStore((s) => s.setNumericalAnswer);
+  const question = exam && currentQuestionId ? exam.questions[currentQuestionId] : undefined;
+  const isTeacherEdit = Boolean(review);
+  const displayQuestionText = question ? stripLeadingQuestionNumber(question.text) : "";
 
   if (!exam || !currentQuestionId) {
     return (
@@ -103,32 +39,18 @@ export function QuestionCard({ review }: QuestionCardProps) {
     );
   }
 
-  const question = exam.questions[currentQuestionId];
   if (!question) return null;
 
   const section = exam.sections.find((s) => s.id === question.sectionId);
   const selected = answers[currentQuestionId] ?? "";
   const globalIndex = exam.sections.flatMap((s) => s.questionIds).indexOf(currentQuestionId) + 1;
   const isNumerical = question.type === "NUMERICAL";
-  const isTeacherEdit = Boolean(review);
-  const displayQuestionText = useMemo(
-    () => stripLeadingQuestionNumber(question.text),
-    [question.text],
-  );
+  const options = question.options ?? [];
   const isLongQuestion = displayQuestionText.length > 300;
-  const hasLatexQuestion = containsLatexDelimiters(displayQuestionText);
   const reviewCorrectValue = question.correctOptionId
-    ? question.options.find((option) => option.id === question.correctOptionId)?.label ?? ""
+    ? options.find((option) => option.id === question.correctOptionId)?.label ?? ""
     : question.correctNumericalAnswer ?? "";
   const hasIssues = (review?.issues?.length ?? 0) > 0;
-
-  useEffect(() => {
-    if (isTeacherEdit || !hasLatexQuestion || !mathRef.current) return;
-    ensureKatexLoaded(() => {
-      if (!mathRef.current || !window.renderMathInElement) return;
-      window.renderMathInElement(mathRef.current, { delimiters: KATEX_DELIMITERS });
-    });
-  }, [displayQuestionText, hasLatexQuestion, isTeacherEdit]);
 
   return (
     <div className="flex-1 overflow-y-auto bg-white">
@@ -159,7 +81,7 @@ export function QuestionCard({ review }: QuestionCardProps) {
         </p>
       </div>
 
-      <div className="px-4 py-5 md:px-8 md:py-7">
+      <div className="px-3 py-4 md:px-8 md:py-7">
         <div className="mb-7 rounded-md border border-gray-200 bg-white shadow-sm">
           <div className="border-b border-gray-200 bg-[#f8fafc] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-[#1a3c6e]">
             Question
@@ -177,23 +99,20 @@ export function QuestionCard({ review }: QuestionCardProps) {
             ) : (
               <div
                 className={cn(
-                  "whitespace-pre-wrap",
+                  "whitespace-pre-wrap break-words",
                   isLongQuestion &&
                     "max-h-[40vh] overflow-y-auto rounded border border-gray-100 bg-gray-50 p-3",
                 )}
               >
-                {hasLatexQuestion ? (
-                  <div ref={mathRef}>{displayQuestionText}</div>
-                ) : (
-                  <span
-                    dangerouslySetInnerHTML={{
-                      __html: formatInlineMath(displayQuestionText),
-                    }}
-                  />
-                )}
+                <MathRenderer text={displayQuestionText} className="text-base leading-relaxed" />
               </div>
             )}
           </div>
+          {question.hasImage ? (
+            <div className="mx-4 mb-4 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-800">
+              Diagram detected. Refer to the original PDF for the figure.
+            </div>
+          ) : null}
         </div>
 
         {isNumerical ? (
@@ -226,7 +145,7 @@ export function QuestionCard({ review }: QuestionCardProps) {
               Options
             </legend>
             <ul className="space-y-3">
-              {question.options.map((opt) => {
+              {options.map((opt) => {
                 const isSelected = isTeacherEdit
                   ? reviewCorrectValue === opt.label
                   : selected === opt.id;
@@ -282,11 +201,7 @@ export function QuestionCard({ review }: QuestionCardProps) {
                             onChange={(event) => review?.onOptionTextChange?.(opt.label, event.target.value)}
                           />
                         ) : (
-                          <span
-                            dangerouslySetInnerHTML={{
-                              __html: formatInlineMath(displayOptionText),
-                            }}
-                          />
+                          <MathRenderer text={displayOptionText} className="text-sm leading-6" />
                         )}
                       </span>
                     </label>
@@ -294,6 +209,11 @@ export function QuestionCard({ review }: QuestionCardProps) {
                 );
               })}
             </ul>
+            {options.length === 0 ? (
+              <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
+                No options were detected for this MCQ. Please review the source paper.
+              </p>
+            ) : null}
             {isTeacherEdit && (
               <div className="mt-5 border-t border-gray-200 pt-4">
                 <label className="flex items-center gap-3 text-sm font-semibold text-gray-700">
@@ -304,7 +224,7 @@ export function QuestionCard({ review }: QuestionCardProps) {
                     onChange={(e) => review?.onCorrectAnswerChange?.(e.target.value)}
                   >
                     <option value="">Select option...</option>
-                    {question.options.map((opt) => (
+                    {options.map((opt) => (
                       <option key={opt.id} value={opt.label}>
                         Option {opt.label}
                       </option>

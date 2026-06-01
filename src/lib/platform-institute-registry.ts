@@ -1,4 +1,5 @@
 import { readStorageJson, writeStorageJson } from "@/lib/storage/safe-json";
+import { createSupabaseClient } from "@/lib/supabase/client";
 import { STORAGE_KEYS } from "@/repositories/storage-keys";
 import type { PlatformInstitute } from "@/types/platform-institute";
 
@@ -47,20 +48,41 @@ export function savePlatformInstitute(
   return row;
 }
 
-export function createPlatformInstitute(input: {
+async function persistPlatformInstituteRemote(row: PlatformInstitute): Promise<void> {
+  const client = createSupabaseClient();
+  if (!client) return;
+  const { error } = await client.from("institutes").upsert(
+    {
+      id: row.id,
+      name: row.name,
+      slug: slugify(row.name) || row.id,
+      contact_email: row.adminEmail || null,
+      is_active: row.status === "active",
+      updated_at: new Date(row.updatedAt).toISOString(),
+    },
+    { onConflict: "id" },
+  );
+  if (error) {
+    console.warn("[ExamGrid] Platform institute remote sync failed", error.message);
+  }
+}
+
+export async function savePlatformInstituteRemote(
+  input: Parameters<typeof savePlatformInstitute>[0],
+): Promise<PlatformInstitute> {
+  const row = savePlatformInstitute(input);
+  await persistPlatformInstituteRemote(row);
+  return row;
+}
+
+export async function createPlatformInstitute(input: {
   name: string;
   city: string;
   adminEmail: string;
   plan?: string;
-}): PlatformInstitute {
-  const baseId = slugify(input.name) || "institute";
-  let id = baseId;
-  let n = 1;
-  while (getPlatformInstitute(id)) {
-    id = `${baseId}-${n}`;
-    n += 1;
-  }
-  return savePlatformInstitute({
+}): Promise<PlatformInstitute> {
+  const id = crypto.randomUUID();
+  return savePlatformInstituteRemote({
     id,
     name: input.name.trim(),
     city: input.city.trim(),
@@ -79,7 +101,26 @@ export function setPlatformInstituteStatus(
   return savePlatformInstitute({ ...existing, status });
 }
 
+export async function setPlatformInstituteStatusRemote(
+  id: string,
+  status: PlatformInstitute["status"],
+): Promise<PlatformInstitute | null> {
+  const existing = getPlatformInstitute(id);
+  if (!existing) return null;
+  return savePlatformInstituteRemote({ ...existing, status });
+}
+
 export function deletePlatformInstitute(id: string): void {
   const all = listPlatformInstitutes().filter((i) => i.id !== id);
   writeStorageJson("local", STORAGE_KEYS.platformInstitutes, all);
+}
+
+export async function deletePlatformInstituteRemote(id: string): Promise<void> {
+  deletePlatformInstitute(id);
+  const client = createSupabaseClient();
+  if (!client) return;
+  const { error } = await client.from("institutes").delete().eq("id", id);
+  if (error) {
+    console.warn("[ExamGrid] Platform institute remote delete failed", error.message);
+  }
 }
