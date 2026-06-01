@@ -174,6 +174,7 @@ const parsedQuestionSchema = z.object({
   options: z.array(z.string()).nullable().optional(),
   answer: z.union([z.string(), z.number()]).transform(String).nullable().optional(),
   explanation: z.string().nullable().optional(),
+  hasImage: z.boolean().catch(false),
   confidence: z.number().nullable().optional(),
 });
 
@@ -225,9 +226,10 @@ STRUCTURE:
       "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
       "answer": "1",
       "explanation": "Explanation if present, else null",
+      "hasImage": true,
       "confidence": 0.95
     }
   ]
 }
 
-Include every single question. Do not skip any. Return ONLY the JSON object.`;
+Include every single question. Do not skip any. If a question contains a diagram, circuit, graph, or image that cannot be represented in text, set "hasImage": true and add "[Diagram: <describe it briefly>]" to the stem. Return ONLY the JSON object.`;

@@ -55,6 +55,7 @@ interface ParsedGeminiQuestion {
   options?: string[] | null;
   answer?: string | null;
   explanation?: string | null;
+  hasImage?: boolean;
   confidence?: number | null;
 }
 
@@ -1281,7 +1282,7 @@ function geminiPaperToProcessedPackage(
       detectionSource: "gemini_vision",
       questionText: q.stem,
       hasEquation: q.stem.includes("$"),
-      hasImage: false,
+      hasImage: q.hasImage ?? false,
       correctAnswer,
       solution: undefined,
       marks: 4,

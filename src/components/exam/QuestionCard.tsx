@@ -178,15 +178,15 @@ export function QuestionCard({ review }: QuestionCardProps) {
                           className="mt-0.5 h-4 w-4 shrink-0 accent-[#1a3c6e]"
                         />
                       )}
-                      <span
+                      <div
                         className={cn(
-                          "flex-1 whitespace-pre-wrap break-words text-sm leading-6",
+                          "flex flex-1 items-center gap-3 whitespace-pre-wrap break-words text-sm leading-6",
                           isSelected && !isTeacherEdit ? "text-white" : "text-gray-950",
                         )}
                       >
                         <span
                           className={cn(
-                            "mr-3 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-sm font-bold",
+                            "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-sm font-bold",
                             isSelected && !isTeacherEdit
                               ? "border-white bg-white text-[#1a3c6e]"
                               : "border-[#1a3c6e] bg-white text-[#1a3c6e]",
@@ -194,16 +194,18 @@ export function QuestionCard({ review }: QuestionCardProps) {
                         >
                           {opt.label}
                         </span>
-                        {isTeacherEdit ? (
-                          <input
-                            className="w-[calc(100%-2.5rem)] rounded-md border border-[#d7dde7] px-2 py-1 text-sm"
-                            value={opt.text}
-                            onChange={(event) => review?.onOptionTextChange?.(opt.label, event.target.value)}
-                          />
-                        ) : (
-                          <MathRenderer text={displayOptionText} className="text-sm leading-6" />
-                        )}
-                      </span>
+                        <div className="flex-1">
+                          {isTeacherEdit ? (
+                            <input
+                              className="w-full rounded-md border border-[#d7dde7] px-2 py-1 text-sm"
+                              value={opt.text}
+                              onChange={(event) => review?.onOptionTextChange?.(opt.label, event.target.value)}
+                            />
+                          ) : (
+                            <MathRenderer text={displayOptionText} className="text-sm leading-6" />
+                          )}
+                        </div>
+                      </div>
                     </label>
                   </li>
                 );
