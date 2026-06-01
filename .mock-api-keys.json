@@ -2,5 +2,13 @@
   "c377a82b-29c1-451a-ae17-b6adae33adb5": {
     "gemini_api_key_encrypted": "gHMRy14KJGIxwZRzYZzI04AhMsESi9WSyI0sgpSGBaqJYui7JbmcY2eQbF7pZrvH8GN8db7y1g==",
     "gemini_api_key_iv": "Di1q5tvjiNQjhiMr"
+  },
+  "cambridge-acamedy": {
+    "gemini_api_key_encrypted": "ntVP/bY4d+60w9iy3BaWa9Q3xkr4jXeiJSeVuANS6wW3B2lf/KQJz6EoLSDkIgkVZKUJKVrPYQ==",
+    "gemini_api_key_iv": "EKK8hj3M47iQp7em"
+  },
+  "4e515a8a-60b7-4955-8526-44a45fd1f339": {
+    "gemini_api_key_encrypted": "sjTS+adzqUcMeadG0a/HG0vGro0lDrFkYn3RWYxDZv0yoKs34h7CcYCYEDoEUBSrLR3jleWF4Q==",
+    "gemini_api_key_iv": "DjWXa8OhMBSuxyw/"
   }
 }

@@ -55,7 +55,7 @@ async function persistPlatformInstituteRemote(row: PlatformInstitute): Promise<v
     {
       id: row.id,
       name: row.name,
-      slug: slugify(row.name) || row.id,
+      slug: `${slugify(row.name).slice(0, 40)}-${row.id.split('-')[0]}`,
       contact_email: row.adminEmail || null,
       is_active: row.status === "active",
       updated_at: new Date(row.updatedAt).toISOString(),
@@ -64,6 +64,7 @@ async function persistPlatformInstituteRemote(row: PlatformInstitute): Promise<v
   );
   if (error) {
     console.warn("[ExamGrid] Platform institute remote sync failed", error.message);
+    throw new Error(`Failed to sync institute to remote database: ${error.message}`);
   }
 }
 
@@ -71,7 +72,14 @@ export async function savePlatformInstituteRemote(
   input: Parameters<typeof savePlatformInstitute>[0],
 ): Promise<PlatformInstitute> {
   const row = savePlatformInstitute(input);
-  await persistPlatformInstituteRemote(row);
+  try {
+    await persistPlatformInstituteRemote(row);
+  } catch (err) {
+    // If remote sync fails, remove from local storage to prevent orphaned local data
+    const all = listPlatformInstitutes().filter((i) => i.id !== row.id);
+    writeStorageJson("local", STORAGE_KEYS.platformInstitutes, all);
+    throw err;
+  }
   return row;
 }
 

@@ -54,25 +54,30 @@ export function PlatformInstitutesManager() {
 
   const handleSave = async () => {
     if (!name.trim() || !adminEmail.trim()) return;
-    if (editingId) {
-      const existing = rows.find((r) => r.id === editingId);
-      if (existing) {
-        await savePlatformInstituteRemote({
-          ...existing,
+    try {
+      if (editingId) {
+        const existing = rows.find((r) => r.id === editingId);
+        if (existing) {
+          await savePlatformInstituteRemote({
+            ...existing,
+            name: name.trim(),
+            city: city.trim(),
+            adminEmail: adminEmail.trim(),
+          });
+        }
+      } else {
+        await createPlatformInstitute({
           name: name.trim(),
           city: city.trim(),
           adminEmail: adminEmail.trim(),
         });
       }
-    } else {
-      await createPlatformInstitute({
-        name: name.trim(),
-        city: city.trim(),
-        adminEmail: adminEmail.trim(),
-      });
+      resetForm();
+      refresh();
+    } catch (error: unknown) {
+      const err = error as Error;
+      alert(`Failed to save institute: ${err.message}`);
     }
-    resetForm();
-    refresh();
   };
 
   return (

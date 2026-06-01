@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useMemo, useState } from "react";
+import { type ReactNode, useMemo, useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -32,10 +32,19 @@ export default function InstituteBatchesPage() {
 
   const activeCount = useMemo(() => batches.filter((batch) => batch.active).length, [batches]);
 
-  const refresh = () =>
+  const refresh = async () => {
+    const maybeRemote = repos.batches as typeof repos.batches & {
+      refreshFromRemote?: () => Promise<void>;
+    };
+    await maybeRemote.refreshFromRemote?.();
     setBatches(
       tenantId ? scopeByInstituteId(repos.batches.list(), tenantId) : repos.batches.list(),
     );
+  };
+
+  useEffect(() => {
+    void refresh();
+  }, [repos, tenantId]);
 
   const save = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -78,7 +87,7 @@ export default function InstituteBatchesPage() {
       await awaitRepositoryPersist();
       setForm(blank);
       setEditingId(null);
-      refresh();
+      void refresh();
     } catch (error) {
       const code = typeof error === "object" && error && "code" in error ? error.code : null;
       if (code === "23505") {
@@ -128,7 +137,7 @@ export default function InstituteBatchesPage() {
       resourceId: id,
     });
     await awaitRepositoryPersist();
-    refresh();
+    void refresh();
   };
 
   if (!tenantId) {
