@@ -38,7 +38,7 @@ export async function setInstituteGeminiKey(instituteId: string, encrypted: stri
   if (!supabase) {
     // Fallback to local mock storage
     try {
-      let keys: any = {};
+      let keys: Record<string, { gemini_api_key_encrypted: string; gemini_api_key_iv: string }> = {};
       if (fs.existsSync(MOCK_KEYS_FILE)) {
         keys = JSON.parse(fs.readFileSync(MOCK_KEYS_FILE, "utf-8"));
       }

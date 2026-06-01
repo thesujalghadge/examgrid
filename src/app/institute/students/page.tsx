@@ -139,7 +139,7 @@ export default function InstituteStudentsPage() {
       resourceId: existing?.id ?? form.rollNumber,
       metadata: { rollNumber: form.rollNumber, batchId: form.batchId },
     });
-    try { try { await awaitRepositoryPersist(); } catch (err: any) { alert(`Failed to save student: ${err?.message || err?.code}`); return; } } catch (err: any) { alert(`Failed to save student: ${err.message}`); return; }
+    try { await awaitRepositoryPersist(); } catch (err: unknown) { const error = err as Error & { code?: string }; alert(`Failed to save student: ${error?.message || error?.code}`); return; }
     setEditingId(null);
     setForm({ ...blank, batchId: batches.find((b) => b.active)?.id ?? "" });
     refresh();

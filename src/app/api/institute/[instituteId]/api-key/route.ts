@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { encryptApiKey } from "@/lib/crypto/api-key-encryption";
-import { createServiceRoleClient } from "@/lib/institute/get-institute-api-key";
+
 import {
   logSessionWarning,
   logParsingEvent,
