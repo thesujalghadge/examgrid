@@ -21,6 +21,7 @@ function bankToExamQuestion(
       text: bank.questionText,
       options: [],
       hasImage,
+      stemImage: bank.stemImage,
       correctNumericalAnswer: bank.correctAnswer,
       marks,
       negativeMarks,
@@ -31,6 +32,7 @@ function bankToExamQuestion(
     id: `${examQuestionId}-opt-${option.label}`,
     label: option.label,
     text: option.text,
+    image: option.image,
   }));
   const correctOption =
     options.find(
@@ -43,6 +45,7 @@ function bankToExamQuestion(
     number: order,
     type: "MCQ_SINGLE",
     text: bank.questionText,
+    stemImage: bank.stemImage,
     options,
     hasImage,
     correctOptionId: correctOption?.id,

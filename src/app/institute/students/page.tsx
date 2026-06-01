@@ -158,13 +158,13 @@ export default function InstituteStudentsPage() {
     });
   };
 
-  const deactivate = async (id: string) => {
-    repos.students.deactivate(id);
+  const toggleActive = async (student: InstituteStudent) => {
+    repos.students.save({ ...student, active: !student.active, updatedAt: Date.now() });
     recordAuditEvent({
       actorRole: "admin",
-      actionType: "student_deactivate",
+      actionType: student.active ? "student_deactivate" : "student_edit",
       resourceType: "student",
-      resourceId: id,
+      resourceId: student.id,
     });
     await awaitRepositoryPersist();
     refresh();
@@ -326,8 +326,8 @@ export default function InstituteStudentsPage() {
                   <Button size="sm" variant="outline" onClick={() => edit(student)}>
                     Edit
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => deactivate(student.id)} disabled={!student.active}>
-                    Deactivate
+                  <Button size="sm" variant="outline" onClick={() => toggleActive(student)}>
+                    {student.active ? "Deactivate" : "Activate"}
                   </Button>
                 </td>
               </tr>
