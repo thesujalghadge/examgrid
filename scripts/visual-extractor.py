@@ -11,7 +11,7 @@ pdf_path = sys.argv[1]
 api_key = sys.argv[2]
 
 genai.configure(api_key=api_key)
-model = genai.GenerativeModel('gemini-2.0-flash')
+model = genai.GenerativeModel('gemini-2.5-flash')
 
 class OptionBox(typing.TypedDict):
     id: str

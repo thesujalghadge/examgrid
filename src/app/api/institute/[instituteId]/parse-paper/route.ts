@@ -100,7 +100,7 @@ export async function POST(
         parsed = parsedPaperSchema.parse(rawJson);
       } else {
         const genAI = new GoogleGenerativeAI(geminiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
         const result = await model.generateContent([
           { inlineData: { mimeType: detectedMimeType, data: buffer.toString("base64") } },
           PARSE_PROMPT,

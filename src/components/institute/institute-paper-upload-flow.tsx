@@ -77,7 +77,7 @@ const ACCEPT_PAPER = ".pdf,.doc,.docx,.txt,.csv,.xlsx";
 const ACCEPT_KEY = ".pdf,.doc,.docx,.txt,.csv,.xlsx";
 const PAPER_FILE_TYPES = ["pdf", "doc", "docx", "txt", "csv", "xlsx"] as const;
 const ANSWER_KEY_FILE_TYPES = ["pdf", "doc", "docx", "txt", "csv", "xlsx"] as const;
-const PLANNED_JEE_QUESTIONS = 90;
+const PLANNED_JEE_QUESTIONS = 75;
 const SUBJECT_OPTIONS = ["Physics", "Chemistry", "Mathematics", "Biology", "Custom"] as const;
 
 export function InstitutePaperUploadFlow() {

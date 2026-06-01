@@ -70,11 +70,6 @@ export function applySubjectMapping(pkg: ProcessedPaperPackage): ProcessedPaperP
     
     // Determine NTA section name
     let sectionName = baseSubject;
-    if (question.questionType === "MCQ_SINGLE") {
-      sectionName = `${baseSubject} Section A`;
-    } else if (question.questionType === "NUMERICAL") {
-      sectionName = `${baseSubject} Section B`;
-    }
     
     if (!sectionMap.has(sectionName)) sectionMap.set(sectionName, []);
     
