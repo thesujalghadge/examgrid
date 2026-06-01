@@ -37,9 +37,10 @@ export async function runVisualExtractor(buffer: Buffer, apiKey: string): Promis
   const scriptPath = path.join(process.cwd(), "scripts", "visual-extractor.py");
 
   try {
-    const { stdout } = await execFileAsync(python, [scriptPath, tempPdf, apiKey], {
+    const { stdout, stderr } = await execFileAsync(python, [scriptPath, tempPdf, apiKey], {
       maxBuffer: 50 * 1024 * 1024, // 50MB for large json
     });
+    if (stderr) console.error("[Visual Extractor stderr]", stderr);
     
     // Parse the output
     const startIndex = stdout.indexOf('{"questions"');

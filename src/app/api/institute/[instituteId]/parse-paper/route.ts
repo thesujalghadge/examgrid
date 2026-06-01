@@ -92,23 +92,28 @@ export async function POST(
       );
     }
 
-    const genAI = new GoogleGenerativeAI(geminiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-    const result = await model.generateContent([
-      { inlineData: { mimeType: detectedMimeType, data: buffer.toString("base64") } },
-      PARSE_PROMPT,
-    ]);
-
-    let text = result.response.text().trim();
-    text = text.replace(/^```json?\s*/i, "").replace(/\s*```$/, "").trim();
-
     let parsed: ParsedPaper;
+    let text = "";
     try {
-      parsed = parsedPaperSchema.parse(JSON.parse(text));
-    } catch {
+      if (detectedMimeType === "application/pdf") {
+        const rawJson = await runVisualExtractor(buffer, geminiKey);
+        parsed = parsedPaperSchema.parse(rawJson);
+      } else {
+        const genAI = new GoogleGenerativeAI(geminiKey);
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+        const result = await model.generateContent([
+          { inlineData: { mimeType: detectedMimeType, data: buffer.toString("base64") } },
+          PARSE_PROMPT,
+        ]);
+    
+        text = result.response.text().trim();
+        text = text.replace(/^```json?\s*/i, "").replace(/\s*```$/, "").trim();
+        parsed = parsedPaperSchema.parse(JSON.parse(text));
+      }
+    } catch (e: any) {
       return NextResponse.json(
         {
-          error: "AI returned malformed response. Try uploading a clearer PDF.",
+          error: "AI returned malformed response or layout extraction failed. " + (e.message || ""),
           raw: text.substring(0, 500),
         },
         { status: 500 },

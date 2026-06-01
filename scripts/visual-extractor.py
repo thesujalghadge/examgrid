@@ -95,6 +95,7 @@ Make sure you do NOT miss the options. Each option must have a bounding box.
                 
                 all_questions.append(q)
         except Exception as e:
+            print(f"Error on page {page_num}: {str(e)}", file=sys.stderr)
             pass
 
     print(json.dumps({"questions": all_questions}))
