@@ -1079,6 +1079,7 @@ export function preparedMetaToBankQuestion(
       difficulty: mapDifficulty(meta.difficulty),
       questionType: "NUMERICAL",
       questionText: normalized.stem,
+      stemImage: meta.stemImage,
       options: [],
       correctAnswer: normalized.answer,
       solution: meta.solution ?? "",
@@ -1093,7 +1094,8 @@ export function preparedMetaToBankQuestion(
   const options: BankQuestion["options"] = [];
   for (const [index, label] of ["A", "B", "C", "D"].entries()) {
     const text = normalized.options[index]?.trim();
-    if (text) options.push({ label, text });
+    const image = (meta as any).optionImages?.[index];
+    if (text || image) options.push({ label, text: text || "", image });
   }
 
   return {
@@ -1104,6 +1106,7 @@ export function preparedMetaToBankQuestion(
     difficulty: mapDifficulty(meta.difficulty),
     questionType: "MCQ_SINGLE",
     questionText: normalized.stem,
+    stemImage: meta.stemImage,
     options,
     correctAnswer: normalized.answer,
     solution: meta.solution ?? "",
