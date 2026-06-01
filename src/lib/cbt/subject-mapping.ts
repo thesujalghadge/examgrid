@@ -60,20 +60,28 @@ export function applySubjectMapping(pkg: ProcessedPaperPackage): ProcessedPaperP
   // Flatten all questions first
   const allQuestions = pkg.sections.flatMap(s => s.questions);
   
-  // Group by resolved subject
+  // Group by resolved subject and type (NTA style)
   const sectionMap = new Map<string, typeof allQuestions>();
   
   let globalIndex = 0;
   for (const question of allQuestions) {
     globalIndex += 1;
-    const subject = resolveSubjectForQuestion(globalIndex, mapping);
+    const baseSubject = resolveSubjectForQuestion(globalIndex, mapping);
     
-    if (!sectionMap.has(subject)) sectionMap.set(subject, []);
+    // Determine NTA section name
+    let sectionName = baseSubject;
+    if (question.questionType === "MCQ_SINGLE") {
+      sectionName = `${baseSubject} Section A`;
+    } else if (question.questionType === "NUMERICAL") {
+      sectionName = `${baseSubject} Section B`;
+    }
     
-    sectionMap.get(subject)!.push({
+    if (!sectionMap.has(sectionName)) sectionMap.set(sectionName, []);
+    
+    sectionMap.get(sectionName)!.push({
       ...question,
-      subject,
-      section: subject, // update section reference
+      subject: baseSubject,
+      section: sectionName, // update section reference
       metadata: {
         ...question.metadata,
         subjectGlobalQuestionNumber: globalIndex,

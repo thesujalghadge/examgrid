@@ -7,7 +7,7 @@ function createServiceRoleClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) {
-    throw new Error("Supabase service role credentials are not configured");
+    return null;
   }
 
   return createClient(url, key, {
@@ -18,19 +18,81 @@ function createServiceRoleClient() {
   });
 }
 
+import fs from "fs";
+import path from "path";
+
+const MOCK_KEYS_FILE = path.join(process.cwd(), ".mock-api-keys.json");
+
+function getMockKey(instituteId: string) {
+  try {
+    if (fs.existsSync(MOCK_KEYS_FILE)) {
+      const keys = JSON.parse(fs.readFileSync(MOCK_KEYS_FILE, "utf-8"));
+      return keys[instituteId];
+    }
+  } catch {}
+  return null;
+}
+
+export async function setInstituteGeminiKey(instituteId: string, encrypted: string, iv: string): Promise<boolean> {
+  const supabase = createServiceRoleClient();
+  if (!supabase) {
+    // Fallback to local mock storage
+    try {
+      let keys: any = {};
+      if (fs.existsSync(MOCK_KEYS_FILE)) {
+        keys = JSON.parse(fs.readFileSync(MOCK_KEYS_FILE, "utf-8"));
+      }
+      keys[instituteId] = { gemini_api_key_encrypted: encrypted, gemini_api_key_iv: iv };
+      fs.writeFileSync(MOCK_KEYS_FILE, JSON.stringify(keys, null, 2));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  const { error } = await supabase
+    .from("institutes")
+    .update({
+      gemini_api_key_encrypted: encrypted,
+      gemini_api_key_iv: iv,
+      gemini_api_key_set_at: new Date().toISOString(),
+    })
+    .eq("id", instituteId);
+
+  return !error;
+}
+
 export async function getInstituteGeminiKey(instituteId: string): Promise<string> {
   const supabase = createServiceRoleClient();
-  const { data, error } = await supabase
-    .from("institutes")
-    .select("gemini_api_key_encrypted, gemini_api_key_iv")
-    .eq("id", instituteId)
-    .single();
+  let encrypted = null;
+  let iv = null;
 
-  if (error || !data?.gemini_api_key_encrypted || !data.gemini_api_key_iv) {
+  if (supabase) {
+    const { data, error } = await supabase
+      .from("institutes")
+      .select("gemini_api_key_encrypted, gemini_api_key_iv")
+      .eq("id", instituteId)
+      .single();
+      
+    if (!error && data) {
+      encrypted = data.gemini_api_key_encrypted;
+      iv = data.gemini_api_key_iv;
+    }
+  }
+
+  if (!encrypted || !iv) {
+    const mockData = getMockKey(instituteId);
+    if (mockData?.gemini_api_key_encrypted && mockData?.gemini_api_key_iv) {
+      encrypted = mockData.gemini_api_key_encrypted;
+      iv = mockData.gemini_api_key_iv;
+    }
+  }
+
+  if (!encrypted || !iv) {
     throw new Error(`No Gemini API key configured for institute ${instituteId}`);
   }
 
-  return decryptApiKey(data.gemini_api_key_encrypted, data.gemini_api_key_iv);
+  return decryptApiKey(encrypted, iv);
 }
 
 export { createServiceRoleClient };

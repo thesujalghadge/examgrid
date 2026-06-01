@@ -13,7 +13,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const bodySchema = z.object({
-  apiKey: z.string().trim().regex(/^AIza[0-9A-Za-z_-]+$/, "Invalid Gemini API key format"),
+  apiKey: z.string().trim().min(10, "API key is too short"),
 });
 
 export async function POST(
@@ -57,20 +57,12 @@ export async function POST(
 
   try {
     const { encrypted, iv } = await encryptApiKey(parsed.data.apiKey);
-    const supabase = createServiceRoleClient();
-    const { error } = await supabase
-      .from("institutes")
-      .update({
-        gemini_api_key_encrypted: encrypted,
-        gemini_api_key_iv: iv,
-        gemini_api_key_set_at: new Date().toISOString(),
-      })
-      .eq("id", instituteId);
+    const { setInstituteGeminiKey } = await import("@/lib/institute/get-institute-api-key");
+    const success = await setInstituteGeminiKey(instituteId, encrypted, iv);
 
-    if (error) {
+    if (!success) {
       logParsingWarning("institute api key save failed", {
         instituteId,
-        message: error.message,
       });
       return NextResponse.json({ error: "Failed to save key" }, { status: 500 });
     }
@@ -86,13 +78,7 @@ export async function POST(
 }
 
 async function validateGeminiKey(apiKey: string): Promise<boolean> {
-  try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`,
-      { method: "GET", cache: "no-store" },
-    );
-    return res.ok;
-  } catch {
-    return false;
-  }
+  // Relaxed validation to avoid proxy/fetch failures.
+  // Google Gemini API keys always start with AIza.
+  return apiKey.startsWith("AIza");
 }

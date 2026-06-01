@@ -48,14 +48,16 @@ export async function POST(
 
   const { questionId, questionText, options, subject } = parsed.data;
   const supabase = createServiceRoleClient();
-  const { data: existing } = await supabase
-    .from("question_solutions")
-    .select("solution_text")
-    .eq("question_id", questionId)
-    .single();
+  if (supabase) {
+    const { data: existing } = await supabase
+      .from("question_solutions")
+      .select("solution_text")
+      .eq("question_id", questionId)
+      .single();
 
-  if (existing?.solution_text) {
-    return NextResponse.json({ solution: existing.solution_text, cached: true });
+    if (existing?.solution_text) {
+      return NextResponse.json({ solution: existing.solution_text, cached: true });
+    }
   }
 
   try {
@@ -87,14 +89,16 @@ Instructions:
     const result = await model.generateContent(prompt);
     const solution = result.response.text().trim();
 
-    await supabase.from("question_solutions").upsert(
-      {
-        question_id: questionId,
-        solution_text: solution,
-        generated_at: new Date().toISOString(),
-      },
-      { onConflict: "question_id" },
-    );
+    if (supabase) {
+      await supabase.from("question_solutions").upsert(
+        {
+          question_id: questionId,
+          solution_text: solution,
+          generated_at: new Date().toISOString(),
+        },
+        { onConflict: "question_id" },
+      );
+    }
 
     return NextResponse.json({ solution, cached: false });
   } catch (error) {
