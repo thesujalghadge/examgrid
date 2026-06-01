@@ -66,6 +66,29 @@ export function InstituteApiKeySection({ instituteId }: { instituteId: string })
     }
   };
 
+  const handleDelete = async () => {
+    if (saving) return;
+    if (!confirm("Are you sure you want to remove the API key? Visually heavy PDFs will fail to parse until a new key is set.")) return;
+    setSaving(true);
+    setMessage(null);
+    try {
+      const response = await fetch(`/api/institute/${instituteId}/api-key`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        setMessage({ type: "error", text: data.error ?? "Failed to delete key" });
+        return;
+      }
+      setMessage({ type: "success", text: "API key removed successfully." });
+      setKeyInput("");
+      setStatus({ hasKey: false, setAt: null });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="space-y-3 rounded-md border border-[#d8d2c7] bg-white p-4 sm:col-span-2 lg:col-span-4">
       <div>
@@ -115,6 +138,16 @@ export function InstituteApiKeySection({ instituteId }: { instituteId: string })
         >
           {saving ? "Validating..." : status?.hasKey ? "Update Key" : "Save Key"}
         </Button>
+        {status?.hasKey && (
+          <Button
+            type="button"
+            onClick={handleDelete}
+            disabled={saving}
+            variant="destructive"
+          >
+            Remove Key
+          </Button>
+        )}
       </div>
 
       {message ? (

@@ -62,6 +62,33 @@ export async function setInstituteGeminiKey(instituteId: string, encrypted: stri
   return !error;
 }
 
+export async function deleteInstituteGeminiKey(instituteId: string): Promise<boolean> {
+  const supabase = createServiceRoleClient();
+  if (!supabase) {
+    try {
+      if (fs.existsSync(MOCK_KEYS_FILE)) {
+        const keys = JSON.parse(fs.readFileSync(MOCK_KEYS_FILE, "utf-8"));
+        delete keys[instituteId];
+        fs.writeFileSync(MOCK_KEYS_FILE, JSON.stringify(keys, null, 2));
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  const { error } = await supabase
+    .from("institutes")
+    .update({
+      gemini_api_key_encrypted: null,
+      gemini_api_key_iv: null,
+      gemini_api_key_set_at: null,
+    })
+    .eq("id", instituteId);
+
+  return !error;
+}
+
 export async function getInstituteGeminiKey(instituteId: string): Promise<string> {
   const supabase = createServiceRoleClient();
   let encrypted = null;

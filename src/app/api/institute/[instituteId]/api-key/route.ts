@@ -82,3 +82,32 @@ async function validateGeminiKey(apiKey: string): Promise<boolean> {
   // Google Gemini API keys always start with AIza.
   return apiKey.startsWith("AIza");
 }
+
+export async function DELETE(
+  request: Request,
+  context: { params: Promise<{ instituteId: string }> },
+) {
+  const { instituteId } = await context.params;
+  const session = await readVerifiedWorkspaceSession();
+  if (
+    !session ||
+    (session.role !== "platform_admin" &&
+      (session.role !== "institute" || session.instituteId !== instituteId))
+  ) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const { deleteInstituteGeminiKey } = await import("@/lib/institute/get-institute-api-key");
+    const success = await deleteInstituteGeminiKey(instituteId);
+    if (!success) {
+      return NextResponse.json({ error: "Failed to delete key" }, { status: 500 });
+    }
+    return NextResponse.json({ success: true, message: "API key deleted." });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Failed to delete key" },
+      { status: 500 },
+    );
+  }
+}

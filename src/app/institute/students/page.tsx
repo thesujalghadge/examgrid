@@ -65,10 +65,15 @@ export default function InstituteStudentsPage() {
     );
   }, [search, students]);
 
-  const refresh = () =>
+  const refresh = useCallback(async () => {
+    const maybeRemote = repos.students as typeof repos.students & {
+      refreshFromRemote?: () => Promise<void>;
+    };
+    await maybeRemote.refreshFromRemote?.();
     setStudents(
       tenantId ? scopeByInstituteId(repos.students.list(), tenantId) : repos.students.list(),
     );
+  }, [repos, tenantId]);
 
   const refreshBatches = useCallback(async () => {
     const maybeRemote = repos.batches as typeof repos.batches & {
@@ -89,7 +94,8 @@ export default function InstituteStudentsPage() {
 
   useEffect(() => {
     void refreshBatches();
-  }, [refreshBatches]);
+    void refresh();
+  }, [refreshBatches, refresh]);
 
   const verifyBatchExists = async (batchId: string): Promise<boolean> => {
     if (!tenantId) return false;
@@ -142,7 +148,7 @@ export default function InstituteStudentsPage() {
     try { await awaitRepositoryPersist(); } catch (err: unknown) { const error = err as Error & { code?: string }; alert(`Failed to save student: ${error?.message || error?.code}`); return; }
     setEditingId(null);
     setForm({ ...blank, batchId: batches.find((b) => b.active)?.id ?? "" });
-    refresh();
+    void refresh();
   };
 
   const edit = (student: InstituteStudent) => {
@@ -167,7 +173,7 @@ export default function InstituteStudentsPage() {
       resourceId: student.id,
     });
     await awaitRepositoryPersist();
-    refresh();
+    void refresh();
   };
 
   const runPreview = () => {
@@ -190,7 +196,7 @@ export default function InstituteStudentsPage() {
     });
     setCsv("");
     setPreview(null);
-    refresh();
+    void refresh();
   };
 
   return (
