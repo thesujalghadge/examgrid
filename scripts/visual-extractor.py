@@ -29,8 +29,12 @@ class ExtractResult(typing.TypedDict):
     questions: list[QuestionBox]
 
 def get_base64_crop(img: Image.Image, box) -> str:
-    # box is [ymin, xmin, ymax, xmax] normalized to 1000
-    ymin, xmin, ymax, xmax = box
+    # box is [ymin, xmin, ymax, xmax] scaled to 1000
+    if len(box) != 4: return ""
+    y1, x1, y2, x2 = box
+    ymin, ymax = sorted([y1, y2])
+    xmin, xmax = sorted([x1, x2])
+    
     width, height = img.size
     left = (xmin / 1000.0) * width
     upper = (ymin / 1000.0) * height
