@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -98,7 +98,7 @@ export function PlatformInstitutesManager() {
           </div>
           <div className="flex items-end gap-2">
             <Button className="bg-[#14213d]" onClick={handleSave}>
-              {editingId ? "Update" : "Add"}
+              {editingId ? "Update Info" : "Add Institute"}
             </Button>
             {editingId ? (
               <Button variant="outline" onClick={resetForm}>
@@ -106,7 +106,6 @@ export function PlatformInstitutesManager() {
               </Button>
             ) : null}
           </div>
-          {editingId ? <InstituteApiKeySection instituteId={editingId} /> : null}
         </CardContent>
       </Card>
 
@@ -137,7 +136,8 @@ export function PlatformInstitutesManager() {
                   {rows.map((row) => {
                     const st = statsFor(row.id);
                     return (
-                      <tr key={row.id} className="border-b border-[#f1ece4]">
+                      <Fragment key={row.id}>
+                      <tr className="border-b border-[#f1ece4]">
                         <td className="py-3">
                           <p className="font-medium text-[#14213d]">{row.name}</p>
                           <p className="text-xs text-[#5e5a52]">{row.city}</p>
@@ -169,7 +169,7 @@ export function PlatformInstitutesManager() {
                                 setAdminEmail(row.adminEmail);
                               }}
                             >
-                              Edit
+                              Edit Info
                             </Button>
                             <Button
                               size="sm"
@@ -198,6 +198,12 @@ export function PlatformInstitutesManager() {
                           </div>
                         </td>
                       </tr>
+                      <tr className="border-b-4 border-[#ece6da]">
+                        <td colSpan={7} className="pb-4 pt-2">
+                           <InstituteApiKeySection instituteId={row.id} />
+                        </td>
+                      </tr>
+                      </Fragment>
                     );
                   })}
                 </tbody>

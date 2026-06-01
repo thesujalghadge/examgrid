@@ -25,9 +25,9 @@ export function rangesForLayout(
   const third = Math.max(1, Math.ceil(total / 3));
   const twoThird = Math.min(total, third * 2);
   return [
-    { start: 1, end: third, subject: "Physics" },
-    { start: third + 1, end: twoThird, subject: "Chemistry" },
-    { start: twoThird + 1, end: total, subject: "Mathematics" },
+    { start: 1, end: third, subject: "Mathematics" },
+    { start: third + 1, end: twoThird, subject: "Physics" },
+    { start: twoThird + 1, end: total, subject: "Chemistry" },
   ];
 }
 
@@ -57,22 +57,36 @@ export function applySubjectMapping(pkg: ProcessedPaperPackage): ProcessedPaperP
   const mapping = pkg.subjectMapping;
   if (!mapping) return pkg;
 
+  // Flatten all questions first
+  const allQuestions = pkg.sections.flatMap(s => s.questions);
+  
+  // Group by resolved subject
+  const sectionMap = new Map<string, typeof allQuestions>();
+  
   let globalIndex = 0;
-  const sections = pkg.sections.map((section) => ({
-    ...section,
-    questions: section.questions.map((question) => {
-      globalIndex += 1;
-      const subject = resolveSubjectForQuestion(globalIndex, mapping);
-      return {
-        ...question,
-        subject,
-        metadata: {
-          ...question.metadata,
-          subjectGlobalQuestionNumber: globalIndex,
-          subjectMappingLayout: mapping.layout,
-        },
-      };
-    }),
+  for (const question of allQuestions) {
+    globalIndex += 1;
+    const subject = resolveSubjectForQuestion(globalIndex, mapping);
+    
+    if (!sectionMap.has(subject)) sectionMap.set(subject, []);
+    
+    sectionMap.get(subject)!.push({
+      ...question,
+      subject,
+      section: subject, // update section reference
+      metadata: {
+        ...question.metadata,
+        subjectGlobalQuestionNumber: globalIndex,
+        subjectMappingLayout: mapping.layout,
+      },
+    });
+  }
+
+  // Create new sections array
+  const sections = Array.from(sectionMap.entries()).map(([name, questions]) => ({
+    id: `section-${name.toLowerCase().replace(/[^a-z0-9]/g, "-")}`,
+    name,
+    questions,
   }));
 
   return {
