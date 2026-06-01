@@ -33,6 +33,7 @@ export interface ExamQuestion {
   text: string;
   options: ExamOption[];
   hasImage?: boolean;
+  images?: string[];
   correctOptionId?: string;
   correctNumericalAnswer?: string;
   marks: number;

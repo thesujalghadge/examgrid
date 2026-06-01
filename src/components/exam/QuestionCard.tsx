@@ -108,7 +108,19 @@ export function QuestionCard({ review }: QuestionCardProps) {
               </div>
             )}
           </div>
-          {question.hasImage ? (
+          {question.images && question.images.length > 0 ? (
+            <div className="mx-4 mb-4 space-y-3">
+              {question.images.map((img, i) => (
+                img.trim().startsWith("<svg") ? (
+                  <div key={i} className="flex justify-center rounded-md border border-gray-200 bg-white p-4" dangerouslySetInnerHTML={{ __html: img }} />
+                ) : (
+                  <div key={i} className="rounded-md border border-gray-200 bg-gray-50 px-4 py-3 text-sm italic text-gray-700">
+                    {img}
+                  </div>
+                )
+              ))}
+            </div>
+          ) : question.hasImage ? (
             <div className="mx-4 mb-4 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-800">
               Diagram detected. Refer to the original PDF for the figure.
             </div>

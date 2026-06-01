@@ -47,14 +47,22 @@ import type {
 
 type FlowStep = "upload" | "configure" | "metadata" | "processing" | "review" | "done";
 
+interface ParsedGeminiOption {
+  id: string;
+  text: string;
+  latex?: string | null;
+}
+
 interface ParsedGeminiQuestion {
   id: string | number;
   type: "mcq" | "numerical" | "multi_correct";
   subject?: string | null;
   stem: string;
-  options?: string[] | null;
+  stemLatex?: string | null;
+  options?: ParsedGeminiOption[] | null;
   answer?: string | null;
   explanation?: string | null;
+  images?: string[];
   hasImage?: boolean;
   confidence?: number | null;
 }
@@ -1256,7 +1264,7 @@ function geminiPaperToProcessedPackage(
     if (!sectionMap.has(sectionName)) sectionMap.set(sectionName, []);
 
     const isNumerical = q.type === "numerical";
-    const optionLabels = isNumerical ? [] : (q.options ?? []);
+    const optionLabels = isNumerical ? [] : (q.options ?? []).map((o: any) => o.latex || o.text || o);
     
     // Convert 0-based or 1-based index or letter to option answer.
     let correctAnswer = q.answer ? String(q.answer) : "";
@@ -1280,7 +1288,7 @@ function geminiPaperToProcessedPackage(
       confidence: q.confidence ?? 0.95,
       questionType: isNumerical ? "NUMERICAL" : "MCQ_SINGLE",
       detectionSource: "gemini_vision",
-      questionText: q.stem,
+      questionText: q.stemLatex || q.stem,
       hasEquation: q.stem.includes("$"),
       hasImage: q.hasImage ?? false,
       correctAnswer,
@@ -1288,7 +1296,7 @@ function geminiPaperToProcessedPackage(
       marks: 4,
       negativeMarks: isNumerical ? 0 : 1,
       optionLabels,
-      images: [],
+      images: q.images || [],
       explanation: q.explanation ?? undefined,
       metadata: {
         parser: "gemini_vision",

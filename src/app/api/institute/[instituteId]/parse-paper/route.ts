@@ -166,14 +166,22 @@ function detectMimeType(buffer: Buffer): string | null {
   return null;
 }
 
+const parsedOptionSchema = z.object({
+  id: z.string(),
+  text: z.string(),
+  latex: z.string().nullable().optional(),
+});
+
 const parsedQuestionSchema = z.object({
   id: z.union([z.number(), z.string()]),
   type: z.enum(["mcq", "numerical", "multi_correct"]).catch("mcq"),
   subject: z.string().nullable().optional(),
   stem: z.string().min(1),
-  options: z.array(z.string()).nullable().optional(),
+  stemLatex: z.string().nullable().optional(),
+  options: z.array(parsedOptionSchema).nullable().optional(),
   answer: z.union([z.string(), z.number()]).transform(String).nullable().optional(),
   explanation: z.string().nullable().optional(),
+  images: z.array(z.string()).catch([]),
   hasImage: z.boolean().catch(false),
   confidence: z.number().nullable().optional(),
 });
@@ -222,14 +230,21 @@ STRUCTURE:
       "id": 1,
       "type": "mcq",
       "subject": "Physics",
-      "stem": "Full question text with $LaTeX$ for math",
-      "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
-      "answer": "1",
-      "explanation": "Explanation if present, else null",
+      "stem": "Full question text in readable format",
+      "stemLatex": "Full question text with strict $LaTeX$ preserving original formatting, equations, matrices, and paragraph spacing.",
+      "options": [
+        {
+          "id": "A",
+          "text": "Readable option text",
+          "latex": "Option with strict $LaTeX$"
+        }
+      ],
+      "answer": "A",
+      "images": ["Detailed textual description of any diagram, circuit, or graph to be rendered later"],
       "hasImage": true,
       "confidence": 0.95
     }
   ]
 }
 
-Include every single question. Do not skip any. If a question contains a diagram, circuit, graph, or image that cannot be represented in text, set "hasImage": true and add "[Diagram: <describe it briefly>]" to the stem. Return ONLY the JSON object.`;
+Include every single question. Do not skip any. For diagrams or images, describe them deeply in the "images" array or provide SVG representations if possible, and set "hasImage": true. Ensure all math formatting is preserved exactly as it appears in the original paper using LaTeX. Return ONLY the JSON object.`;
