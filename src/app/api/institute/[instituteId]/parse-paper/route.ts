@@ -116,10 +116,13 @@ export async function POST(
 
     if (parsedForm.data.answerKey) {
       const answers = parseAnswerKey(parsedForm.data.answerKey);
-      parsed.questions = parsed.questions.map((question) => ({
-        ...question,
-        correct_answer: answers[question.number] ?? question.correct_answer ?? null,
-      }));
+      parsed.questions = parsed.questions.map((question) => {
+        const idNum = Number(question.id);
+        return {
+          ...question,
+          answer: (!isNaN(idNum) && answers[idNum] !== undefined) ? answers[idNum] : (question.answer ?? null),
+        };
+      });
     }
 
     logParsingEvent("gemini paper parse completed", {
@@ -164,20 +167,18 @@ function detectMimeType(buffer: Buffer): string | null {
 }
 
 const parsedQuestionSchema = z.object({
-  number: z.number().int().positive(),
-  text: z.string().min(1),
-  options: z.record(z.string(), z.string()).nullable(),
-  type: z.enum(["mcq", "integer", "multi_correct"]),
-  correct_answer: z.string().nullable(),
-  marks: z.number(),
-  negative_marks: z.number(),
+  id: z.union([z.number(), z.string()]),
+  type: z.enum(["mcq", "numerical", "multi_correct"]).catch("mcq"),
+  subject: z.string().nullable().optional(),
+  stem: z.string().min(1),
+  options: z.array(z.string()).nullable().optional(),
+  answer: z.union([z.string(), z.number()]).transform(String).nullable().optional(),
+  explanation: z.string().nullable().optional(),
+  confidence: z.number().nullable().optional(),
 });
 
 const parsedPaperSchema = z.object({
-  paper_title: z.string().nullable(),
-  subject: z.string().nullable(),
-  total_marks: z.number().nullable(),
-  questions: z.array(parsedQuestionSchema).min(1),
+  questions: z.array(parsedQuestionSchema),
 });
 
 type ParsedPaper = z.infer<typeof parsedPaperSchema>;
@@ -209,29 +210,22 @@ MATH/SCIENCE FORMATTING RULES (critical):
 - For options that are pure math, also wrap them in $ $
 
 QUESTION TYPE RULES:
-- "mcq": has exactly 4 options labeled 1,2,3,4
-- "integer": numerical answer, no options (options: null)
-- "multi_correct": multiple correct options possible
+- "mcq": has exactly 4 options.
+- "numerical": numerical answer, no options.
+- "multi_correct": multiple correct options possible.
 
 STRUCTURE:
 {
-  "paper_title": "string or null",
-  "subject": "Mathematics" | "Physics" | "Chemistry" | "Biology" | "Mixed" | null,
-  "total_marks": number or null,
   "questions": [
     {
-      "number": 1,
-      "text": "Full question text with $LaTeX$ for math",
-      "options": {
-        "1": "option with $math$ if needed",
-        "2": "option text",
-        "3": "option text",
-        "4": "option text"
-      },
+      "id": 1,
       "type": "mcq",
-      "correct_answer": null,
-      "marks": 4,
-      "negative_marks": 1
+      "subject": "Physics",
+      "stem": "Full question text with $LaTeX$ for math",
+      "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
+      "answer": "1",
+      "explanation": "Explanation if present, else null",
+      "confidence": 0.95
     }
   ]
 }

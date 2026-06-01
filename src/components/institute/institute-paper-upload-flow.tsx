@@ -48,19 +48,17 @@ import type {
 type FlowStep = "upload" | "configure" | "metadata" | "processing" | "review" | "done";
 
 interface ParsedGeminiQuestion {
-  number: number;
-  text: string;
-  options: Record<string, string> | null;
-  type: "mcq" | "integer" | "multi_correct";
-  correct_answer: string | null;
-  marks: number;
-  negative_marks: number;
+  id: string | number;
+  type: "mcq" | "numerical" | "multi_correct";
+  subject?: string | null;
+  stem: string;
+  options?: string[] | null;
+  answer?: string | null;
+  explanation?: string | null;
+  confidence?: number | null;
 }
 
 interface ParsedGeminiPaper {
-  paper_title: string | null;
-  subject: string | null;
-  total_marks: number | null;
   questions: ParsedGeminiQuestion[];
 }
 
@@ -1249,46 +1247,52 @@ function geminiPaperToProcessedPackage(
   instituteId: string,
 ): ProcessedPaperPackage {
   const id = `paper-${Date.now()}`;
-  const title =
-    parsed.paper_title ??
-    (paperFileName.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim() ||
-      "Institute CBT Paper");
+  const title = paperFileName.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim() || "Institute CBT Paper";
   const sectionMap = new Map<string, PreparedQuestionMeta[]>();
 
   for (const q of parsed.questions) {
-    const sectionName = parsed.subject ?? "Imported Questions";
+    const sectionName = q.subject || "Imported Questions";
     if (!sectionMap.has(sectionName)) sectionMap.set(sectionName, []);
 
-    const isNumerical = q.type === "integer";
-    const optionLabels = isNumerical ? [] : ["1", "2", "3", "4"].map((k) => q.options?.[k] ?? "");
-    const answerMap: Record<string, string> = { "1": "A", "2": "B", "3": "C", "4": "D" };
-    const correctAnswer = q.correct_answer ? (answerMap[q.correct_answer] ?? q.correct_answer) : "";
+    const isNumerical = q.type === "numerical";
+    const optionLabels = isNumerical ? [] : (q.options ?? []);
+    
+    // Convert 0-based or 1-based index or letter to option answer.
+    let correctAnswer = q.answer ? String(q.answer) : "";
+    if (!isNumerical && correctAnswer) {
+       // if answer is like "1", "2", "3", "4", convert to "A", "B", "C", "D" if needed
+       // Or the system uses optionLabels array directly. We'll leave it as is if it's already a letter, or convert index to letter.
+       const answerMap: Record<string, string> = { "1": "A", "2": "B", "3": "C", "4": "D", "0": "A", "A": "A", "B": "B", "C": "C", "D": "D" };
+       correctAnswer = answerMap[correctAnswer] ?? correctAnswer;
+    }
+
+    const questionNumber = Number(q.id) || 1;
 
     sectionMap.get(sectionName)!.push({
-      questionId: `${id}-q${q.number}`,
-      sequence: q.number,
+      questionId: `${id}-q${questionNumber}`,
+      sequence: questionNumber,
       section: sectionName,
       subject: sectionName,
       chapter: undefined,
       topic: undefined,
       difficulty: undefined,
-      confidence: 0.95,
+      confidence: q.confidence ?? 0.95,
       questionType: isNumerical ? "NUMERICAL" : "MCQ_SINGLE",
       detectionSource: "gemini_vision",
-      questionText: q.text,
-      hasEquation: q.text.includes("$"),
+      questionText: q.stem,
+      hasEquation: q.stem.includes("$"),
       hasImage: false,
       correctAnswer,
       solution: undefined,
-      marks: q.marks ?? 4,
-      negativeMarks: q.negative_marks ?? (isNumerical ? 0 : 1),
+      marks: 4,
+      negativeMarks: isNumerical ? 0 : 1,
       optionLabels,
       images: [],
-      explanation: undefined,
+      explanation: q.explanation ?? undefined,
       metadata: {
         parser: "gemini_vision",
-        sourceQuestionNumber: q.number,
-        answerKeySource: q.correct_answer ? "gemini_extracted" : "manual",
+        sourceQuestionNumber: questionNumber,
+        answerKeySource: q.answer ? "gemini_extracted" : "manual",
       },
     });
   }
@@ -1299,7 +1303,7 @@ function geminiPaperToProcessedPackage(
     questions,
   }));
   const totalQuestions = parsed.questions.length;
-  const totalMarks = parsed.questions.reduce((sum, q) => sum + (q.marks ?? 4), 0);
+  const totalMarks = totalQuestions * 4;
   const pkg: ProcessedPaperPackage = {
     id,
     status: "DRAFT_REVIEW",
@@ -1321,13 +1325,13 @@ function geminiPaperToProcessedPackage(
     extractionMode: "gemini_vision",
     extractionSummary: {
       pages: 1,
-      extractedChars: parsed.questions.reduce((n, q) => n + q.text.length, 0),
+      extractedChars: parsed.questions.reduce((n, q) => n + q.stem.length, 0),
       usedOCR: true,
       questionsDetected: totalQuestions,
       warnings: [],
     },
     parsingDiagnostics: {
-      rawTextPreview: parsed.questions.slice(0, 2).map((q) => q.text).join("\n"),
+      rawTextPreview: parsed.questions.slice(0, 2).map((q) => q.stem).join("\n"),
       parsedQuestionCount: totalQuestions,
       unmatchedAnswerCount: 0,
       unmatchedAnswers: [],
