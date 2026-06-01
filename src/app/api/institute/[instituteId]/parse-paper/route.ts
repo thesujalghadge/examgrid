@@ -82,23 +82,23 @@ export async function POST(
       );
     }
 
+    let geminiKey: string;
+    try {
+      geminiKey = await getInstituteGeminiKey(instituteId);
+    } catch {
+      return NextResponse.json(
+        { error: "No Gemini API key configured for this institute. Please add one in Settings." },
+        { status: 400 },
+      );
+    }
+
     let parsed: ParsedPaper;
     let text = "";
     try {
       if (detectedMimeType === "application/pdf") {
-        const rawJson = await runVisualExtractor(buffer, "");
+        const rawJson = await runVisualExtractor(buffer, geminiKey);
         parsed = parsedPaperSchema.parse(rawJson);
       } else {
-        let geminiKey: string;
-        try {
-          geminiKey = await getInstituteGeminiKey(instituteId);
-        } catch {
-          return NextResponse.json(
-            { error: "No Gemini API key configured for this institute. Please add one in Settings." },
-            { status: 400 },
-          );
-        }
-        
         const genAI = new GoogleGenerativeAI(geminiKey);
         const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
         const result = await model.generateContent([

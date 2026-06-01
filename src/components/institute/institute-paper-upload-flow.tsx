@@ -393,10 +393,7 @@ export function InstitutePaperUploadFlow() {
       );
 
       const hasGeminiKey = await checkGeminiKeyConfigured(tenantId);
-      const canRunVisual = paperType === "pdf";
-      const canRunGemini = hasGeminiKey && shouldUseGeminiRepair(configured);
-      
-      if (canRunVisual || canRunGemini) {
+      if (hasGeminiKey && paperType === "pdf" && shouldUseGeminiRepair(configured)) {
         try {
           const { parsedPaper } = await parseWithGemini(paperFile, keySource?.text ?? "", tenantId);
           configured = configureProcessedPackage(
@@ -412,9 +409,9 @@ export function InstitutePaperUploadFlow() {
             ...configured,
             processingLog: [
               ...configured.processingLog,
-              `Visual extraction failed: ${
+              `Gemini repair fallback was unavailable: ${
                 repairError instanceof Error ? repairError.message : "unknown error"
-              }. Continuing with deterministic text draft.`,
+              }. Continuing with deterministic draft.`,
             ],
           };
         }
