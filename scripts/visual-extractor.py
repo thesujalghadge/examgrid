@@ -4,32 +4,10 @@ import base64
 import io
 import fitz  # PyMuPDF
 from PIL import Image
-import google.generativeai as genai
-import typing_extensions as typing
-
-pdf_path = sys.argv[1]
-api_key = sys.argv[2]
-
-genai.configure(api_key=api_key)
-model = genai.GenerativeModel('gemini-2.5-flash')
-
-class OptionBox(typing.TypedDict):
-    id: str
-    box: list[int]
-
-class QuestionBox(typing.TypedDict):
-    id: str
-    type: str
-    subject: str
-    answer: str
-    stem_box: list[int]
-    options: list[OptionBox]
-
-class ExtractResult(typing.TypedDict):
-    questions: list[QuestionBox]
+import re
 
 def get_base64_crop(img: Image.Image, box) -> str:
-    # box is [ymin, xmin, ymax, xmax] normalized to 1000
+    # box is [ymin, xmin, ymax, xmax] scaled to 1000
     ymin, xmin, ymax, xmax = box
     width, height = img.size
     left = (xmin / 1000.0) * width
@@ -48,52 +26,133 @@ def get_base64_crop(img: Image.Image, box) -> str:
     cropped.save(buf, format="PNG")
     return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode("utf-8")
 
+def extract_page_heuristics(page, img):
+    blocks = page.get_text("dict")["blocks"]
+    
+    spans = []
+    for b in blocks:
+        if "lines" in b:
+            for l in b["lines"]:
+                for s in l["spans"]:
+                    text = s["text"].strip()
+                    if text:
+                        # bbox is [x0, y0, x1, y1]
+                        spans.append({"text": text, "bbox": s["bbox"]})
+                        
+    # Sort by Y, then by X
+    spans.sort(key=lambda x: (x["bbox"][1], x["bbox"][0]))
+    
+    questions = []
+    current_q = None
+    
+    # Common JEE markers
+    q_pattern = re.compile(r'^(?:Q|Question)?\.?\s*(\d+)\.$')
+    opt_pattern = re.compile(r'^\(?([A-D1-4])\)$|^(?:Option\s*)?([A-D1-4])\)$')
+    
+    for span in spans:
+        text = span["text"]
+        bbox = span["bbox"]
+        
+        q_match = q_pattern.match(text)
+        opt_match = opt_pattern.match(text)
+        
+        if q_match:
+            if current_q:
+                questions.append(current_q)
+            current_q = {
+                "id": q_match.group(1),
+                "type": "mcq",
+                "subject": "Physics", # default, will be remapped by TS
+                "top": bbox[1],
+                "bottom": bbox[3],
+                "left": bbox[0],
+                "right": bbox[2],
+                "options": [],
+                "spans": [span]
+            }
+        elif current_q:
+            if opt_match:
+                opt_id = opt_match.group(1) or opt_match.group(2)
+                current_q["options"].append({
+                    "id": opt_id,
+                    "top": bbox[1],
+                    "left": bbox[0],
+                    "bottom": bbox[3],
+                    "right": bbox[2]
+                })
+                current_q["bottom"] = max(current_q["bottom"], bbox[3])
+                current_q["right"] = max(current_q["right"], bbox[2])
+            else:
+                if len(current_q["options"]) == 0:
+                    current_q["spans"].append(span)
+                    current_q["bottom"] = max(current_q["bottom"], bbox[3])
+                    current_q["right"] = max(current_q["right"], bbox[2])
+                else:
+                    last_opt = current_q["options"][-1]
+                    last_opt["bottom"] = max(last_opt["bottom"], bbox[3])
+                    last_opt["right"] = max(last_opt["right"], bbox[2])
+                    
+    if current_q:
+        questions.append(current_q)
+        
+    width, height = img.size
+    page_width = page.rect.width
+    page_height = page.rect.height
+    
+    def normalize_box(box):
+        x0, y0, x1, y1 = box
+        return [
+            (y0 / page_height) * 1000,
+            (x0 / page_width) * 1000,
+            (y1 / page_height) * 1000,
+            (x1 / page_width) * 1000
+        ]
+        
+    result = []
+    for q in questions:
+        left = min([s["bbox"][0] for s in q["spans"]])
+        right = page_width
+        
+        stem_box = normalize_box([left, q["top"], right, q["bottom"]])
+        stem_image = get_base64_crop(img, stem_box)
+        
+        parsed_opts = []
+        for i, opt in enumerate(q["options"]):
+            opt_right = page_width
+            for other in q["options"][i+1:]:
+                if abs(other["top"] - opt["top"]) < 20: # same line
+                    opt_right = other["left"] - 5
+                    break
+            
+            opt_box = normalize_box([opt["left"], opt["top"], opt_right, opt["bottom"] + 15])
+            parsed_opts.append({
+                "id": opt["id"],
+                "image": get_base64_crop(img, opt_box)
+            })
+            
+        result.append({
+            "id": q["id"],
+            "type": q["type"],
+            "subject": q["subject"],
+            "stem_image": stem_image,
+            "options": parsed_opts
+        })
+        
+    return result
+
 def main():
+    pdf_path = sys.argv[1]
     doc = fitz.open(pdf_path)
     all_questions = []
 
     for page_num in range(len(doc)):
-        page = doc[page_num]
-        pix = page.get_pixmap(dpi=300) # 300 DPI for high quality
-        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-        
-        img_byte_arr = io.BytesIO()
-        img.save(img_byte_arr, format='PNG')
-        img_bytes = img_byte_arr.getvalue()
-        
-        prompt = """You are a visual layout extractor for exam papers.
-Find all questions on this page.
-For each question:
-- id: question number
-- type: "mcq" or "numerical"
-- subject: inferred subject (Physics, Chemistry, Mathematics)
-- answer: correct option ID or numerical value if indicated, else null
-- stem_box: bounding box of the question text and any diagrams (EXCLUDING the options) as [ymin, xmin, ymax, xmax] scaled to 1000. Include the question number in the box.
-- options: For MCQs, list EXACTLY all options with their id (A, B, C, D or 1, 2, 3, 4) and bounding box.
-
-Make sure you do NOT miss the options. Each option must have a bounding box.
-"""
-        
         try:
-            response = model.generate_content([
-                prompt,
-                {"mime_type": "image/png", "data": img_bytes}
-            ], generation_config={
-                "response_mime_type": "application/json",
-                "response_schema": ExtractResult
-            })
+            page = doc[page_num]
+            pix = page.get_pixmap(dpi=300)
+            img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
             
-            data = json.loads(response.text)
-            
-            for q in data.get("questions", []):
-                if "stem_box" in q and len(q["stem_box"]) == 4:
-                    q["stem_image"] = get_base64_crop(img, q["stem_box"])
-                
-                for opt in q.get("options", []):
-                    if "box" in opt and len(opt["box"]) == 4:
-                        opt["image"] = get_base64_crop(img, opt["box"])
-                
-                all_questions.append(q)
+            qs = extract_page_heuristics(page, img)
+            all_questions.extend(qs)
         except Exception as e:
             print(f"Error on page {page_num}: {str(e)}", file=sys.stderr)
             pass
