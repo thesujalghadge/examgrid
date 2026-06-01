@@ -51,6 +51,7 @@ interface ParsedGeminiOption {
   id: string;
   text: string;
   latex?: string | null;
+  image?: string;
 }
 
 interface ParsedGeminiQuestion {
@@ -59,6 +60,7 @@ interface ParsedGeminiQuestion {
   subject?: string | null;
   stem: string;
   stemLatex?: string | null;
+  stem_image?: string;
   options?: ParsedGeminiOption[] | null;
   answer?: string | null;
   explanation?: string | null;
@@ -1264,7 +1266,8 @@ function geminiPaperToProcessedPackage(
     if (!sectionMap.has(sectionName)) sectionMap.set(sectionName, []);
 
     const isNumerical = q.type === "numerical";
-    const optionLabels = isNumerical ? [] : (q.options ?? []).map((o: any) => o.latex || o.text || o);
+    const optionLabels = isNumerical ? [] : (q.options ?? []).map((o: any) => o.latex || o.text || o.id || "");
+    const optionImages = isNumerical ? [] : (q.options ?? []).map((o: any) => o.image || "");
     
     // Convert 0-based or 1-based index or letter to option answer.
     let correctAnswer = q.answer ? String(q.answer) : "";
@@ -1288,7 +1291,8 @@ function geminiPaperToProcessedPackage(
       confidence: q.confidence ?? 0.95,
       questionType: isNumerical ? "NUMERICAL" : "MCQ_SINGLE",
       detectionSource: "gemini_vision",
-      questionText: q.stemLatex || q.stem,
+      questionText: q.stemLatex || q.stem || "",
+      stemImage: q.stem_image,
       hasEquation: q.stem.includes("$"),
       hasImage: q.hasImage ?? false,
       correctAnswer,
@@ -1296,6 +1300,7 @@ function geminiPaperToProcessedPackage(
       marks: 4,
       negativeMarks: isNumerical ? 0 : 1,
       optionLabels,
+      optionImages,
       images: q.images || [],
       explanation: q.explanation ?? undefined,
       metadata: {

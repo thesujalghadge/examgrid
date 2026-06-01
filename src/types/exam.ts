@@ -22,6 +22,7 @@ export interface ExamViolation {
 export interface ExamOption {
   id: string;
   label: string;
+  image?: string;
   text: string;
 }
 
@@ -33,6 +34,7 @@ export interface ExamQuestion {
   text: string;
   options: ExamOption[];
   hasImage?: boolean;
+  stemImage?: string;
   images?: string[];
   correctOptionId?: string;
   correctNumericalAnswer?: string;

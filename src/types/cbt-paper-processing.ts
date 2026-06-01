@@ -61,6 +61,8 @@ export interface PreparedQuestionMeta {
   questionText: string;
   hasEquation?: boolean;
   hasImage?: boolean;
+  stemImage?: string;
+  optionImages?: string[];
   correctAnswer: string;
   solution?: string;
   marks: number;

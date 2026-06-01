@@ -213,6 +213,8 @@ export function QuestionCard({ review }: QuestionCardProps) {
                               value={opt.text}
                               onChange={(event) => review?.onOptionTextChange?.(opt.label, event.target.value)}
                             />
+                          ) : opt.image ? (
+                            <img src={opt.image} alt={opt.label} className="max-w-full max-h-[200px] object-contain" />
                           ) : (
                             <MathRenderer text={displayOptionText} className="text-sm leading-6" />
                           )}

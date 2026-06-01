@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { runVisualExtractor } from "@/lib/server/visual-extractor";
 import { getInstituteGeminiKey } from "@/lib/institute/get-institute-api-key";
 import { logParsingEvent, logParsingWarning, logSessionWarning } from "@/lib/logging/runtime-logger";
 import { readVerifiedWorkspaceSession } from "@/lib/workspace-session-server";
@@ -168,15 +169,17 @@ function detectMimeType(buffer: Buffer): string | null {
 
 const parsedOptionSchema = z.object({
   id: z.string(),
-  text: z.string(),
+  text: z.string().optional(),
   latex: z.string().nullable().optional(),
+  image: z.string().optional(),
 });
 
 const parsedQuestionSchema = z.object({
   id: z.union([z.number(), z.string()]),
   type: z.enum(["mcq", "numerical", "multi_correct"]).catch("mcq"),
   subject: z.string().nullable().optional(),
-  stem: z.string().min(1),
+  stem: z.string().optional(),
+  stem_image: z.string().optional(),
   stemLatex: z.string().nullable().optional(),
   options: z.array(parsedOptionSchema).nullable().optional(),
   answer: z.union([z.string(), z.number()]).transform(String).nullable().optional(),
