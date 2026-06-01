@@ -90,7 +90,9 @@ export function QuestionCard({ review }: QuestionCardProps) {
             <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#1a3c6e] text-xs font-bold text-white">
               {question.number}
             </span>
-            {isTeacherEdit ? (
+            {question.stemImage ? (
+              <img src={question.stemImage} alt="Question" className="max-w-full max-h-[600px] object-contain border border-gray-100 rounded shadow-sm" />
+            ) : isTeacherEdit ? (
               <textarea
                 className="min-h-[100px] w-full rounded-md border border-[#d7dde7] px-3 py-2 text-sm text-gray-900"
                 value={question.text}
@@ -104,7 +106,7 @@ export function QuestionCard({ review }: QuestionCardProps) {
                     "max-h-[40vh] overflow-y-auto rounded border border-gray-100 bg-gray-50 p-3",
                 )}
               >
-                <MathRenderer text={displayQuestionText} className="text-base leading-relaxed" />
+                <MathRenderer text={displayQuestionText} className="text-base leading-relaxed text-gray-800" />
               </div>
             )}
           </div>
@@ -207,14 +209,14 @@ export function QuestionCard({ review }: QuestionCardProps) {
                           {opt.label}
                         </span>
                         <div className="flex-1">
-                          {isTeacherEdit ? (
+                          {opt.image ? (
+                            <img src={opt.image} alt={opt.label} className="max-w-full max-h-[200px] object-contain border border-gray-100 rounded" />
+                          ) : isTeacherEdit ? (
                             <input
                               className="w-full rounded-md border border-[#d7dde7] px-2 py-1 text-sm"
                               value={opt.text}
                               onChange={(event) => review?.onOptionTextChange?.(opt.label, event.target.value)}
                             />
-                          ) : opt.image ? (
-                            <img src={opt.image} alt={opt.label} className="max-w-full max-h-[200px] object-contain" />
                           ) : (
                             <MathRenderer text={displayOptionText} className="text-sm leading-6" />
                           )}
