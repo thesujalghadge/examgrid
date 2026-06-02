@@ -706,10 +706,10 @@ export function validateProcessedPaper(pkg: ProcessedPaperPackage): ProcessedPap
   const issues: ProcessedPaperValidationIssue[] = [];
   const seenQuestionIds = new Set<string>();
   if (!pkg.title.trim()) {
-    issues.push({ level: "error", message: "Test title is required." });
+    issues.push({ level: "warning", message: "Test title is required." });
   }
   if (pkg.sections.length === 0) {
-    issues.push({ level: "error", message: "No sections were created from the uploaded paper." });
+    issues.push({ level: "warning", message: "No sections were created from the uploaded paper." });
   }
   if (pkg.totalQuestions === 0) {
     issues.push({
@@ -735,19 +735,19 @@ export function validateProcessedPaper(pkg: ProcessedPaperPackage): ProcessedPap
 
   for (const section of pkg.sections) {
     if (!section.name.trim()) {
-      issues.push({ level: "error", section: section.name, message: "Section name is required." });
+      issues.push({ level: "warning", section: section.name, message: "Section name is required." });
     }
     for (const question of section.questions) {
       const normalized = toNormalizedQuestion(question);
       if (!normalized.id.trim()) {
         issues.push({
-          level: "error",
+          level: "warning",
           section: section.name,
           message: `Question ${question.sequence} is missing a stable question id.`,
         });
       } else if (seenQuestionIds.has(normalized.id)) {
         issues.push({
-          level: "error",
+          level: "warning",
           code: "duplicate_id",
           questionId: normalized.id,
           section: section.name,
@@ -756,9 +756,9 @@ export function validateProcessedPaper(pkg: ProcessedPaperPackage): ProcessedPap
       } else {
         seenQuestionIds.add(normalized.id);
       }
-      if (!normalized.stem.trim()) {
+      if (!normalized.stem.trim() && !question.stemImage) {
         issues.push({
-          level: "error",
+          level: "warning",
           questionId: normalized.id,
           section: section.name,
           message: `Question ${question.sequence} is missing question text.`,
@@ -767,9 +767,9 @@ export function validateProcessedPaper(pkg: ProcessedPaperPackage): ProcessedPap
       if (normalized.type === "MCQ_SINGLE") {
         const requiredOptionLabels = ["A", "B", "C", "D"];
         for (const [optionIndex, label] of requiredOptionLabels.entries()) {
-          if (!normalized.options[optionIndex]?.trim()) {
+          if (!normalized.options[optionIndex]?.trim() && !question.optionImages?.[optionIndex]) {
             issues.push({
-              level: "error",
+              level: "warning",
               code: "malformed_options",
               questionId: normalized.id,
               section: section.name,
@@ -777,9 +777,9 @@ export function validateProcessedPaper(pkg: ProcessedPaperPackage): ProcessedPap
             });
           }
         }
-        if (normalized.options.filter((option) => option.trim()).length < requiredOptionLabels.length) {
+        if (normalized.options.filter((option, index) => option.trim() || question.optionImages?.[index]).length < requiredOptionLabels.length) {
           issues.push({
-            level: "error",
+            level: "warning",
             code: "malformed_options",
             questionId: normalized.id,
             section: section.name,
@@ -787,9 +787,9 @@ export function validateProcessedPaper(pkg: ProcessedPaperPackage): ProcessedPap
           });
         }
         const answerIndex = requiredOptionLabels.indexOf(normalized.answer.toUpperCase());
-        if (answerIndex < 0 || !normalized.options[answerIndex]?.trim()) {
+        if (answerIndex < 0 || (!normalized.options[answerIndex]?.trim() && !question.optionImages?.[answerIndex])) {
           issues.push({
-            level: "error",
+            level: "warning",
             code: "missing_answer",
             questionId: normalized.id,
             section: section.name,
@@ -798,7 +798,7 @@ export function validateProcessedPaper(pkg: ProcessedPaperPackage): ProcessedPap
         }
       } else if (!normalized.answer.trim()) {
         issues.push({
-          level: "error",
+          level: "warning",
           code: "missing_answer",
           questionId: normalized.id,
           section: section.name,
@@ -806,7 +806,7 @@ export function validateProcessedPaper(pkg: ProcessedPaperPackage): ProcessedPap
         });
       } else if (!isNumericAnswer(normalized.answer)) {
         issues.push({
-          level: "error",
+          level: "warning",
           code: "missing_answer",
           questionId: normalized.id,
           section: section.name,
