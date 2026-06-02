@@ -1,5 +1,8 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
+import crypto from "node:crypto";
+import { promises as fs } from "node:fs";
+import path from "node:path";
 import { z } from "zod";
 import { runVisualExtractor } from "@/lib/server/visual-extractor";
 import { getInstituteGeminiKey } from "@/lib/institute/get-institute-api-key";
@@ -96,8 +99,21 @@ export async function POST(
     let text = "";
     try {
       if (detectedMimeType === "application/pdf") {
-        const rawJson = await runVisualExtractor(buffer, geminiKey, instituteId);
-        parsed = parsedPaperSchema.parse(rawJson);
+        const hash = crypto.createHash("md5").update(buffer).digest("hex");
+        const cacheDir = path.join(process.cwd(), "public", "uploads", "cbt_assets", instituteId, "cache");
+        const cacheFile = path.join(cacheDir, `${hash}.json`);
+        
+        try {
+          const cachedStr = await fs.readFile(cacheFile, "utf-8");
+          const cachedJson = JSON.parse(cachedStr);
+          parsed = parsedPaperSchema.parse(cachedJson);
+        } catch {
+          const rawJson = await runVisualExtractor(buffer, geminiKey, instituteId);
+          parsed = parsedPaperSchema.parse(rawJson);
+          
+          await fs.mkdir(cacheDir, { recursive: true });
+          await fs.writeFile(cacheFile, JSON.stringify(rawJson), "utf-8");
+        }
       } else {
         const genAI = new GoogleGenerativeAI(geminiKey);
         const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
