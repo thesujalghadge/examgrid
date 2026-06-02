@@ -28,7 +28,12 @@ async function resolveExistingPath(candidates: string[]): Promise<string> {
   return "python";
 }
 
-export async function runVisualExtractor(buffer: Buffer, apiKey: string): Promise<any> {
+export async function runVisualExtractor(buffer: Buffer, apiKey: string, instituteId: string): Promise<any> {
+  const jobId = Date.now().toString() + Math.floor(Math.random() * 1000).toString();
+  const assetDir = path.join(process.cwd(), "public", "uploads", "cbt_assets", instituteId, jobId);
+  await fs.mkdir(assetDir, { recursive: true });
+  const assetUrlPrefix = `/uploads/cbt_assets/${instituteId}/${jobId}`;
+  
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "examgrid-vis-"));
   const tempPdf = path.join(tempDir, "paper.pdf");
   await fs.writeFile(tempPdf, buffer);
@@ -37,7 +42,7 @@ export async function runVisualExtractor(buffer: Buffer, apiKey: string): Promis
   const scriptPath = path.join(process.cwd(), "scripts", "visual-extractor.py");
 
   try {
-    const { stdout, stderr } = await execFileAsync(python, [scriptPath, tempPdf, apiKey], {
+    const { stdout, stderr } = await execFileAsync(python, [scriptPath, tempPdf, apiKey, assetDir, assetUrlPrefix], {
       maxBuffer: 50 * 1024 * 1024, // 50MB for large json
       shell: true,
     });

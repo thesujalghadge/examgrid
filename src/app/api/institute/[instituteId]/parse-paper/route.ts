@@ -96,7 +96,7 @@ export async function POST(
     let text = "";
     try {
       if (detectedMimeType === "application/pdf") {
-        const rawJson = await runVisualExtractor(buffer, geminiKey);
+        const rawJson = await runVisualExtractor(buffer, geminiKey, instituteId);
         parsed = parsedPaperSchema.parse(rawJson);
       } else {
         const genAI = new GoogleGenerativeAI(geminiKey);

@@ -1,13 +1,13 @@
 import sys
 import json
-import base64
 import io
+import os
 import fitz  # PyMuPDF
 from PIL import Image
 import google.generativeai as genai
 import time
 
-def get_base64_crop(img: Image.Image, box) -> str:
+def get_saved_crop_url(img: Image.Image, box, filename: str, asset_dir: str, asset_url_prefix: str) -> str:
     if len(box) != 4: return ""
     y1, x1, y2, x2 = box
     ymin, ymax = sorted([y1, y2])
@@ -26,16 +26,16 @@ def get_base64_crop(img: Image.Image, box) -> str:
     lower = min(height, lower + pad)
     
     cropped = img.crop((left, upper, right, lower))
-    buf = io.BytesIO()
-    cropped.save(buf, format="PNG")
-    return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode("utf-8")
+    filepath = os.path.join(asset_dir, filename)
+    cropped.save(filepath, format="PNG")
+    return f"{asset_url_prefix}/{filename}"
 
 def image_to_parts(img: Image.Image):
     buf = io.BytesIO()
     img.save(buf, format='PNG')
     return {"mime_type": "image/png", "data": buf.getvalue()}
 
-def process_page(page_img, prev_img, next_img, page_num, model):
+def process_page(page_img, prev_img, next_img, page_num, model, asset_dir, asset_url_prefix):
     parts = []
     
     prompt = f"You are a highly precise visual extractor for NTA JEE exam papers.\n"
@@ -76,13 +76,18 @@ def process_page(page_img, prev_img, next_img, page_num, model):
         questions = data.get("questions", [])
         
         results = []
-        for q in questions:
-            if "stem_box" in q and len(q["stem_box"]) == 4:
-                q["stem_image"] = get_base64_crop(page_img, q["stem_box"])
+        for i, q in enumerate(questions):
+            q_id_str = str(q.get("id", f"p{page_num}_{i}"))
             
-            for opt in q.get("options", []):
+            if "stem_box" in q and len(q["stem_box"]) == 4:
+                filename = f"q_{q_id_str}_stem.png"
+                q["stem_image"] = get_saved_crop_url(page_img, q["stem_box"], filename, asset_dir, asset_url_prefix)
+            
+            for opt_idx, opt in enumerate(q.get("options", [])):
                 if "box" in opt and len(opt["box"]) == 4:
-                    opt["image"] = get_base64_crop(page_img, opt["box"])
+                    opt_id = str(opt.get("id", opt_idx))
+                    filename = f"q_{q_id_str}_opt_{opt_id}.png"
+                    opt["image"] = get_saved_crop_url(page_img, opt["box"], filename, asset_dir, asset_url_prefix)
                     
             results.append(q)
             
@@ -94,6 +99,8 @@ def process_page(page_img, prev_img, next_img, page_num, model):
 def main():
     pdf_path = sys.argv[1]
     api_key = sys.argv[2]
+    asset_dir = sys.argv[3]
+    asset_url_prefix = sys.argv[4]
     
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel('gemini-2.5-flash')
@@ -115,7 +122,7 @@ def main():
         prev_img = page_images[i-1] if i > 0 else None
         next_img = page_images[i+1] if i < len(page_images) - 1 else None
         
-        res = process_page(img, prev_img, next_img, i + 1, model)
+        res = process_page(img, prev_img, next_img, i + 1, model, asset_dir, asset_url_prefix)
         if res:
             all_questions.extend(res)
             
