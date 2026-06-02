@@ -7,7 +7,7 @@ from PIL import Image
 import re
 import google.generativeai as genai
 import typing
-import concurrent.futures
+import time
 
 class OptionBox(typing.TypedDict):
     id: str
@@ -163,12 +163,13 @@ def main():
     
     all_questions = []
     
-    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
-        future_to_batch = {executor.submit(process_batch, batch, model): batch for batch in batches}
-        for future in concurrent.futures.as_completed(future_to_batch):
-            res = future.result()
-            if res:
-                all_questions.extend(res)
+    for i, batch in enumerate(batches):
+        res = process_batch(batch, model)
+        if res:
+            all_questions.extend(res)
+        # Sleep for 4 seconds between batches to avoid free tier burst limits (15 RPM limit)
+        if i < len(batches) - 1:
+            time.sleep(4)
                 
     # Sort questions by ID to maintain order
     all_questions.sort(key=lambda x: int(x["id"]) if x["id"].isdigit() else 0)

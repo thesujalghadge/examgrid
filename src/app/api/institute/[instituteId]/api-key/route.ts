@@ -47,13 +47,8 @@ export async function POST(
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid request" }, { status: 400 });
   }
 
-  const valid = await validateGeminiKey(parsed.data.apiKey);
-  if (!valid) {
-    return NextResponse.json(
-      { error: "Gemini API key validation failed. Check the key and try again." },
-      { status: 400 },
-    );
-  }
+  // Validation removed to allow any key format
+
 
   try {
     const { encrypted, iv } = await encryptApiKey(parsed.data.apiKey);
@@ -75,12 +70,6 @@ export async function POST(
       { status: 500 },
     );
   }
-}
-
-async function validateGeminiKey(apiKey: string): Promise<boolean> {
-  // Relaxed validation to avoid proxy/fetch failures.
-  // Google Gemini API keys always start with AIza.
-  return apiKey.startsWith("AIza");
 }
 
 export async function DELETE(
