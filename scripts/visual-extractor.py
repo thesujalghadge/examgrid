@@ -72,8 +72,7 @@ def process_batch(chunk_batch: list[tuple[Image.Image, str]], model) -> list:
         
     try:
         response = model.generate_content([prompt] + parts, generation_config={
-            "response_mime_type": "application/json",
-            "response_schema": BatchExtractResult
+            "response_mime_type": "application/json"
         })
         
         data = json.loads(response.text)
