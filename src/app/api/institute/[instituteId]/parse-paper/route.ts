@@ -193,6 +193,8 @@ const parsedQuestionSchema = z.object({
   images: z.array(z.string()).catch([]),
   hasImage: z.boolean().catch(false),
   confidence: z.number().nullable().optional(),
+  sourcePage: z.number().optional(),
+  continued: z.boolean().optional(),
 });
 
 const parsedPaperSchema = z.object({

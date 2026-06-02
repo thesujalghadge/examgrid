@@ -1339,13 +1339,13 @@ function geminiPaperToProcessedPackage(
     extractionMode: "gemini_vision",
     extractionSummary: {
       pages: 1,
-      extractedChars: parsed.questions.reduce((n, q) => n + q.stem.length, 0),
+      extractedChars: parsed.questions.reduce((n, q) => n + (q.stem?.length || 0), 0),
       usedOCR: true,
       questionsDetected: totalQuestions,
       warnings: [],
     },
     parsingDiagnostics: {
-      rawTextPreview: parsed.questions.slice(0, 2).map((q) => q.stem).join("\n"),
+      rawTextPreview: parsed.questions.slice(0, 2).map((q) => q.stem || "").join("\n"),
       parsedQuestionCount: totalQuestions,
       unmatchedAnswerCount: 0,
       unmatchedAnswers: [],
