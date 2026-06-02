@@ -51,16 +51,18 @@ def process_batch(chunk_batch: list[tuple[Image.Image, str]], model) -> list:
     parts = []
     expected_ids = []
     
-    prompt = f"You are a visual layout extractor. You are given {len(chunk_batch)} images in order. Each image contains ONE specific question.\n"
+    prompt = f"You are a visual layout extractor. You are given {len(chunk_batch)} images in order.\n"
     prompt += "Extract the exact bounding boxes for the question stem and its options for EACH image.\n"
-    prompt += "Return a JSON object with a 'questions' array. The array must contain exactly one object per image, in the exact same order.\n"
+    prompt += "NOTE: Some images may contain MULTIPLE questions. Extract EVERY question you see in the image.\n"
+    prompt += "Return a JSON object with a 'questions' array. The array must contain ALL questions found across all images.\n"
     prompt += "Each question object MUST have:\n"
-    prompt += "- id: the question number (provided below)\n"
+    prompt += "- id: the question number as written in the text (e.g. '1', '2')\n"
     prompt += "- type: 'mcq' or 'numerical'\n"
     prompt += "- subject: inferred subject (Physics, Chemistry, Mathematics)\n"
     prompt += "- answer: correct option ID if indicated, else null\n"
-    prompt += "- stem_box: bounding box of the question text and diagrams [ymin, xmin, ymax, xmax] scaled to 1000.\n"
-    prompt += "- options: list of options with id (A, B, C, D or 1, 2, 3, 4) and bounding box [ymin, xmin, ymax, xmax] scaled to 1000. Ensure you capture ALL options.\n\n"
+    prompt += "- stem_box: bounding box of the question text and diagrams [ymin, xmin, ymax, xmax] scaled to 1000 relative to the IMAGE it was found in.\n"
+    prompt += "- options: list of options with id (A, B, C, D or 1, 2, 3, 4) and bounding box [ymin, xmin, ymax, xmax] scaled to 1000 relative to the IMAGE it was found in.\n"
+    prompt += "- source_image_index: the index (0 to N-1) of the image this question was found in.\n\n"
     
     for i, (img, q_id) in enumerate(chunk_batch):
         expected_ids.append(q_id)
@@ -79,11 +81,17 @@ def process_batch(chunk_batch: list[tuple[Image.Image, str]], model) -> list:
         questions = data.get("questions", [])
         
         results = []
-        for i, q in enumerate(questions):
-            if i >= len(chunk_batch): break
-            chunk_img, q_id = chunk_batch[i]
-            q["id"] = q_id  # override to ensure correct ID mapping
+        for q in questions:
+            idx = q.get("source_image_index", 0)
+            if idx >= len(chunk_batch): idx = len(chunk_batch) - 1
+            if idx < 0: idx = 0
             
+            chunk_img, original_q_id = chunk_batch[idx]
+            
+            # If we had a specific expected ID from OCR (not a fallback Page ID), force it
+            if "Page_" not in original_q_id:
+                q["id"] = original_q_id
+                
             if "stem_box" in q and len(q["stem_box"]) == 4:
                 q["stem_image"] = get_base64_crop(chunk_img, q["stem_box"])
             
@@ -135,7 +143,25 @@ def main():
                 questions.append({"id": match.group(1), "y": l["y0"]})
                 
         if not questions:
-            # Maybe the whole page is one question or a continuation, skip for chunking or treat as 1
+            # Fallback: Scanned PDF or no text layer.
+            # Slice the page into 2 overlapping vertical halves so Gemini isn't overwhelmed by a full dense page.
+            # We treat these halves as separate chunks. Gemini will extract multiple questions per half.
+            page_height = page.rect.height
+            half = page_height / 2
+            overlap = page_height * 0.1 # 10% overlap to avoid cutting a question in half fatally
+            
+            # Top Half
+            scale_y = img.height / page_height
+            crop_y0 = 0
+            crop_y1 = int((half + overlap) * scale_y)
+            top_img = img.crop((0, crop_y0, img.width, crop_y1))
+            all_chunks.append((top_img, f"Page_{page_num}_Top"))
+            
+            # Bottom Half
+            crop_y0 = int((half - overlap) * scale_y)
+            crop_y1 = img.height
+            bottom_img = img.crop((0, crop_y0, img.width, crop_y1))
+            all_chunks.append((bottom_img, f"Page_{page_num}_Bottom"))
             continue
             
         page_height = page.rect.height
