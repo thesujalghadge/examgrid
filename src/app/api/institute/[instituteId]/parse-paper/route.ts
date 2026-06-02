@@ -106,6 +106,9 @@ export async function POST(
         try {
           const cachedStr = await fs.readFile(cacheFile, "utf-8");
           const cachedJson = JSON.parse(cachedStr);
+          if (cachedJson.questions && cachedJson.questions.length === 0) {
+            throw new Error("Empty cache");
+          }
           parsed = parsedPaperSchema.parse(cachedJson);
         } catch {
           const rawJson = await runVisualExtractor(buffer, geminiKey, instituteId);

@@ -44,7 +44,7 @@ export async function runVisualExtractor(buffer: Buffer, apiKey: string, institu
   try {
     const { stdout, stderr } = await execFileAsync(python, [scriptPath, tempPdf, apiKey, assetDir, assetUrlPrefix], {
       maxBuffer: 50 * 1024 * 1024, // 50MB for large json
-      shell: true,
+      shell: false,
     });
     if (stderr) console.error("[Visual Extractor stderr]", stderr);
     
