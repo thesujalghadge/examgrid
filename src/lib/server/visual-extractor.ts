@@ -81,6 +81,12 @@ export async function* runVisualExtractor(buffer: Buffer, apiKey: string, instit
     }
     
     const semanticPath = path.join(assetDir, "semantic.json");
+    try {
+      await fs.access(semanticPath);
+    } catch {
+      throw new Error(`[PIPELINE FAILURE] Semantic generation failed. File not found: ${semanticPath}`);
+    }
+    
     const semanticStr = await fs.readFile(semanticPath, "utf-8");
     const semanticJson = JSON.parse(semanticStr);
     

@@ -58,18 +58,24 @@ def generate_semantic_package(ocr_data, math_data, client):
         
         # If running in mock mode (no API key provided or invalid)
         if not client or client == "mock_key":
-            print("Warning: No valid Gemini API key provided. Generating mock semantic package.", file=sys.stderr)
+            print("[DEBUG] Warning: No valid Gemini API key provided. Generating mock semantic package.", flush=True)
             return mock_semantic_package(list(merged_regions.values()))
             
-        print("Calling Gemini 2.5 Flash for Semantic Normalization...")
+        print("[DEBUG] Gemini request started...", flush=True)
         response = client.models.generate_content(
             model='gemini-2.5-flash',
             contents=[prompt, prompt_payload],
             config=types.GenerateContentConfig(response_mime_type="application/json")
         )
-        return json.loads(response.text)
+        print("[DEBUG] Gemini response received.", flush=True)
+        
+        print("[DEBUG] Semantic normalization started (parsing JSON)...", flush=True)
+        parsed_response = json.loads(response.text)
+        print("[DEBUG] Semantic normalization complete.", flush=True)
+        
+        return parsed_response
     except Exception as e:
-        print(f"Error calling Gemini: {e}", file=sys.stderr)
+        print(f"[PIPELINE FATAL ERROR] Error calling Gemini: {e}", flush=True)
         return {"questions": [], "error": str(e)}
 
 def mock_semantic_package(regions):
@@ -143,13 +149,19 @@ def main():
     final_package = generate_semantic_package(ocr_data, math_data, client)
     elapsed = time.time() - start_time
     
-    print(f"Semantic normalization generated {len(final_package.get('questions', []))} questions in {elapsed:.2f}s")
+    print(f"Semantic normalization generated {len(final_package.get('questions', []))} questions in {elapsed:.2f}s", flush=True)
     
+    if "error" in final_package and not final_package.get("questions"):
+        print(f"[PIPELINE FATAL ERROR] Semantic generation failed due to API error: {final_package['error']}", flush=True)
+        sys.exit(1)
+        
     semantic_path = os.path.join(base_dir, "semantic.json")
+    print(f"[DEBUG] semantic.json write started to {semantic_path}...", flush=True)
     with open(semantic_path, "w", encoding="utf-8") as f:
         json.dump(final_package, f, indent=2)
         
-    print(f"Semantic normalization complete. Saved to {semantic_path}")
+    print(f"[DEBUG] semantic.json write completed.", flush=True)
+    print(f"Semantic normalization complete. Saved to {semantic_path}", flush=True)
 
 if __name__ == "__main__":
     main()

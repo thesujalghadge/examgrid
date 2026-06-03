@@ -98,23 +98,40 @@ def main():
     total_start = time.time()
     timings = {}
     
-    def run_stage_with_timing(script_name, args, warn_timeout=None):
+    def run_stage_with_timing(script_name, args, warn_timeout=None, expected_file=None):
         start = time.time()
         run_stage(script_name, args, warn_timeout)
+        
+        if expected_file:
+            if not os.path.exists(expected_file):
+                print(f"\n[PIPELINE FATAL ERROR] Stage Failed: {script_name} failed to produce expected output file: {os.path.basename(expected_file)}", flush=True)
+                sys.exit(1)
+            try:
+                import json
+                with open(expected_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    if not data:
+                        raise ValueError("JSON is empty")
+            except Exception as e:
+                print(f"\n[PIPELINE FATAL ERROR] Stage Failed: {script_name} produced invalid JSON in {os.path.basename(expected_file)}. Error: {e}", flush=True)
+                sys.exit(1)
+                
         timings[script_name] = time.time() - start
 
+    base_dir = os.path.join(os.getcwd(), "public", "uploads", "cbt_assets", job_id)
+    
     stage1_args = [pdf_path, job_id]
     if max_pages:
         stage1_args.append(f"--max-pages={max_pages}")
         
-    run_stage_with_timing("stage1_render.py", stage1_args, warn_timeout=15)
-    run_stage_with_timing("stage2_layout.py", [pdf_path, job_id, "--no-debug"], warn_timeout=20)
-    run_stage_with_timing("stage3_ocr.py", [pdf_path, job_id, "--no-debug"], warn_timeout=30)
+    run_stage_with_timing("stage1_render.py", stage1_args, warn_timeout=15, expected_file=os.path.join(base_dir, "render_meta.json"))
+    run_stage_with_timing("stage2_layout.py", [pdf_path, job_id, "--no-debug"], warn_timeout=20, expected_file=os.path.join(base_dir, "layout.json"))
+    run_stage_with_timing("stage3_ocr.py", [pdf_path, job_id, "--no-debug"], warn_timeout=30, expected_file=os.path.join(base_dir, "ocr.json"))
     
     if not is_lightweight:
-        run_stage_with_timing("stage4_math.py", [pdf_path, job_id, "--no-debug"], warn_timeout=30)
+        run_stage_with_timing("stage4_math.py", [pdf_path, job_id, "--no-debug"], warn_timeout=30, expected_file=os.path.join(base_dir, "math.json"))
         
-    run_stage_with_timing("stage6_semantic.py", [job_id, api_key], warn_timeout=20)
+    run_stage_with_timing("stage6_semantic.py", [job_id, api_key], warn_timeout=20, expected_file=os.path.join(base_dir, "semantic.json"))
     
     print("\n" + "="*50, flush=True)
     print("[PIPELINE TIMING SUMMARY]", flush=True)

@@ -1,0 +1,636 @@
+{
+  "job_id": "1780491855283348",
+  "pages": [
+    {
+      "page": 1,
+      "regions": [
+        {
+          "id": "stem_1",
+          "type": "QuestionStem",
+          "bbox": [
+            104,
+            134,
+            2414,
+            245
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/stem_1.webp",
+          "text": "2025 (22 Jan Shift 1) JEE Main Previous Year Paper JEE Main 2025 January MathonGo",
+          "confidence": 0.9232568346781183,
+          "readingOrder": 0
+        },
+        {
+          "id": "img_1",
+          "type": "Image",
+          "bbox": [
+            109,
+            336,
+            2295,
+            517
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/img_1.webp",
+          "text": "[DIAGRAM]",
+          "confidence": 1.0,
+          "readingOrder": 1
+        },
+        {
+          "id": "img_2",
+          "type": "Image",
+          "bbox": [
+            109,
+            564,
+            2341,
+            791
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/img_2.webp",
+          "text": "[DIAGRAM]",
+          "confidence": 1.0,
+          "readingOrder": 2
+        },
+        {
+          "id": "img_3",
+          "type": "Image",
+          "bbox": [
+            109,
+            845,
+            2377,
+            1095
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/img_3.webp",
+          "text": "[DIAGRAM]",
+          "confidence": 1.0,
+          "readingOrder": 3
+        },
+        {
+          "id": "stem_2",
+          "type": "QuestionStem",
+          "bbox": [
+            187,
+            1121,
+            1400,
+            1164
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/stem_2.webp",
+          "text": "(3) 13 11",
+          "confidence": 0.9627220968874044,
+          "readingOrder": 4
+        },
+        {
+          "id": "img_5",
+          "type": "Image",
+          "bbox": [
+            109,
+            1210,
+            1621,
+            1408
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/img_5.webp",
+          "text": "[DIAGRAM]",
+          "confidence": 1.0,
+          "readingOrder": 5
+        },
+        {
+          "id": "img_6",
+          "type": "Image",
+          "bbox": [
+            109,
+            1467,
+            2360,
+            1652
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/img_6.webp",
+          "text": "[DIAGRAM]",
+          "confidence": 1.0,
+          "readingOrder": 6
+        },
+        {
+          "id": "stem_3",
+          "type": "QuestionStem",
+          "bbox": [
+            187,
+            1677,
+            1401,
+            1720
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/stem_3.webp",
+          "text": "(3) 21 (4) 22",
+          "confidence": 0.9349424250013516,
+          "readingOrder": 7
+        },
+        {
+          "id": "img_8",
+          "type": "Image",
+          "bbox": [
+            109,
+            1769,
+            2319,
+            1967
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/img_8.webp",
+          "text": "[DIAGRAM]",
+          "confidence": 1.0,
+          "readingOrder": 8
+        },
+        {
+          "id": "stem_4",
+          "type": "QuestionStem",
+          "bbox": [
+            187,
+            1993,
+            1383,
+            2036
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/stem_4.webp",
+          "text": "(3) 2t T",
+          "confidence": 0.8009514987012624,
+          "readingOrder": 9
+        },
+        {
+          "id": "img_10",
+          "type": "Image",
+          "bbox": [
+            109,
+            2093,
+            2376,
+            2280
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/img_10.webp",
+          "text": "[DIAGRAM]",
+          "confidence": 1.0,
+          "readingOrder": 10
+        },
+        {
+          "id": "stem_5",
+          "type": "QuestionStem",
+          "bbox": [
+            187,
+            2306,
+            1378,
+            2349
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/stem_5.webp",
+          "text": "(3) 6 (4) 5",
+          "confidence": 0.8885483660537885,
+          "readingOrder": 11
+        },
+        {
+          "id": "img_12",
+          "type": "Image",
+          "bbox": [
+            109,
+            2399,
+            2338,
+            2673
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/img_12.webp",
+          "text": "[DIAGRAM]",
+          "confidence": 1.0,
+          "readingOrder": 12
+        },
+        {
+          "id": "img_13",
+          "type": "Image",
+          "bbox": [
+            109,
+            2723,
+            2277,
+            2908
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/img_13.webp",
+          "text": "[DIAGRAM]",
+          "confidence": 1.0,
+          "readingOrder": 13
+        },
+        {
+          "id": "stem_6",
+          "type": "QuestionStem",
+          "bbox": [
+            187,
+            2933,
+            1448,
+            2977
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/stem_6.webp",
+          "text": "(3) 2384 (4 2406",
+          "confidence": 0.978366408648237,
+          "readingOrder": 14
+        },
+        {
+          "id": "stem_7",
+          "type": "QuestionStem",
+          "bbox": [
+            109,
+            3039,
+            2364,
+            3154
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/stem_7.webp",
+          "text": "Q10. From all the English alphabets, five letters are chosen and are arranged in alphabetical order The total number of ways, in which the middle letter is M is",
+          "confidence": 0.8946605540111761,
+          "readingOrder": 15
+        }
+      ]
+    },
+    {
+      "page": 2,
+      "regions": [
+        {
+          "id": "stem_1",
+          "type": "QuestionStem",
+          "bbox": [
+            104,
+            134,
+            2414,
+            245
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/stem_1.webp",
+          "text": "2025 (22 Jan Shift 1) JEE Main Previous Year Paper JEE Main 2025 January MathonGo",
+          "confidence": 0.9232568346781183,
+          "readingOrder": 0
+        },
+        {
+          "id": "stem_2",
+          "type": "QuestionStem",
+          "bbox": [
+            210,
+            330,
+            1461,
+            374
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/stem_2.webp",
+          "text": "(1) 5148 Knehon Aneton (2) 6084",
+          "confidence": 0.41877267288182096,
+          "readingOrder": 1
+        },
+        {
+          "id": "stem_3",
+          "type": "QuestionStem",
+          "bbox": [
+            210,
+            399,
+            1483,
+            442
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/stem_3.webp",
+          "text": "(3) 4356 (4) 14950",
+          "confidence": 0.9703895067915127,
+          "readingOrder": 2
+        },
+        {
+          "id": "img_3",
+          "type": "Image",
+          "bbox": [
+            109,
+            505,
+            2333,
+            777
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/img_3.webp",
+          "text": "[DIAGRAM]",
+          "confidence": 1.0,
+          "readingOrder": 3
+        },
+        {
+          "id": "img_4",
+          "type": "Image",
+          "bbox": [
+            109,
+            836,
+            2180,
+            1158
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/img_4.webp",
+          "text": "[DIAGRAM]",
+          "confidence": 1.0,
+          "readingOrder": 4
+        },
+        {
+          "id": "stem_4",
+          "type": "QuestionStem",
+          "bbox": [
+            109,
+            1208,
+            2240,
+            1333
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/stem_4.webp",
+          "text": "Q13. The area of the region; inside the circle (x _ 213)2 y2 12 and outside the parabola y2 2V3. is : @ (1) 37 + 8 (2) 6T ~ 16",
+          "confidence": 0.6172951048695845,
+          "readingOrder": 5
+        },
+        {
+          "id": "stem_5",
+          "type": "QuestionStem",
+          "bbox": [
+            210,
+            1359,
+            1496,
+            1402
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/stem_5.webp",
+          "text": "6(3) 30 _ 8 Aoo Ancnon (4) 6w _ 8\u20ac",
+          "confidence": 0.17189641949463358,
+          "readingOrder": 6
+        },
+        {
+          "id": "img_7",
+          "type": "Image",
+          "bbox": [
+            109,
+            1461,
+            2324,
+            1723
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/img_7.webp",
+          "text": "[DIAGRAM]",
+          "confidence": 1.0,
+          "readingOrder": 7
+        },
+        {
+          "id": "img_8",
+          "type": "Image",
+          "bbox": [
+            109,
+            1762,
+            1736,
+            1988
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/img_8.webp",
+          "text": "[DIAGRAM]",
+          "confidence": 1.0,
+          "readingOrder": 8
+        },
+        {
+          "id": "img_9",
+          "type": "Image",
+          "bbox": [
+            109,
+            2036,
+            2298,
+            2224
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/img_9.webp",
+          "text": "[DIAGRAM]",
+          "confidence": 1.0,
+          "readingOrder": 9
+        },
+        {
+          "id": "stem_6",
+          "type": "QuestionStem",
+          "bbox": [
+            210,
+            2249,
+            1413,
+            2292
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/stem_6.webp",
+          "text": "(3) 32 (4) 48",
+          "confidence": 0.9158009884950058,
+          "readingOrder": 10
+        },
+        {
+          "id": "stem_7",
+          "type": "QuestionStem",
+          "bbox": [
+            109,
+            2352,
+            1625,
+            2467
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/stem_7.webp",
+          "text": "Q17. The number of 'non-empty equivalence relations on = on the set {1,2,3} is : is '9 (1) 6 (2) 5",
+          "confidence": 0.7202186347614616,
+          "readingOrder": 11
+        },
+        {
+          "id": "stem_8",
+          "type": "QuestionStem",
+          "bbox": [
+            210,
+            2492,
+            1391,
+            2536
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/stem_8.webp",
+          "text": "(3) 7 (4) 4",
+          "confidence": 0.9986463597521231,
+          "readingOrder": 12
+        },
+        {
+          "id": "img_13",
+          "type": "Image",
+          "bbox": [
+            109,
+            2597,
+            2368,
+            2849
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/img_13.webp",
+          "text": "[DIAGRAM]",
+          "confidence": 1.0,
+          "readingOrder": 13
+        },
+        {
+          "id": "stem_9",
+          "type": "QuestionStem",
+          "bbox": [
+            210,
+            2874,
+            1414,
+            2917
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/stem_9.webp",
+          "text": "(3) 12 (4) 14",
+          "confidence": 0.9975785788338333,
+          "readingOrder": 14
+        },
+        {
+          "id": "stem_10",
+          "type": "QuestionStem",
+          "bbox": [
+            109,
+            2973,
+            2265,
+            3095
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/stem_10.webp",
+          "text": "Q19.Let A = {1,2,3, 10} and B = {2 m, n \u20ac A,m < n and gcd(m, n) = 1}. Then n(B) is equal to (1) 36 (2) 31",
+          "confidence": 0.83476418391341,
+          "readingOrder": 15
+        },
+        {
+          "id": "stem_11",
+          "type": "QuestionStem",
+          "bbox": [
+            210,
+            3121,
+            1413,
+            3164
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/stem_11.webp",
+          "text": "(3) 37 (4) 29",
+          "confidence": 0.9768167324671333,
+          "readingOrder": 16
+        }
+      ]
+    },
+    {
+      "page": 3,
+      "regions": [
+        {
+          "id": "stem_1",
+          "type": "QuestionStem",
+          "bbox": [
+            104,
+            134,
+            2414,
+            245
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/stem_1.webp",
+          "text": "2025 (22 Jan Shift 1) JEE Main Previous Year Paper JEE Main 2025 January MathonGo",
+          "confidence": 0.9232568346781183,
+          "readingOrder": 0
+        },
+        {
+          "id": "img_1",
+          "type": "Image",
+          "bbox": [
+            109,
+            330,
+            2224,
+            514
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/img_1.webp",
+          "text": "[DIAGRAM]",
+          "confidence": 1.0,
+          "readingOrder": 1
+        },
+        {
+          "id": "stem_2",
+          "type": "QuestionStem",
+          "bbox": [
+            210,
+            540,
+            1412,
+            583
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/stem_2.webp",
+          "text": "(3) 41 (4) 31",
+          "confidence": 0.9695311693396631,
+          "readingOrder": 2
+        },
+        {
+          "id": "stem_3",
+          "type": "QuestionStem",
+          "bbox": [
+            109,
+            642,
+            2369,
+            760
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/stem_3.webp",
+          "text": "Q21.Let A be a square matrix of order 3 such that det(A) ~2 and det(3adj( _6 adj(3A4))) 2m+n 3mn,m > n Then 4 m + 2n is equal to",
+          "confidence": 0.7796775508762106,
+          "readingOrder": 3
+        },
+        {
+          "id": "stem_4",
+          "type": "QuestionStem",
+          "bbox": [
+            109,
+            804,
+            1421,
+            877
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/stem_4.webp",
+          "text": "5 Q22. If r=0 2r+2 4,gcd(m,n) = 1, then m L n is equal to 11C22r",
+          "confidence": 0.7167380914349502,
+          "readingOrder": 4
+        },
+        {
+          "id": "stem_5",
+          "type": "QuestionStem",
+          "bbox": [
+            109,
+            922,
+            2311,
+            1057
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/stem_5.webp",
+          "text": "Q23.Let \u20ac be the projection vector of b Az + 4k,A 0, on the vector & { 2j + 2k. Ifla + & = 7, then the area of the parallelogram formed by the vectors b and \u20ac is",
+          "confidence": 0.6815907752310928,
+          "readingOrder": 5
+        },
+        {
+          "id": "img_6",
+          "type": "Image",
+          "bbox": [
+            109,
+            1101,
+            2377,
+            1281
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/img_6.webp",
+          "text": "[DIAGRAM]",
+          "confidence": 1.0,
+          "readingOrder": 6
+        },
+        {
+          "id": "stem_6",
+          "type": "QuestionStem",
+          "bbox": [
+            109,
+            1396,
+            2357,
+            1528
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/stem_6.webp",
+          "text": "Q25.Let L1 231 21 281 and Lz 222 = 8 = 244 \u20ac R; be two lines; which intersect at the point B. If Pis the foot of perpendicular from the point A(1,1, -1) o Lz, then the value of 260 PB)2 is Q",
+          "confidence": 0.6764633999163635,
+          "readingOrder": 7
+        },
+        {
+          "id": "img_8",
+          "type": "Image",
+          "bbox": [
+            109,
+            1586,
+            2364,
+            2045
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/img_8.webp",
+          "text": "[DIAGRAM]",
+          "confidence": 1.0,
+          "readingOrder": 8
+        },
+        {
+          "id": "img_9",
+          "type": "Image",
+          "bbox": [
+            109,
+            2105,
+            2370,
+            2492
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/img_9.webp",
+          "text": "[DIAGRAM]",
+          "confidence": 1.0,
+          "readingOrder": 9
+        },
+        {
+          "id": "stem_7",
+          "type": "QuestionStem",
+          "bbox": [
+            109,
+            2555,
+            2316,
+            2670
+          ],
+          "assetPath": "/uploads/cbt_assets/1780491855283348/regions/stem_7.webp",
+          "text": "Q28.A uniform circular disc of radius R and mass M is rotating about an axis perpendicular to its plane and passing through its centre. A small circular part of radius R/2 is removed from the original disc as shown in",
+          "confidence": 0.8979477994528163,
+          "readingOrder": 10
+        }
+      ]
+    }
+  ]
+}
