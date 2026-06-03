@@ -157,9 +157,11 @@ def main():
         print(f"Page {page_num} OCR Complete in {elapsed:.2f}s | Avg Conf: {avg_conf:.2f} | Empty/Failed: {failed_regions}")
         
         # Debug Overlay
-        debug_path = os.path.join(base_dir, "pages", f"page_{page_num:03d}_ocr_debug.png")
-        generate_ocr_debug(page_img_path, ocr_results, debug_path)
-        print(f"Saved OCR visual debug to {debug_path}")
+        no_debug = "--no-debug" in sys.argv
+        if not no_debug:
+            debug_path = os.path.join(base_dir, "pages", f"page_{page_num:03d}_ocr_debug.png")
+            generate_ocr_debug(page_img_path, ocr_results, debug_path)
+            print(f"Saved OCR visual debug to {debug_path}")
         
         ocr_data["pages"].append({
             "page": page_num,

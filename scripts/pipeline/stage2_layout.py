@@ -198,12 +198,14 @@ def main():
             "regions": regions
         })
         
-        # Generate visual debug overlay
-        debug_img_path = orig_img_path.replace(".png", "_debug.png")
-        draw_debug_overlay(orig_img_path, regions, debug_img_path)
-        
+        no_debug = "--no-debug" in sys.argv
+        if not no_debug:
+            # Generate visual debug overlay
+            debug_img_path = orig_img_path.replace(".png", "_debug.png")
+            draw_debug_overlay(orig_img_path, regions, debug_img_path)
+            print(f"Saved visual debug to {debug_img_path}")
+            
         print(f"Detected {len(regions)} layout regions on Page {page_num + 1}")
-        print(f"Saved visual debug to {debug_img_path}")
         
     layout_path = os.path.join(base_dir, "layout.json")
     with open(layout_path, "w", encoding="utf-8") as f:

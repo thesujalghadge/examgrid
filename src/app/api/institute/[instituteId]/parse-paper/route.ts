@@ -109,27 +109,33 @@ export async function POST(
           if (cachedJson.questions && cachedJson.questions.length === 0) {
             throw new Error("Empty cache");
           }
-          
-          console.log("\n=======================================================");
-          console.log("[RUNTIME PROOF] CACHE HIT");
-          console.log(`[RUNTIME PROOF] Loading from cache: ${cacheFile}`);
-          
           parsed = parsedPaperSchema.parse(cachedJson);
-          console.log(`[RUNTIME PROOF] After Zod Parse (Cache) Q1 _debug_source:`, (parsed as any).questions?.[0]?._debug_source);
-          console.log("=======================================================\n");
         } catch {
-          console.log("\n=======================================================");
-          console.log(`[RUNTIME PROOF] CACHE MISS. Calling runVisualExtractor for new PDF parse`);
+          const generator = runVisualExtractor(buffer, geminiKey, instituteId);
+          const stream = new ReadableStream({
+            async start(controller) {
+              try {
+                for await (const chunk of generator) {
+                  controller.enqueue(JSON.stringify(chunk) + "\n");
+                  if (chunk.questions) {
+                    await fs.mkdir(cacheDir, { recursive: true });
+                    await fs.writeFile(cacheFile, JSON.stringify(chunk), "utf-8");
+                  }
+                }
+                controller.close();
+              } catch (e: any) {
+                controller.enqueue(JSON.stringify({ error: e.message || "Unknown error" }) + "\n");
+                controller.close();
+              }
+            }
+          });
           
-          const rawJson = await runVisualExtractor(buffer, geminiKey, instituteId);
-          console.log(`[RUNTIME PROOF] RAW Adapter Output Q1 _debug_source:`, rawJson?.questions?.[0]?._debug_source);
-          
-          parsed = parsedPaperSchema.parse(rawJson);
-          console.log(`[RUNTIME PROOF] After Zod Parse Q1 _debug_source:`, (parsed as any).questions?.[0]?._debug_source);
-          console.log("=======================================================\n");
-          
-          await fs.mkdir(cacheDir, { recursive: true });
-          await fs.writeFile(cacheFile, JSON.stringify(rawJson), "utf-8");
+          return new Response(stream, {
+            headers: {
+              "Content-Type": "application/x-ndjson",
+              "Cache-Control": "no-cache",
+            }
+          });
         }
       } else {
         throw new Error(`[RUNTIME PROOF] Explicit failure: Legacy parser disabled. Only PDFs are currently supported by the deterministic pipeline.`);

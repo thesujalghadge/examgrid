@@ -12,6 +12,10 @@ def main():
     pdf_path = sys.argv[1]
     job_id = sys.argv[2]
     
+    max_pages = None
+    if len(sys.argv) > 3 and sys.argv[3].startswith("--max-pages="):
+        max_pages = int(sys.argv[3].split("=")[1])
+    
     # Setup directories
     base_dir = os.path.join(os.getcwd(), "public", "uploads", "cbt_assets", job_id)
     pages_dir = os.path.join(base_dir, "pages")
@@ -20,13 +24,18 @@ def main():
     print(f"Opening PDF: {pdf_path}")
     doc = fitz.open(pdf_path)
     
+    num_pages = len(doc)
+    if max_pages and max_pages < num_pages:
+        print(f"Limiting render to first {max_pages} pages for fast demo execution.")
+        num_pages = max_pages
+        
     metadata = {
         "job_id": job_id,
-        "total_pages": len(doc),
+        "total_pages": num_pages,
         "pages": []
     }
     
-    for page_num in range(len(doc)):
+    for page_num in range(num_pages):
         page = doc[page_num]
         
         # High-res render for layout/OCR (300 DPI)

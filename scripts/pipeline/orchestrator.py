@@ -66,19 +66,47 @@ def main():
         
     verify_dependencies()
     
-    if len(sys.argv) < 3:
-        print("Usage: python orchestrator.py <pdf_path> <job_id> <api_key>")
+    max_pages = None
+    positional_args = []
+    
+    for arg in sys.argv[1:]:
+        if arg.startswith("--max-pages="):
+            max_pages = arg.split("=")[1]
+        else:
+            positional_args.append(arg)
+            
+    if len(positional_args) < 2:
+        print("Usage: python orchestrator.py <pdf_path> <job_id> <api_key> [--max-pages=N]")
         sys.exit(1)
         
-    pdf_path = sys.argv[1]
-    job_id = sys.argv[2]
-    api_key = sys.argv[3] if len(sys.argv) > 3 else "mock_key"
+    pdf_path = positional_args[0]
+    job_id = positional_args[1]
+    api_key = positional_args[2] if len(positional_args) > 2 else "mock_key"
     
-    run_stage("stage1_render.py", [pdf_path, job_id])
-    run_stage("stage2_layout.py", [pdf_path, job_id])
-    run_stage("stage3_ocr.py", [pdf_path, job_id])
-    run_stage("stage4_math.py", [pdf_path, job_id])
-    run_stage("stage6_semantic.py", [job_id, api_key])
+    total_start = time.time()
+    timings = {}
+    
+    def run_stage_with_timing(script_name, args):
+        start = time.time()
+        run_stage(script_name, args)
+        timings[script_name] = time.time() - start
+
+    stage1_args = [pdf_path, job_id]
+    if max_pages:
+        stage1_args.append(f"--max-pages={max_pages}")
+        
+    run_stage_with_timing("stage1_render.py", stage1_args)
+    run_stage_with_timing("stage2_layout.py", [pdf_path, job_id, "--no-debug"])
+    run_stage_with_timing("stage3_ocr.py", [pdf_path, job_id, "--no-debug"])
+    run_stage_with_timing("stage4_math.py", [pdf_path, job_id, "--no-debug"])
+    run_stage_with_timing("stage6_semantic.py", [job_id, api_key])
+    
+    print("\n" + "="*50)
+    print("[PIPELINE TIMING SUMMARY]")
+    for stage, t in timings.items():
+        print(f"  {stage}: {t:.2f}s")
+    print(f"  TOTAL: {time.time() - total_start:.2f}s")
+    print("="*50 + "\n")
     
     print("Pipeline Complete. Final package is ready at semantic.json.")
 

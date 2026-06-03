@@ -87,6 +87,7 @@ export function InstitutePaperUploadFlow() {
 
   const [step, setStep] = useState<FlowStep>("upload");
   const [processing, setProcessing] = useState(false);
+  const [progressText, setProgressText] = useState("Initializing pipeline...");
   const [paperFile, setPaperFile] = useState<File | null>(null);
   const [keyFile, setKeyFile] = useState<File | null>(null);
   const [pkg, setPkg] = useState<ProcessedPaperPackage | null>(null);
@@ -373,7 +374,9 @@ export function InstitutePaperUploadFlow() {
       // We read the answer key just for the manual answers, but no legacy text parsing for PDF!
       const answerKeyText = keyFile ? await keyFile.text() : "";
 
-      const { parsedPaper } = await parseWithGemini(paperFile, answerKeyText, tenantId);
+      const { parsedPaper } = await parseWithGemini(paperFile, answerKeyText, tenantId, (msg) => {
+        setProgressText(msg);
+      });
       
       const rawPkg = geminiPaperToProcessedPackage(parsedPaper, paperFile.name, paperType, tenantId);
       let configured = configureProcessedPackage(
@@ -739,7 +742,7 @@ export function InstitutePaperUploadFlow() {
         <Card className="border-[#d8d2c7]">
           <CardContent className="py-10 text-center">
             <p className="text-lg font-semibold text-[#14213d]">Processing paper...</p>
-            <p className="mt-1 text-sm text-[#5e5a52]">Parsing questions, answer keys, and subject ranges.</p>
+            <p className="mt-1 text-sm text-[#5e5a52]">{progressText}</p>
           </CardContent>
         </Card>
       )}
@@ -1197,6 +1200,7 @@ async function parseWithGemini(
   file: File,
   answerKeyText: string,
   instituteId: string,
+  onProgress?: (msg: string) => void
 ): Promise<{ parsedPaper: ParsedGeminiPaper; usedGemini: true }> {
   const formData = new FormData();
   formData.set("file", file);
@@ -1215,8 +1219,52 @@ async function parseWithGemini(
     throw new Error(err.error ?? "Gemini parse failed");
   }
 
-  const parsed = await res.json();
-  return { parsedPaper: parsed, usedGemini: true };
+  if (!res.body) {
+    throw new Error("No response body");
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let finalResult: ParsedGeminiPaper | null = null;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+    
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      try {
+        const parsed = JSON.parse(line);
+        if (parsed.status) {
+          onProgress?.(parsed.status);
+        } else if (parsed.questions) {
+          finalResult = parsed;
+        } else if (parsed.error) {
+          throw new Error(parsed.error);
+        }
+      } catch (e) {
+        // Ignore JSON parse errors for incomplete lines if any, though splitting by \n should give full JSON objects.
+      }
+    }
+  }
+  
+  if (buffer.trim()) {
+    try {
+      const parsed = JSON.parse(buffer);
+      if (parsed.questions) finalResult = parsed;
+    } catch (e) {}
+  }
+
+  if (!finalResult) {
+    throw new Error("Failed to get final parsed paper from stream.");
+  }
+
+  return { parsedPaper: finalResult, usedGemini: true };
 }
 
 function geminiPaperToProcessedPackage(

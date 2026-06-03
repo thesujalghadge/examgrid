@@ -140,9 +140,11 @@ def main():
         print(f"Page {page_num} Math OCR Complete in {elapsed:.2f}s | Processed {len(math_results)} regions.")
         
         # Debug Overlay
-        debug_path = os.path.join(base_dir, "pages", f"page_{page_num:03d}_math_debug.png")
-        generate_math_debug(page_img_path, math_results, debug_path)
-        print(f"Saved Math visual debug to {debug_path}")
+        no_debug = "--no-debug" in sys.argv
+        if not no_debug:
+            debug_path = os.path.join(base_dir, "pages", f"page_{page_num:03d}_math_debug.png")
+            generate_math_debug(page_img_path, math_results, debug_path)
+            print(f"Saved Math visual debug to {debug_path}")
         
         math_data["pages"].append({
             "page": page_num,
