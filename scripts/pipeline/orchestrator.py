@@ -32,7 +32,6 @@ def main():
     run_stage("stage2_layout.py", [pdf_path, job_id])
     run_stage("stage3_ocr.py", [pdf_path, job_id])
     run_stage("stage4_math.py", [pdf_path, job_id])
-    run_stage("stage5_assets.py", ["pdf_path", job_id]) # stage5 actually ignores pdf_path, but needs args offset 
     run_stage("stage6_semantic.py", [job_id, api_key])
     
     print("Pipeline Complete. Final package is ready at semantic.json.")

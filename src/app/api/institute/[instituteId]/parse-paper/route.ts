@@ -101,7 +101,7 @@ export async function POST(
       if (detectedMimeType === "application/pdf") {
         const hash = crypto.createHash("md5").update(buffer).digest("hex");
         const cacheDir = path.join(process.cwd(), "public", "uploads", "cbt_assets", instituteId, "cache");
-        const cacheFile = path.join(cacheDir, `${hash}.json`);
+        const cacheFile = path.join(cacheDir, `${hash}_v2.json`);
         
         try {
           const cachedStr = await fs.readFile(cacheFile, "utf-8");

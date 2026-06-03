@@ -39,22 +39,44 @@ export async function runVisualExtractor(buffer: Buffer, apiKey: string, institu
   await fs.writeFile(tempPdf, buffer);
 
   const python = await resolveExistingPath(getPythonCandidates());
-  const scriptPath = path.join(process.cwd(), "scripts", "visual-extractor.py");
+  const scriptPath = path.join(process.cwd(), "scripts", "pipeline", "orchestrator.py");
 
   try {
-    const { stdout, stderr } = await execFileAsync(python, [scriptPath, tempPdf, apiKey, assetDir, assetUrlPrefix], {
+    const { stdout, stderr } = await execFileAsync(python, [scriptPath, tempPdf, jobId, apiKey], {
       maxBuffer: 50 * 1024 * 1024, // 50MB for large json
       shell: false,
     });
-    if (stderr) console.error("[Visual Extractor stderr]", stderr);
+    if (stderr) console.error("[Pipeline stderr]", stderr);
+    console.log("[Pipeline stdout]", stdout);
     
-    // Parse the output
-    const startIndex = stdout.indexOf('{"questions"');
-    const validJsonStr = startIndex >= 0 ? stdout.substring(startIndex) : stdout;
+    // Read the output from the generated semantic.json
+    const semanticPath = path.join(assetDir, "semantic.json");
+    const semanticStr = await fs.readFile(semanticPath, "utf-8");
+    const semanticJson = JSON.parse(semanticStr);
     
-    return JSON.parse(validJsonStr);
+    // Map new semantic format to legacy frontend schema to prevent React rewrite
+    const mappedQuestions = (semanticJson.questions || []).map((q: any) => {
+      return {
+        id: q.id,
+        type: q.type,
+        subject: q.subject,
+        stem: q.stem,
+        stemLatex: q.stem, // map both for legacy compatibility
+        options: (q.options || []).map((optText: string, idx: number) => ({
+          id: (idx + 1).toString(),
+          text: optText,
+          latex: optText
+        })),
+        answer: q.answer,
+        confidence: q.confidence,
+        images: q.assetPaths || [], // send visual crops to legacy images array
+        hasImage: (q.assetPaths && q.assetPaths.length > 0)
+      };
+    });
+    
+    return { questions: mappedQuestions };
   } catch (error: any) {
-    console.error("[Visual Extractor Error]", error);
+    console.error("[Pipeline Error]", error);
     if (error.stderr) console.error("[Visual Extractor Stderr]", error.stderr);
     throw error;
   } finally {
