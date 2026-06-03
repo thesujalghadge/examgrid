@@ -109,17 +109,30 @@ export async function POST(
           if (cachedJson.questions && cachedJson.questions.length === 0) {
             throw new Error("Empty cache");
           }
+          
+          console.log("\n=======================================================");
+          console.log("[RUNTIME PROOF] CACHE HIT");
+          console.log(`[RUNTIME PROOF] Loading from cache: ${cacheFile}`);
+          
           parsed = parsedPaperSchema.parse(cachedJson);
+          console.log(`[RUNTIME PROOF] After Zod Parse (Cache) Q1 _debug_source:`, (parsed as any).questions?.[0]?._debug_source);
+          console.log("=======================================================\n");
         } catch {
-          console.log(`[Runtime Audit Boundary 0] Calling runVisualExtractor for new PDF parse`);
+          console.log("\n=======================================================");
+          console.log(`[RUNTIME PROOF] CACHE MISS. Calling runVisualExtractor for new PDF parse`);
+          
           const rawJson = await runVisualExtractor(buffer, geminiKey, instituteId);
+          console.log(`[RUNTIME PROOF] RAW Adapter Output Q1 _debug_source:`, rawJson?.questions?.[0]?._debug_source);
+          
           parsed = parsedPaperSchema.parse(rawJson);
+          console.log(`[RUNTIME PROOF] After Zod Parse Q1 _debug_source:`, (parsed as any).questions?.[0]?._debug_source);
+          console.log("=======================================================\n");
           
           await fs.mkdir(cacheDir, { recursive: true });
           await fs.writeFile(cacheFile, JSON.stringify(rawJson), "utf-8");
         }
       } else {
-        throw new Error(`Explicit failure: Legacy parser disabled. Only PDFs are currently supported by the deterministic pipeline.`);
+        throw new Error(`[RUNTIME PROOF] Explicit failure: Legacy parser disabled. Only PDFs are currently supported by the deterministic pipeline.`);
       }
     } catch (e: any) {
       console.error("[Parse-Paper Route Error]", e);
@@ -148,6 +161,12 @@ export async function POST(
       fileName: file.name,
       questionCount: parsed.questions.length,
     });
+    
+    console.log("\n=======================================================");
+    console.log(`[RUNTIME PROOF] FINAL API RESPONSE PAYLOAD (Q1)`);
+    console.log(JSON.stringify(parsed.questions[0], null, 2));
+    console.log("=======================================================\n");
+    
     return NextResponse.json(parsed);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";

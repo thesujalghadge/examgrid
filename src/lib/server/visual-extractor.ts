@@ -41,23 +41,26 @@ export async function runVisualExtractor(buffer: Buffer, apiKey: string, institu
   const python = await resolveExistingPath(getPythonCandidates());
   const scriptPath = path.join(process.cwd(), "scripts", "pipeline", "orchestrator.py");
   
-  console.log(`[Runtime Audit Boundary 1] Starting pipeline for job: ${jobId}`);
+  console.log(`\n[RUNTIME PROOF] ORCHESTRATOR INVOKED`);
+  console.log(`[RUNTIME PROOF] Starting pipeline for job: ${jobId}`);
 
   try {
     const { stdout, stderr } = await execFileAsync(python, [scriptPath, tempPdf, jobId, apiKey], {
       maxBuffer: 50 * 1024 * 1024, // 50MB for large json
       shell: false,
     });
-    if (stderr) console.error("[Pipeline stderr]", stderr);
-    console.log(`[Runtime Audit Boundary 2] Python pipeline finished. Stdout length: ${stdout.length}`);
+    if (stderr) console.error("[RUNTIME PROOF] Pipeline stderr", stderr);
+    console.log(`[RUNTIME PROOF] Python pipeline finished. Stdout length: ${stdout.length}`);
     
     // Read the output from the generated semantic.json
     const semanticPath = path.join(assetDir, "semantic.json");
-    console.log(`[Runtime Audit Boundary 3] Reading semantic JSON from: ${semanticPath}`);
+    console.log(`[RUNTIME PROOF] SEMANTIC.JSON LOADED`);
+    console.log(`[RUNTIME PROOF] Absolute Path: ${semanticPath}`);
     const semanticStr = await fs.readFile(semanticPath, "utf-8");
     const semanticJson = JSON.parse(semanticStr);
     
-    console.log(`[Runtime Audit Boundary 4] Semantic JSON parsed. Found ${(semanticJson.questions || []).length} questions.`);
+    console.log(`[RUNTIME PROOF] Parsed successful. Found ${(semanticJson.questions || []).length} questions.`);
+    console.log(`[RUNTIME PROOF] ADAPTER EXECUTED`);
     
     // Map new semantic format to legacy frontend schema to prevent React rewrite
     const mappedQuestions = (semanticJson.questions || []).map((q: any) => {
@@ -81,7 +84,8 @@ export async function runVisualExtractor(buffer: Buffer, apiKey: string, institu
       };
     });
     
-    console.log(`[Runtime Audit Boundary 5] Mapped questions for CBT. Sample Q1 AssetPaths:`, mappedQuestions[0]?.images);
+    console.log(`[RUNTIME PROOF] LEGACY PARSER BYPASSED`);
+    console.log(`[RUNTIME PROOF] Sample Adapter Mapped Q1:`, JSON.stringify(mappedQuestions[0], null, 2));
     
     return { questions: mappedQuestions };
   } catch (error: any) {
