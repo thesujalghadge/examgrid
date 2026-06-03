@@ -73,17 +73,23 @@ export function runVisualExtractor(buffer: Buffer, apiKey: string, instituteId: 
               subject: q.subject,
               stem: q.stem,
               stemLatex: q.stem,
-              options: (Array.isArray(q.options) ? q.options : []).map((optText: unknown, idx: number) => ({
-                id: (idx + 1).toString(),
-                text: optText,
-                latex: optText
-              })),
+              options: (Array.isArray(q.options) ? q.options : []).map((opt: unknown, idx: number) => {
+                const optRecord = typeof opt === "object" && opt !== null ? opt as Record<string, unknown> : null;
+                const optText = typeof opt === "string" ? opt : typeof optRecord?.text === "string" ? optRecord.text : "";
+                const optImg = typeof optRecord?.assetPath === "string" ? optRecord.assetPath : undefined;
+                return {
+                  id: (idx + 1).toString(),
+                  text: optText,
+                  latex: optText,
+                  image: optImg
+                };
+              }),
               answer: q.answer,
               confidence: q.confidence,
-              images: q.assetPaths || [],
-              hasImage: (Array.isArray(q.assetPaths) && q.assetPaths.length > 0),
+              images: q.stemAssetPaths || [],
+              hasImage: (Array.isArray(q.stemAssetPaths) && q.stemAssetPaths.length > 0),
               _debug_source: "semantic_pipeline_v1",
-              _debug_assets: q.assetPaths || []
+              _debug_assets: q.stemAssetPaths || []
             };
           });
           

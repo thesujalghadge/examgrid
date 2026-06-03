@@ -20,12 +20,25 @@ def crop_region_asset(img, bbox, region_id, output_dir):
     cropped.save(asset_path, format="WEBP", quality=95)
     return asset_name, asset_path, cropped
 
-def run_ocr_on_crop(cropped_img, reader):
+reader_instance = None
+
+def get_reader():
+    global reader_instance
+    if reader_instance is None:
+        print("Initializing EasyOCR Model...")
+        import easyocr
+        # Use quantize=True to speed up CPU inference slightly if possible, or just standard
+        reader_instance = easyocr.Reader(['en'], gpu=False)
+    return reader_instance
+
+def run_ocr_on_crop(cropped_img):
     try:
-        # Convert PIL Image to numpy array (RGB)
+        # Very small crops might not be worth OCRing or might just be noise
+        if cropped_img.width < 10 or cropped_img.height < 10:
+            return "", 0.0
+            
         img_np = np.array(cropped_img)
-        
-        # EasyOCR returns list of (bbox, text, prob)
+        reader = get_reader()
         results = reader.readtext(img_np)
         
         text_lines = []
@@ -37,7 +50,6 @@ def run_ocr_on_crop(cropped_img, reader):
                 text_lines.append(text)
                 confidences.append(prob)
                 
-        # Join words into single text string for the region
         combined_text = " ".join(text_lines) if text_lines else ""
         avg_conf = (sum(confidences) / len(confidences)) if confidences else 0.0
         
@@ -77,7 +89,6 @@ def main():
         
     job_id = sys.argv[2] if len(sys.argv) > 2 else sys.argv[1]
     
-    # Check if job_id is actually the second argument in orchestrator
     if len(sys.argv) >= 3:
         job_id = sys.argv[2]
     
@@ -94,11 +105,6 @@ def main():
     with open(layout_path, "r", encoding="utf-8") as f:
         layout_data = json.load(f)
         
-    
-    # Initialize EasyOCR reader once
-    print("Initializing EasyOCR Model...")
-    reader = easyocr.Reader(['en'], gpu=False)
-    
     ocr_data = {
         "job_id": job_id,
         "pages": []
@@ -108,7 +114,6 @@ def main():
         page_num = page_data["page_num"]
         regions = page_data["regions"]
         
-        # Load the original rendered page image
         page_img_path = os.path.join(base_dir, "pages", f"page_{page_num:03d}.png")
         if not os.path.exists(page_img_path):
             continue
@@ -126,17 +131,22 @@ def main():
             rtype = region["type"]
             bbox = region["bbox"]
             
-            # Step 1: Deterministic Visual Crop
             asset_name, asset_path, cropped_img = crop_region_asset(img, bbox, region_id, regions_dir)
             
-            # Step 2: Isolated Region OCR
             text = ""
             conf = 0.0
             
             if rtype in ["QuestionStem", "Option"]:
-                text, conf = run_ocr_on_crop(cropped_img, reader)
+                text, conf = run_ocr_on_crop(cropped_img)
                 if not text:
                     failed_regions += 1
+                
+                # Check for answer key / trailing pages to ignore further processing
+                text_lower = text.lower()
+                if "answer key" in text_lower or "hints and solutions" in text_lower:
+                    print(f"Detected trailing answer section on page {page_num}. Skipping remaining regions.")
+                    break
+                    
             elif rtype == "Image":
                 text = "[DIAGRAM]"
                 conf = 1.0
@@ -151,17 +161,14 @@ def main():
                 "readingOrder": idx
             })
             
-        # Logging observability
         elapsed = time.time() - start_time
         avg_conf = sum(r["confidence"] for r in ocr_results) / len(ocr_results) if ocr_results else 0
         print(f"Page {page_num} OCR Complete in {elapsed:.2f}s | Avg Conf: {avg_conf:.2f} | Empty/Failed: {failed_regions}")
         
-        # Debug Overlay
         no_debug = "--no-debug" in sys.argv
         if not no_debug:
             debug_path = os.path.join(base_dir, "pages", f"page_{page_num:03d}_ocr_debug.png")
             generate_ocr_debug(page_img_path, ocr_results, debug_path)
-            print(f"Saved OCR visual debug to {debug_path}")
         
         ocr_data["pages"].append({
             "page": page_num,

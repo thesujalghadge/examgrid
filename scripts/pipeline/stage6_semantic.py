@@ -32,7 +32,7 @@ def generate_semantic_package(ocr_data, math_data, api_key):
     1. NEVER rewrite or creatively solve equations. Use the provided 'math_text' exactly as the source of truth if it exists, otherwise fallback to 'text'.
     2. Do NOT hallucinate missing content. If an option is missing, leave it out.
     3. Group stems and their options together into single questions based on context.
-    4. Maintain strict deterministic traceability: you MUST include the exact assetPaths of the regions that make up the question.
+    4. Maintain strict deterministic traceability: you MUST map the correct 'assetPath' from the region to the corresponding stem or option.
     
     Return a strict JSON object with a 'questions' array.
     Each question MUST follow this schema exactly:
@@ -41,10 +41,12 @@ def generate_semantic_package(ocr_data, math_data, api_key):
       "type": "mcq" | "numerical",
       "subject": "Physics" | "Chemistry" | "Mathematics" | "Unknown",
       "stem": "The combined text/math string for the question body",
-      "options": ["(A) text", "(B) text", ...] (empty if numerical),
+      "options": [
+        { "text": "(A) text", "assetPath": "/uploads/...opt.webp (or null)" }
+      ],
       "answer": "null or inferred if answer key is present",
-      "confidence": 0.0 to 1.0 (your confidence in this normalization),
-      "assetPaths": ["/uploads/...stem.webp", "/uploads/...opt.webp"],
+      "confidence": 0.0 to 1.0,
+      "stemAssetPaths": ["/uploads/...stem.webp"],
       "metadata": {
         "ambiguityFlags": ["list of any weird formatting issues you noticed, else empty"],
         "regionIds": ["stem_1", "opt_1_1"]
@@ -96,15 +98,17 @@ def mock_semantic_package(regions):
                 "options": [],
                 "answer": None,
                 "confidence": 0.9,
-                "assetPaths": [r["assetPath"]],
+                "stemAssetPaths": [r["assetPath"]],
                 "metadata": {
                     "ambiguityFlags": [],
                     "regionIds": [r["id"]]
                 }
             }
         elif r["type"] == "Option" and current_q:
-            current_q["options"].append(r.get("math_text", r["text"]))
-            current_q["assetPaths"].append(r["assetPath"])
+            current_q["options"].append({
+                "text": r.get("math_text", r["text"]),
+                "assetPath": r["assetPath"]
+            })
             current_q["metadata"]["regionIds"].append(r["id"])
             
     if current_q:

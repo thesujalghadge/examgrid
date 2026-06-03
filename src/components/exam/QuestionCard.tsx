@@ -122,6 +122,8 @@ export function QuestionCard({ review }: QuestionCardProps) {
                 value={question.text}
                 onChange={(event) => review?.onQuestionTextChange?.(event.target.value)}
               />
+            ) : question.images && question.images.length > 0 && (question as any)._debug_source === "semantic_pipeline_v1" ? (
+              <div className="hidden">OCR Text suppressed for pure visual fidelity.</div>
             ) : (
               <div
                 className={cn(
@@ -236,7 +238,7 @@ export function QuestionCard({ review }: QuestionCardProps) {
                         </span>
                         <div className="flex-1">
                           {opt.image ? (
-                            <img src={opt.image} alt={opt.label} className="max-w-full max-h-[200px] object-contain border border-gray-100 rounded" />
+                            <img src={opt.image} alt={opt.label} loading="lazy" className="max-w-full max-h-[200px] object-contain border border-gray-100 rounded" />
                           ) : isTeacherEdit ? (
                             <input
                               className="w-full rounded-md border border-[#d7dde7] px-2 py-1 text-sm"
