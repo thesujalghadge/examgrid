@@ -40,6 +40,8 @@ export async function runVisualExtractor(buffer: Buffer, apiKey: string, institu
 
   const python = await resolveExistingPath(getPythonCandidates());
   const scriptPath = path.join(process.cwd(), "scripts", "pipeline", "orchestrator.py");
+  
+  console.log(`[Runtime Audit Boundary 1] Starting pipeline for job: ${jobId}`);
 
   try {
     const { stdout, stderr } = await execFileAsync(python, [scriptPath, tempPdf, jobId, apiKey], {
@@ -47,12 +49,15 @@ export async function runVisualExtractor(buffer: Buffer, apiKey: string, institu
       shell: false,
     });
     if (stderr) console.error("[Pipeline stderr]", stderr);
-    console.log("[Pipeline stdout]", stdout);
+    console.log(`[Runtime Audit Boundary 2] Python pipeline finished. Stdout length: ${stdout.length}`);
     
     // Read the output from the generated semantic.json
     const semanticPath = path.join(assetDir, "semantic.json");
+    console.log(`[Runtime Audit Boundary 3] Reading semantic JSON from: ${semanticPath}`);
     const semanticStr = await fs.readFile(semanticPath, "utf-8");
     const semanticJson = JSON.parse(semanticStr);
+    
+    console.log(`[Runtime Audit Boundary 4] Semantic JSON parsed. Found ${(semanticJson.questions || []).length} questions.`);
     
     // Map new semantic format to legacy frontend schema to prevent React rewrite
     const mappedQuestions = (semanticJson.questions || []).map((q: any) => {
@@ -70,9 +75,13 @@ export async function runVisualExtractor(buffer: Buffer, apiKey: string, institu
         answer: q.answer,
         confidence: q.confidence,
         images: q.assetPaths || [], // send visual crops to legacy images array
-        hasImage: (q.assetPaths && q.assetPaths.length > 0)
+        hasImage: (q.assetPaths && q.assetPaths.length > 0),
+        _debug_source: "semantic_pipeline_v1",
+        _debug_assets: q.assetPaths || []
       };
     });
+    
+    console.log(`[Runtime Audit Boundary 5] Mapped questions for CBT. Sample Q1 AssetPaths:`, mappedQuestions[0]?.images);
     
     return { questions: mappedQuestions };
   } catch (error: any) {

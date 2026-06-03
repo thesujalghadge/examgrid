@@ -111,6 +111,7 @@ export async function POST(
           }
           parsed = parsedPaperSchema.parse(cachedJson);
         } catch {
+          console.log(`[Runtime Audit Boundary 0] Calling runVisualExtractor for new PDF parse`);
           const rawJson = await runVisualExtractor(buffer, geminiKey, instituteId);
           parsed = parsedPaperSchema.parse(rawJson);
           
@@ -118,16 +119,7 @@ export async function POST(
           await fs.writeFile(cacheFile, JSON.stringify(rawJson), "utf-8");
         }
       } else {
-        const genAI = new GoogleGenerativeAI(geminiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-        const result = await model.generateContent([
-          { inlineData: { mimeType: detectedMimeType, data: buffer.toString("base64") } },
-          PARSE_PROMPT,
-        ]);
-    
-        text = result.response.text().trim();
-        text = text.replace(/^```json?\s*/i, "").replace(/\s*```$/, "").trim();
-        parsed = parsedPaperSchema.parse(JSON.parse(text));
+        throw new Error(`Explicit failure: Legacy parser disabled. Only PDFs are currently supported by the deterministic pipeline.`);
       }
     } catch (e: any) {
       console.error("[Parse-Paper Route Error]", e);
