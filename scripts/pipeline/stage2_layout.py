@@ -5,65 +5,124 @@ import fitz
 import cv2
 import numpy as np
 from PIL import Image, ImageDraw
+import pytesseract
 
 def rect_merge(r1, r2):
     return [min(r1[0], r2[0]), min(r1[1], r2[1]), max(r1[2], r2[2]), max(r1[3], r2[3])]
+
+def extract_text_anchor(crop_img):
+    """Lightweight OCR to find anchors like Q29 or (1)"""
+    try:
+        # pytesseract needs to be installed on system
+        text = pytesseract.image_to_string(crop_img, config='--psm 8').strip()
+        return text
+    except:
+        return ""
+
+def is_question_anchor(text):
+    text = text.strip()
+    return (text.startswith("Q") and any(c.isdigit() for c in text[:4])) or \
+           (text and text[0].isdigit() and "." in text[:4])
+
+def is_option_anchor(text):
+    text = text.strip()
+    if text.startswith("(") and ")" in text[:5] and any(c.isalnum() for c in text[1:4]):
+        return True
+    if text.startswith("[") and "]" in text[:5]:
+        return True
+    return False
 
 def detect_layout_cv2(img_path):
     img = cv2.imread(img_path)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     
-    # Binarize
-    _, thresh = cv2.threshold(gray, 240, 255, cv2.THRESH_BINARY_INV)
+    # Aggressive watermark suppression
+    # MathonGo watermarks are typically light gray. We use a harsh threshold (e.g., 180) to kill them.
+    _, thresh = cv2.threshold(gray, 180, 255, cv2.THRESH_BINARY_INV)
     
-    # Remove watermarks/noise by opening
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-    clean = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel, iterations=1)
+    # Remove isolated noise pixels
+    kernel_noise = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
+    clean = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel_noise, iterations=1)
     
-    # Dilate horizontally to connect text characters into lines
-    line_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (40, 5))
-    lines_mask = cv2.dilate(clean, line_kernel, iterations=1)
+    # Dilate horizontally to connect text characters into solid lines
+    # Using a wide but short kernel so lines don't merge vertically
+    line_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (50, 3))
+    lines_mask = cv2.dilate(clean, line_kernel, iterations=2)
     
-    # Dilate vertically to connect lines into paragraphs/blocks
-    block_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (20, 20))
-    blocks_mask = cv2.dilate(lines_mask, block_kernel, iterations=1)
+    # Find initial contours (lines or small blocks)
+    contours, _ = cv2.findContours(lines_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     
-    contours, _ = cv2.findContours(blocks_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    
-    blocks = []
+    raw_blocks = []
     for c in contours:
         x, y, w, h = cv2.boundingRect(c)
-        if w > 10 and h > 10:
-            blocks.append([x, y, x + w, y + h])
+        if w > 15 and h > 10: # Filter out tiny noise
+            raw_blocks.append([x, y, x + w, y + h])
             
-    # Sort blocks top-to-bottom
-    blocks.sort(key=lambda b: b[1])
+    # Sort top-to-bottom
+    raw_blocks.sort(key=lambda b: b[1])
     
+    # Group lines into semantic blocks using vertical proximity and OCR anchors
+    blocks = []
+    current_block = None
+    
+    for b in raw_blocks:
+        if not current_block:
+            current_block = b
+            continue
+            
+        # Check vertical gap
+        gap = b[1] - current_block[3]
+        
+        # If gap is small, they belong to the same paragraph/block
+        if gap < 25:
+            current_block = rect_merge(current_block, b)
+        else:
+            blocks.append(current_block)
+            current_block = b
+            
+    if current_block:
+        blocks.append(current_block)
+        
     regions = []
-    current_q_stem = None
     q_counter = 0
     opt_counter = 0
     
     for i, b in enumerate(blocks):
-        w = b[2] - b[0]
-        h = b[3] - b[1]
+        x0, y0, x1, y1 = b
+        w = x1 - x0
+        h = y1 - y0
         
-        # Heuristic 1: Very large regions might be diagrams or large equations
-        if h > 200:
-            regions.append({"id": f"img_{i}", "type": "Image", "bbox": b})
+        # Heuristic: Images / large diagrams
+        if h > 150 and w > 150:
+            regions.append({"id": f"img_{i}", "type": "Image", "bbox": b, "confidence": 0.9})
             continue
             
-        # Heuristic 2: Options are usually narrow, arranged in grids
-        # If it's relatively small and there are other blocks on similar Y level
-        siblings_on_y = [other for other in blocks if other != b and abs(other[1] - b[1]) < 30]
+        # Lightweight OCR Anchor Detection
+        # Crop the left side of the block to check for "Q." or "(1)"
+        anchor_w = min(120, w)
+        anchor_crop = gray[y0:y1, x0:x0+anchor_w]
         
-        if len(siblings_on_y) > 0 and w < img.shape[1] * 0.4:
-            opt_counter += 1
-            regions.append({"id": f"opt_{opt_counter}", "type": "Option", "bbox": b})
-        else:
-            # Assume question stem text block
+        anchor_text = extract_text_anchor(anchor_crop)
+        
+        if is_question_anchor(anchor_text):
             q_counter += 1
-            regions.append({"id": f"stem_{q_counter}", "type": "QuestionStem", "bbox": b})
+            regions.append({"id": f"stem_{q_counter}", "type": "QuestionStem", "bbox": b, "confidence": 0.8})
+            continue
+            
+        if is_option_anchor(anchor_text):
+            opt_counter += 1
+            regions.append({"id": f"opt_{q_counter}_{opt_counter}", "type": "Option", "bbox": b, "confidence": 0.8})
+            continue
+            
+        # If OCR fails or returns nothing, fallback to structural heuristics
+        siblings_on_y = [other for other in blocks if other != b and abs(other[1] - y0) < 40]
+        
+        if len(siblings_on_y) > 0 and w < img.shape[1] * 0.45:
+            opt_counter += 1
+            regions.append({"id": f"opt_{q_counter}_{opt_counter}", "type": "Option", "bbox": b, "confidence": 0.6})
+        else:
+            q_counter += 1
+            regions.append({"id": f"stem_{q_counter}", "type": "QuestionStem", "bbox": b, "confidence": 0.6})
             
     return regions
 
