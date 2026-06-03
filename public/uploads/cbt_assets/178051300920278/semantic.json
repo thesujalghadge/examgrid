@@ -1,0 +1,159 @@
+{
+  "questions": [
+    {
+      "id": "Q21",
+      "type": "numerical",
+      "subject": "Mathematics",
+      "stem": "Q21.Let A be a square matrix of order 3 such that det(A) ~2 and det(3adj( _6 adj(3A4))) 2m+n 3mn,m > n Then 4 m + 2n is equal to",
+      "options": [],
+      "answer": null,
+      "confidence": 0.5,
+      "stemAssetPaths": [
+        "/uploads/cbt_assets/178051300920278/regions/stem_3.webp",
+        "/uploads/cbt_assets/178051300920278/regions/img_8.webp"
+      ],
+      "metadata": {
+        "ambiguityFlags": [],
+        "regionIds": [
+          "stem_3",
+          "img_8"
+        ]
+      }
+    },
+    {
+      "id": "Q22",
+      "type": "numerical",
+      "subject": "Mathematics",
+      "stem": "Q22. If r=0 2r+2 4,gcd(m,n) = 1, then m L n is equal to 11C22r",
+      "options": [],
+      "answer": null,
+      "confidence": 0.5,
+      "stemAssetPaths": [
+        "/uploads/cbt_assets/178051300920278/regions/stem_4.webp",
+        "/uploads/cbt_assets/178051300920278/regions/img_10.webp"
+      ],
+      "metadata": {
+        "ambiguityFlags": [],
+        "regionIds": [
+          "stem_4",
+          "img_10"
+        ]
+      }
+    },
+    {
+      "id": "Q23",
+      "type": "numerical",
+      "subject": "Mathematics",
+      "stem": "Q23.Let \u20ac be the projection vector of b Az + 4k,A 0, on the vector & { 2j + 2k. Ifla + & = 7, then the area of the parallelogram formed by the vectors b and \u20ac is",
+      "options": [],
+      "answer": null,
+      "confidence": 0.5,
+      "stemAssetPaths": [
+        "/uploads/cbt_assets/178051300920278/regions/stem_5.webp",
+        "/uploads/cbt_assets/178051300920278/regions/img_12.webp",
+        "/uploads/cbt_assets/178051300920278/regions/img_13.webp"
+      ],
+      "metadata": {
+        "ambiguityFlags": [],
+        "regionIds": [
+          "stem_5",
+          "img_12",
+          "img_13"
+        ]
+      }
+    },
+    {
+      "id": "Q25",
+      "type": "numerical",
+      "subject": "Mathematics",
+      "stem": "Q25.Let L1 231 21 281 and Lz 222 = 8 = 244 \u20ac R; be two lines; which intersect at the point B. If Pis the foot of perpendicular from the point A(1,1, -1) o Lz, then the value of 260 PB)2 is Q",
+      "options": [],
+      "answer": null,
+      "confidence": 0.5,
+      "stemAssetPaths": [
+        "/uploads/cbt_assets/178051300920278/regions/stem_6.webp"
+      ],
+      "metadata": {
+        "ambiguityFlags": [],
+        "regionIds": [
+          "stem_6"
+        ]
+      }
+    },
+    {
+      "id": "Q28",
+      "type": "mcq",
+      "subject": "Physics",
+      "stem": "Q28.A uniform circular disc of radius R and mass M is rotating about an axis perpendicular to its plane and passing through its centre. A small circular part of radius R/2 is removed from the original disc as shown in",
+      "options": [
+        {
+          "text": "(3) 7",
+          "assetPath": "/uploads/cbt_assets/178051300920278/regions/stem_8.webp"
+        },
+        {
+          "text": "(4) 4",
+          "assetPath": "/uploads/cbt_assets/178051300920278/regions/stem_8.webp"
+        }
+      ],
+      "answer": null,
+      "confidence": 0.5,
+      "stemAssetPaths": [
+        "/uploads/cbt_assets/178051300920278/regions/stem_7.webp",
+        "/uploads/cbt_assets/178051300920278/regions/img_4.webp",
+        "/uploads/cbt_assets/178051300920278/regions/img_7.webp",
+        "/uploads/cbt_assets/178051300920278/regions/img_9.webp",
+        "/uploads/cbt_assets/178051300920278/regions/stem_8.webp"
+      ],
+      "metadata": {
+        "ambiguityFlags": [
+          "Conflicting option labels found in region stem_9. Labels 3, 4 already exist for Q28. Ignoring these new options for traceability."
+        ],
+        "regionIds": [
+          "stem_7",
+          "img_4",
+          "img_7",
+          "img_9",
+          "stem_8",
+          "stem_9"
+        ]
+      }
+    },
+    {
+      "id": "Q19",
+      "type": "mcq",
+      "subject": "Mathematics",
+      "stem": "Q19.Let A = {1,2,3, 10} and B = {2 m, n \u20ac A,m < n and gcd(m, n) = 1}. Then n(B) is equal to",
+      "options": [
+        {
+          "text": "(1) 36",
+          "assetPath": "/uploads/cbt_assets/178051300920278/regions/stem_10.webp"
+        },
+        {
+          "text": "(2) 31",
+          "assetPath": "/uploads/cbt_assets/178051300920278/regions/stem_10.webp"
+        },
+        {
+          "text": "(3) 37",
+          "assetPath": "/uploads/cbt_assets/178051300920278/regions/stem_11.webp"
+        },
+        {
+          "text": "(4) 29",
+          "assetPath": "/uploads/cbt_assets/178051300920278/regions/stem_11.webp"
+        }
+      ],
+      "answer": null,
+      "confidence": 0.5,
+      "stemAssetPaths": [
+        "/uploads/cbt_assets/178051300920278/regions/stem_10.webp",
+        "/uploads/cbt_assets/178051300920278/regions/stem_11.webp"
+      ],
+      "metadata": {
+        "ambiguityFlags": [],
+        "regionIds": [
+          "stem_10",
+          "stem_11"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "job_id": "178051300920278",
+  "total_pages": 3,
+  "pages": [
+    {
+      "page_num": 1,
+      "filename": "page_001.png",
+      "width": 2479,
+      "height": 3508,
+      "path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\178051300920278\\pages\\page_001.png"
+    },
+    {
+      "page_num": 2,
+      "filename": "page_002.png",
+      "width": 2479,
+      "height": 3508,
+      "path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\178051300920278\\pages\\page_002.png"
+    },
+    {
+      "page_num": 3,
+      "filename": "page_003.png",
+      "width": 2479,
+      "height": 3508,
+      "path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\178051300920278\\pages\\page_003.png"
+    }
+  ]
+}

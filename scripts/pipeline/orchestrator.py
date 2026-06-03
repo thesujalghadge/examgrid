@@ -87,25 +87,69 @@ def main():
             client = genai.Client(api_key=api_key)
             available_models = [m.name for m in client.models.list()]
             target = "gemini-2.5-flash"
-            if any(target in m for m in available_models):
-                print(f"[VERIFICATION] Target model '{target}' is available.", flush=True)
-            else:
+            if not any(target in m for m in available_models):
                 print(f"[PIPELINE FATAL ERROR] Target model '{target}' NOT found. Available: {available_models}", flush=True)
                 sys.exit(1)
+            print(f"[VERIFICATION] Target model '{target}' is available.", flush=True)
         except Exception as e:
             print(f"[VERIFICATION ERROR] Failed to verify models: {e}", flush=True)
             sys.exit(1)
             
     total_start = time.time()
-    timings = {}
     
-    def run_stage_with_timing(script_name, args, warn_timeout=None, expected_file=None):
-        start = time.time()
-        run_stage(script_name, args, warn_timeout)
+    health_report = {
+        "job_id": job_id,
+        "stages": {},
+        "overall_status": "SUCCESS",
+        "failures": []
+    }
+    
+    def run_stage_with_guardrails(script_name, args, expected_file=None):
+        start_time = time.time()
+        start_iso = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(start_time))
         
+        print(f"\n{'='*50}", flush=True)
+        print(f"[STAGE RUN] {script_name}", flush=True)
+        print(f"[STAGE START] {start_iso}", flush=True)
+        
+        script_path = os.path.join(os.path.dirname(__file__), script_name)
+        cmd = [sys.executable, "-u", script_path] + args
+        
+        # We use subprocess.run with check=False to capture failures deterministically
+        result = subprocess.run(cmd)
+        
+        end_time = time.time()
+        end_iso = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(end_time))
+        duration = end_time - start_time
+        
+        stage_info = {
+            "start_time": start_iso,
+            "end_time": end_iso,
+            "duration_s": round(duration, 2),
+            "status": "SUCCESS",
+            "output_file": expected_file if expected_file and os.path.exists(expected_file) else None
+        }
+        
+        if result.returncode != 0:
+            stage_info["status"] = f"FAILED (Exit code {result.returncode})"
+            health_report["overall_status"] = "FAILED"
+            health_report["failures"].append(f"{script_name} crashed with exit code {result.returncode}.")
+            health_report["stages"][script_name] = stage_info
+            
+            print(f"\n[STAGE FAILED] {script_name} exit code {result.returncode}", flush=True)
+            print(f"[STAGE END] {end_iso} | Duration: {duration:.2f}s", flush=True)
+            print("[PIPELINE FATAL ERROR] Stage contract violation. Stopping pipeline immediately.", flush=True)
+            print_health_report(health_report)
+            sys.exit(1)
+            
         if expected_file:
             if not os.path.exists(expected_file):
-                print(f"\n[PIPELINE FATAL ERROR] Stage Failed: {script_name} failed to produce expected output file: {os.path.basename(expected_file)}", flush=True)
+                stage_info["status"] = "FAILED (Missing Output)"
+                health_report["overall_status"] = "FAILED"
+                health_report["failures"].append(f"{script_name} failed to produce expected output file: {os.path.basename(expected_file)}")
+                health_report["stages"][script_name] = stage_info
+                print(f"\n[PIPELINE FATAL ERROR] {script_name} output validation failed: {os.path.basename(expected_file)} not found.", flush=True)
+                print_health_report(health_report)
                 sys.exit(1)
             try:
                 import json
@@ -114,37 +158,67 @@ def main():
                     if not data:
                         raise ValueError("JSON is empty")
             except Exception as e:
-                print(f"\n[PIPELINE FATAL ERROR] Stage Failed: {script_name} produced invalid JSON in {os.path.basename(expected_file)}. Error: {e}", flush=True)
+                stage_info["status"] = "FAILED (Invalid JSON)"
+                health_report["overall_status"] = "FAILED"
+                health_report["failures"].append(f"{script_name} produced invalid JSON in {os.path.basename(expected_file)}. Error: {e}")
+                health_report["stages"][script_name] = stage_info
+                print(f"\n[PIPELINE FATAL ERROR] {script_name} output validation failed: Invalid JSON. {e}", flush=True)
+                print_health_report(health_report)
                 sys.exit(1)
                 
-        timings[script_name] = time.time() - start
+        health_report["stages"][script_name] = stage_info
+        print(f"[STAGE SUCCESS] {script_name}", flush=True)
+        print(f"[STAGE END] {end_iso} | Duration: {duration:.2f}s", flush=True)
+        print(f"{'='*50}\n", flush=True)
+
+    def print_health_report(report):
+        print("\n" + "#"*50, flush=True)
+        print(" PIPELINE HEALTH REPORT ", flush=True)
+        print("#"*50, flush=True)
+        print(f"Job ID: {report['job_id']}", flush=True)
+        print(f"Overall Status: {report['overall_status']}", flush=True)
+        
+        print("\n--- Stages ---", flush=True)
+        for stage, info in report["stages"].items():
+            print(f"[{info['status']}] {stage}", flush=True)
+            print(f"  Duration: {info['duration_s']}s", flush=True)
+            print(f"  Start: {info['start_time']} | End: {info['end_time']}", flush=True)
+            if info['output_file']:
+                print(f"  Output: {os.path.basename(info['output_file'])}", flush=True)
+                
+        if report["failures"]:
+            print("\n--- Failures ---", flush=True)
+            for f in report["failures"]:
+                print(f"  - {f}", flush=True)
+        
+        print("#"*50 + "\n", flush=True)
 
     base_dir = os.path.join(os.getcwd(), "public", "uploads", "cbt_assets", job_id)
     
-    if is_semantic_only:
-        run_stage_with_timing("stage6_semantic.py", [job_id, api_key], warn_timeout=20, expected_file=os.path.join(base_dir, "semantic.json"))
+    stage1_args = [pdf_path, job_id]
+    if max_pages:
+        stage1_args.append(f"--max-pages={max_pages}")
+
+    # Execution Modes
+    if "--render-only" in sys.argv:
+        run_stage_with_guardrails("stage1_render.py", stage1_args, expected_file=os.path.join(base_dir, "render_meta.json"))
+    elif "--layout-only" in sys.argv:
+        run_stage_with_guardrails("stage2_layout.py", [pdf_path, job_id, "--no-debug"], expected_file=os.path.join(base_dir, "layout.json"))
+    elif "--ocr-only" in sys.argv:
+        run_stage_with_guardrails("stage3_ocr.py", [pdf_path, job_id, "--no-debug"], expected_file=os.path.join(base_dir, "ocr.json"))
+    elif "--semantic-only" in sys.argv:
+        run_stage_with_guardrails("stage6_semantic.py", [job_id, api_key], expected_file=os.path.join(base_dir, "semantic.json"))
     else:
-        stage1_args = [pdf_path, job_id]
-        if max_pages:
-            stage1_args.append(f"--max-pages={max_pages}")
-            
-        run_stage_with_timing("stage1_render.py", stage1_args, warn_timeout=15, expected_file=os.path.join(base_dir, "render_meta.json"))
-        run_stage_with_timing("stage2_layout.py", [pdf_path, job_id, "--no-debug"], warn_timeout=20, expected_file=os.path.join(base_dir, "layout.json"))
-        run_stage_with_timing("stage3_ocr.py", [pdf_path, job_id, "--no-debug"], warn_timeout=30, expected_file=os.path.join(base_dir, "ocr.json"))
-        
+        # Full Pipeline
+        run_stage_with_guardrails("stage1_render.py", stage1_args, expected_file=os.path.join(base_dir, "render_meta.json"))
+        run_stage_with_guardrails("stage2_layout.py", [pdf_path, job_id, "--no-debug"], expected_file=os.path.join(base_dir, "layout.json"))
+        run_stage_with_guardrails("stage3_ocr.py", [pdf_path, job_id, "--no-debug"], expected_file=os.path.join(base_dir, "ocr.json"))
         if not is_lightweight:
-            run_stage_with_timing("stage4_math.py", [pdf_path, job_id, "--no-debug"], warn_timeout=30, expected_file=os.path.join(base_dir, "math.json"))
-            
-        run_stage_with_timing("stage6_semantic.py", [job_id, api_key], warn_timeout=20, expected_file=os.path.join(base_dir, "semantic.json"))
+            run_stage_with_guardrails("stage4_math.py", [pdf_path, job_id, "--no-debug"], expected_file=os.path.join(base_dir, "math.json"))
+        run_stage_with_guardrails("stage6_semantic.py", [job_id, api_key], expected_file=os.path.join(base_dir, "semantic.json"))
     
-    print("\n" + "="*50, flush=True)
-    print("[PIPELINE TIMING SUMMARY]", flush=True)
-    for stage, t in timings.items():
-        print(f"  {stage}: {t:.2f}s", flush=True)
-    print(f"  TOTAL: {time.time() - total_start:.2f}s", flush=True)
-    print("="*50 + "\n", flush=True)
-    
-    print("Pipeline Complete. Final package is ready at semantic.json.", flush=True)
+    print_health_report(health_report)
+    print("Pipeline Complete.", flush=True)
 
 if __name__ == "__main__":
     main()
