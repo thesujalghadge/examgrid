@@ -101,7 +101,7 @@ export async function POST(
       if (detectedMimeType === "application/pdf") {
         const hash = crypto.createHash("md5").update(buffer).digest("hex");
         const cacheDir = path.join(process.cwd(), "public", "uploads", "cbt_assets", instituteId, "cache");
-        const cacheFile = path.join(cacheDir, `${hash}_v2.json`);
+        const cacheFile = path.join(cacheDir, `${hash}_v3.json`);
         
         try {
           const cachedStr = await fs.readFile(cacheFile, "utf-8");
@@ -206,6 +206,8 @@ const parsedQuestionSchema = z.object({
   confidence: z.number().nullable().optional(),
   sourcePage: z.number().optional(),
   continued: z.boolean().optional(),
+  _debug_source: z.string().optional(),
+  _debug_assets: z.array(z.string()).optional(),
 });
 
 const parsedPaperSchema = z.object({
