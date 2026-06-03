@@ -22,50 +22,22 @@ def verify_dependencies():
     return True
 
 def run_stage(script_name, args, warn_timeout=None):
-    print(f"\n--- Running {script_name} ---", flush=True)
+    print(f"\n[STAGE START] {script_name}", flush=True)
     start = time.time()
     
     script_path = os.path.join(os.path.dirname(__file__), script_name)
     cmd = [sys.executable, "-u", script_path] + args
     
-    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1)
-    
-    for line in iter(process.stdout.readline, ''):
-        print(line, end='', flush=True)
-        
-    process.stdout.close()
-    return_code = process.wait()
+    result = subprocess.run(cmd)
     
     elapsed = time.time() - start
-    if warn_timeout and elapsed > warn_timeout:
-        print(f"[WARNING] {script_name} exceeded timeout threshold! Took {elapsed:.2f}s (Threshold: {warn_timeout}s)", flush=True)
     
-    if return_code != 0:
-        error_output = process.stderr.read().strip()
-        print(f"\n[PIPELINE FATAL ERROR] Stage Failed: {script_name}", flush=True)
-        print(f"[ACTION REQUIRED] Fix the runtime error below before continuing.", flush=True)
-        
-        missing_dep = ""
-        if "ModuleNotFoundError: No module named" in error_output:
-            for line in error_output.split('\n'):
-                if "ModuleNotFoundError" in line:
-                    missing_dep = line.split("'")[1] if "'" in line else line
-                    break
-        
-        if missing_dep:
-            print(f"[DEPENDENCY ERROR] Missing dependency: '{missing_dep}' in stage '{script_name}'.", flush=True)
-            print("Verify your Python environment matches the Next.js runtime environment.", flush=True)
-            print(f"Current Python executable: {sys.executable}", flush=True)
-            print(f"Please install it or run: pip install -r scripts/pipeline/requirements.txt", flush=True)
-        else:
-            print(f"[RUNTIME ERROR] Actionable runtime error in {script_name}:", flush=True)
-            print("-" * 50, flush=True)
-            print(error_output, flush=True)
-            print("-" * 50, flush=True)
-            
+    if result.returncode != 0:
+        print(f"\n[STAGE FAILED] {script_name} crashed with exit code {result.returncode}", flush=True)
+        print("[PIPELINE FATAL ERROR] Stopping immediately to preserve raw traceback.", flush=True)
         sys.exit(1)
         
-    print(f"--- Completed {script_name} in {elapsed:.2f}s ---\n", flush=True)
+    print(f"[STAGE COMPLETE] {script_name} in {elapsed:.2f}s\n", flush=True)
 
 def main():
     if "--verify" in sys.argv:

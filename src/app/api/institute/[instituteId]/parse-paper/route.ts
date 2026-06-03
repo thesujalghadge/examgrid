@@ -111,32 +111,11 @@ export async function POST(
           }
           parsed = parsedPaperSchema.parse(cachedJson);
         } catch {
-          const generator = runVisualExtractor(buffer, geminiKey, instituteId);
-          const stream = new ReadableStream({
-            async start(controller) {
-              try {
-                for await (const chunk of generator) {
-                  const typedChunk = chunk as any;
-                  controller.enqueue(JSON.stringify(typedChunk) + "\n");
-                  if (typedChunk.questions) {
-                    await fs.mkdir(cacheDir, { recursive: true });
-                    await fs.writeFile(cacheFile, JSON.stringify(chunk), "utf-8");
-                  }
-                }
-                controller.close();
-              } catch (e: any) {
-                controller.enqueue(JSON.stringify({ error: e.message || "Unknown error" }) + "\n");
-                controller.close();
-              }
-            }
-          });
+          const rawJson = await runVisualExtractor(buffer, geminiKey, instituteId);
+          parsed = parsedPaperSchema.parse(rawJson);
           
-          return new Response(stream, {
-            headers: {
-              "Content-Type": "application/x-ndjson",
-              "Cache-Control": "no-cache",
-            }
-          });
+          await fs.mkdir(cacheDir, { recursive: true });
+          await fs.writeFile(cacheFile, JSON.stringify(rawJson), "utf-8");
         }
       } else {
         throw new Error(`[RUNTIME PROOF] Explicit failure: Legacy parser disabled. Only PDFs are currently supported by the deterministic pipeline.`);
