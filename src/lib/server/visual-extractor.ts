@@ -28,11 +28,10 @@ async function resolveExistingPath(candidates: string[]): Promise<string> {
   return "python";
 }
 
-export async function runVisualExtractor(buffer: Buffer, apiKey: string, instituteId: string): Promise<any> {
+export async function runVisualExtractor(buffer: Buffer, apiKey: string, instituteId: string): Promise<unknown> {
   const jobId = Date.now().toString() + Math.floor(Math.random() * 1000).toString();
   const assetDir = path.join(process.cwd(), "public", "uploads", "cbt_assets", instituteId, jobId);
   await fs.mkdir(assetDir, { recursive: true });
-  const assetUrlPrefix = `/uploads/cbt_assets/${instituteId}/${jobId}`;
   
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "examgrid-vis-"));
   const tempPdf = path.join(tempDir, "paper.pdf");
@@ -63,14 +62,14 @@ export async function runVisualExtractor(buffer: Buffer, apiKey: string, institu
     console.log(`[RUNTIME PROOF] ADAPTER EXECUTED`);
     
     // Map new semantic format to legacy frontend schema to prevent React rewrite
-    const mappedQuestions = (semanticJson.questions || []).map((q: any) => {
+    const mappedQuestions = (semanticJson.questions || []).map((q: Record<string, unknown>) => {
       return {
         id: q.id,
         type: q.type,
         subject: q.subject,
         stem: q.stem,
         stemLatex: q.stem, // map both for legacy compatibility
-        options: (q.options || []).map((optText: string, idx: number) => ({
+        options: (Array.isArray(q.options) ? q.options : []).map((optText: unknown, idx: number) => ({
           id: (idx + 1).toString(),
           text: optText,
           latex: optText
@@ -78,7 +77,7 @@ export async function runVisualExtractor(buffer: Buffer, apiKey: string, institu
         answer: q.answer,
         confidence: q.confidence,
         images: q.assetPaths || [], // send visual crops to legacy images array
-        hasImage: (q.assetPaths && q.assetPaths.length > 0),
+        hasImage: (Array.isArray(q.assetPaths) && q.assetPaths.length > 0),
         _debug_source: "semantic_pipeline_v1",
         _debug_assets: q.assetPaths || []
       };
@@ -88,9 +87,9 @@ export async function runVisualExtractor(buffer: Buffer, apiKey: string, institu
     console.log(`[RUNTIME PROOF] Sample Adapter Mapped Q1:`, JSON.stringify(mappedQuestions[0], null, 2));
     
     return { questions: mappedQuestions };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[Pipeline Error]", error);
-    if (error.stderr) console.error("[Visual Extractor Stderr]", error.stderr);
+    if (error && typeof error === 'object' && 'stderr' in error) console.error("[Visual Extractor Stderr]", (error as Record<string, unknown>).stderr);
     throw error;
   } finally {
     try {
