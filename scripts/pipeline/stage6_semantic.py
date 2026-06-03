@@ -3,7 +3,7 @@ import os
 import json
 import time
 
-def generate_semantic_package(ocr_data, math_data, client):
+def generate_semantic_package(ocr_data, math_data, api_key):
     # Merge OCR and Math text into a unified payload for Gemini
     merged_regions = {}
     
@@ -53,20 +53,20 @@ def generate_semantic_package(ocr_data, math_data, client):
     """
     
     try:
-        from google import genai
-        from google.genai import types
+        import google.generativeai as genai
         
         # If running in mock mode (no API key provided or invalid)
-        if not client or client == "mock_key":
+        if not api_key or api_key == "mock_key":
             print("[DEBUG] Warning: No valid Gemini API key provided. Generating mock semantic package.", flush=True)
             return mock_semantic_package(list(merged_regions.values()))
             
         print("[DEBUG] Gemini request started...", flush=True)
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=[prompt, prompt_payload],
-            config=types.GenerateContentConfig(response_mime_type="application/json")
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel(
+            model_name='gemini-1.5-flash',
+            generation_config={"response_mime_type": "application/json"}
         )
+        response = model.generate_content([prompt, prompt_payload])
         print("[DEBUG] Gemini response received.", flush=True)
         
         print("[DEBUG] Semantic normalization started (parsing JSON)...", flush=True)
@@ -137,16 +137,8 @@ def main():
         print(f"Error loading intermediate artifacts: {e}", file=sys.stderr)
         sys.exit(1)
         
-    client = "mock_key"
-    if api_key != "mock_key":
-        try:
-            from google import genai
-            client = genai.Client(api_key=api_key)
-        except ImportError:
-            print("Warning: google-genai not installed. Falling back to mock.", file=sys.stderr)
-            
     start_time = time.time()
-    final_package = generate_semantic_package(ocr_data, math_data, client)
+    final_package = generate_semantic_package(ocr_data, math_data, api_key)
     elapsed = time.time() - start_time
     
     print(f"Semantic normalization generated {len(final_package.get('questions', []))} questions in {elapsed:.2f}s", flush=True)

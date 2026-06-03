@@ -18,6 +18,16 @@ def verify_dependencies():
         print(f"[PIPELINE FATAL ERROR] Missing required Python dependencies: {', '.join(missing)}")
         print("Please run: pip install -r scripts/pipeline/requirements.txt")
         sys.exit(1)
+        
+    print("[VERIFICATION] Checking Gemini SDK version...", flush=True)
+    try:
+        import importlib.metadata
+        version = importlib.metadata.version("google-generativeai")
+        print(f"[VERIFICATION] Installed Gemini SDK (google-generativeai) version: {version}", flush=True)
+        import google.generativeai as genai
+        print(f"[VERIFICATION] Gemini SDK successfully imported.", flush=True)
+    except Exception as e:
+        print(f"[VERIFICATION ERROR] Failed to load Gemini SDK: {e}", flush=True)
     
     return True
 
@@ -49,6 +59,7 @@ def main():
     
     max_pages = None
     is_lightweight = False
+    is_semantic_only = False
     positional_args = []
     
     for arg in sys.argv[1:]:
@@ -56,6 +67,8 @@ def main():
             max_pages = arg.split("=")[1]
         elif arg == "--lightweight":
             is_lightweight = True
+        elif arg == "--semantic-only":
+            is_semantic_only = True
         else:
             positional_args.append(arg)
             
@@ -92,18 +105,21 @@ def main():
 
     base_dir = os.path.join(os.getcwd(), "public", "uploads", "cbt_assets", job_id)
     
-    stage1_args = [pdf_path, job_id]
-    if max_pages:
-        stage1_args.append(f"--max-pages={max_pages}")
+    if is_semantic_only:
+        run_stage_with_timing("stage6_semantic.py", [job_id, api_key], warn_timeout=20, expected_file=os.path.join(base_dir, "semantic.json"))
+    else:
+        stage1_args = [pdf_path, job_id]
+        if max_pages:
+            stage1_args.append(f"--max-pages={max_pages}")
+            
+        run_stage_with_timing("stage1_render.py", stage1_args, warn_timeout=15, expected_file=os.path.join(base_dir, "render_meta.json"))
+        run_stage_with_timing("stage2_layout.py", [pdf_path, job_id, "--no-debug"], warn_timeout=20, expected_file=os.path.join(base_dir, "layout.json"))
+        run_stage_with_timing("stage3_ocr.py", [pdf_path, job_id, "--no-debug"], warn_timeout=30, expected_file=os.path.join(base_dir, "ocr.json"))
         
-    run_stage_with_timing("stage1_render.py", stage1_args, warn_timeout=15, expected_file=os.path.join(base_dir, "render_meta.json"))
-    run_stage_with_timing("stage2_layout.py", [pdf_path, job_id, "--no-debug"], warn_timeout=20, expected_file=os.path.join(base_dir, "layout.json"))
-    run_stage_with_timing("stage3_ocr.py", [pdf_path, job_id, "--no-debug"], warn_timeout=30, expected_file=os.path.join(base_dir, "ocr.json"))
-    
-    if not is_lightweight:
-        run_stage_with_timing("stage4_math.py", [pdf_path, job_id, "--no-debug"], warn_timeout=30, expected_file=os.path.join(base_dir, "math.json"))
-        
-    run_stage_with_timing("stage6_semantic.py", [job_id, api_key], warn_timeout=20, expected_file=os.path.join(base_dir, "semantic.json"))
+        if not is_lightweight:
+            run_stage_with_timing("stage4_math.py", [pdf_path, job_id, "--no-debug"], warn_timeout=30, expected_file=os.path.join(base_dir, "math.json"))
+            
+        run_stage_with_timing("stage6_semantic.py", [job_id, api_key], warn_timeout=20, expected_file=os.path.join(base_dir, "semantic.json"))
     
     print("\n" + "="*50, flush=True)
     print("[PIPELINE TIMING SUMMARY]", flush=True)
