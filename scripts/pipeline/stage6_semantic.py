@@ -53,7 +53,8 @@ def generate_semantic_package(ocr_data, math_data, api_key):
     """
     
     try:
-        import google.generativeai as genai
+        from google import genai
+        from google.genai import types
         
         # If running in mock mode (no API key provided or invalid)
         if not api_key or api_key == "mock_key":
@@ -61,12 +62,12 @@ def generate_semantic_package(ocr_data, math_data, api_key):
             return mock_semantic_package(list(merged_regions.values()))
             
         print("[DEBUG] Gemini request started...", flush=True)
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel(
-            model_name='gemini-1.5-flash',
-            generation_config={"response_mime_type": "application/json"}
+        client = genai.Client(api_key=api_key)
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=[prompt, prompt_payload],
+            config=types.GenerateContentConfig(response_mime_type="application/json")
         )
-        response = model.generate_content([prompt, prompt_payload])
         print("[DEBUG] Gemini response received.", flush=True)
         
         print("[DEBUG] Semantic normalization started (parsing JSON)...", flush=True)

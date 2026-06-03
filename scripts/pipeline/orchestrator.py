@@ -5,7 +5,7 @@ import time
 
 def verify_dependencies():
     required_modules = [
-        "cv2", "easyocr", "fitz", "PIL", "numpy", "pix2text", "surya", "google.generativeai", "pydantic", "pytesseract"
+        "cv2", "easyocr", "fitz", "PIL", "numpy", "pix2text", "surya", "google.genai", "pydantic", "pytesseract"
     ]
     missing = []
     for module in required_modules:
@@ -22,9 +22,9 @@ def verify_dependencies():
     print("[VERIFICATION] Checking Gemini SDK version...", flush=True)
     try:
         import importlib.metadata
-        version = importlib.metadata.version("google-generativeai")
-        print(f"[VERIFICATION] Installed Gemini SDK (google-generativeai) version: {version}", flush=True)
-        import google.generativeai as genai
+        version = importlib.metadata.version("google-genai")
+        print(f"[VERIFICATION] Installed Gemini SDK (google-genai) version: {version}", flush=True)
+        from google import genai
         print(f"[VERIFICATION] Gemini SDK successfully imported.", flush=True)
     except Exception as e:
         print(f"[VERIFICATION ERROR] Failed to load Gemini SDK: {e}", flush=True)
@@ -80,6 +80,22 @@ def main():
     job_id = positional_args[1]
     api_key = positional_args[2] if len(positional_args) > 2 else "mock_key"
     
+    if api_key and api_key != "mock_key":
+        print("[VERIFICATION] Fetching available models for API Key...", flush=True)
+        try:
+            from google import genai
+            client = genai.Client(api_key=api_key)
+            available_models = [m.name for m in client.models.list()]
+            target = "gemini-2.5-flash"
+            if any(target in m for m in available_models):
+                print(f"[VERIFICATION] Target model '{target}' is available.", flush=True)
+            else:
+                print(f"[PIPELINE FATAL ERROR] Target model '{target}' NOT found. Available: {available_models}", flush=True)
+                sys.exit(1)
+        except Exception as e:
+            print(f"[VERIFICATION ERROR] Failed to verify models: {e}", flush=True)
+            sys.exit(1)
+            
     total_start = time.time()
     timings = {}
     
