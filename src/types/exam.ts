@@ -40,6 +40,8 @@ export interface ExamQuestion {
   correctNumericalAnswer?: string;
   marks: number;
   negativeMarks: number;
+  _debug_source?: string;
+  _debug_assets?: string[];
 }
 
 export interface ExamSection {

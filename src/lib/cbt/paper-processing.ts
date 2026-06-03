@@ -866,7 +866,10 @@ export function normalizeProcessedPaper(pkg: ProcessedPaperPackage): ProcessedPa
           detectionSource: question.detectionSource,
           hasEquation: question.hasEquation,
           hasImage: question.hasImage,
+          images: question.images,
           metadata: question.metadata,
+          _debug_source: (question as any)._debug_source,
+          _debug_assets: (question as any)._debug_assets,
         });
       }),
     }))
@@ -1088,7 +1091,10 @@ export function preparedMetaToBankQuestion(
       metadata: meta.metadata,
       createdAt: now,
       updatedAt: now,
-    };
+      images: meta.images || [],
+      _debug_source: (meta as any)._debug_source,
+      _debug_assets: (meta as any)._debug_assets,
+    } as any;
   }
 
   const options: BankQuestion["options"] = [];

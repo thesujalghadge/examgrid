@@ -25,7 +25,10 @@ function bankToExamQuestion(
       correctNumericalAnswer: bank.correctAnswer,
       marks,
       negativeMarks,
-    };
+      images: (bank as any).images || [],
+      _debug_source: (bank as any)._debug_source,
+      _debug_assets: (bank as any)._debug_assets,
+    } as any;
   }
 
   const options = bank.options.map((option) => ({
@@ -51,7 +54,10 @@ function bankToExamQuestion(
     correctOptionId: correctOption?.id,
     marks,
     negativeMarks,
-  };
+    images: (bank as any).images || [],
+    _debug_source: (bank as any)._debug_source,
+    _debug_assets: (bank as any)._debug_assets,
+  } as any;
 }
 
 function manualToExamQuestion(

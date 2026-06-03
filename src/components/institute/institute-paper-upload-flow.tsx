@@ -24,7 +24,6 @@ import {
   MAX_ANSWER_KEY_UPLOAD_BYTES,
   MAX_PAPER_UPLOAD_BYTES,
   normalizeProcessedPaper,
-  runPaperProcessing,
   validateProcessedPaper,
   validateUploadFile,
 } from "@/lib/cbt/paper-processing";
@@ -365,57 +364,26 @@ export function InstitutePaperUploadFlow() {
         return;
       }
 
-      const paperSource = await extractUploadText(paperFile, "paper", false);
-      if (!paperSource) {
-        throw new Error("Could not read the question paper.");
+      // ONE DETERMINISTIC INGESTION PATH
+      // Do not run legacy regex processing.
+      if (paperType !== "pdf") {
+        throw new Error("Only PDF files are supported by the new deterministic pipeline.");
       }
-      const keySource = keyFile ? await extractUploadText(keyFile, "answer_key", true) : null;
 
-      const result = await runPaperProcessing({
-        instituteId: tenantId,
-        paperFileName: paperFile.name,
-        paperFileType: paperType,
-        paperText: paperSource.text,
-        answerKeyFileName: keyFile?.name,
-        answerKeyFileType: keyType,
-        answerKeyText: keySource?.text,
-        extractionMode: keySource ? "file" : "file",
-        extractionSummary: paperSource.summary,
-      });
+      // We read the answer key just for the manual answers, but no legacy text parsing for PDF!
+      const answerKeyText = keyFile ? await keyFile.text() : "";
 
+      const { parsedPaper } = await parseWithGemini(paperFile, answerKeyText, tenantId);
+      
+      const rawPkg = geminiPaperToProcessedPackage(parsedPaper, paperFile.name, paperType, tenantId);
       let configured = configureProcessedPackage(
-        result,
+        rawPkg,
         title.trim(),
         duration,
         marksPerQuestion,
         negativeMarks,
         subjectMapping,
       );
-
-      const hasGeminiKey = await checkGeminiKeyConfigured(tenantId);
-      if (hasGeminiKey && paperType === "pdf" && shouldUseGeminiRepair(configured)) {
-        try {
-          const { parsedPaper } = await parseWithGemini(paperFile, keySource?.text ?? "", tenantId);
-          configured = configureProcessedPackage(
-            geminiPaperToProcessedPackage(parsedPaper, paperFile.name, paperType, tenantId),
-            title.trim(),
-            duration,
-            marksPerQuestion,
-            negativeMarks,
-            subjectMapping,
-          );
-        } catch (repairError) {
-          configured = {
-            ...configured,
-            processingLog: [
-              ...configured.processingLog,
-              `Gemini repair fallback was unavailable: ${
-                repairError instanceof Error ? repairError.message : "unknown error"
-              }. Continuing with deterministic draft.`,
-            ],
-          };
-        }
-      }
 
       setPkg(configured);
       setStep("review");
@@ -1308,7 +1276,9 @@ function geminiPaperToProcessedPackage(
         sourceQuestionNumber: questionNumber,
         answerKeySource: q.answer ? "gemini_extracted" : "manual",
       },
-    });
+      _debug_source: (q as any)._debug_source,
+      _debug_assets: (q as any)._debug_assets,
+    } as any);
   }
 
   const sections = Array.from(sectionMap.entries()).map(([name, questions]) => ({
@@ -1363,31 +1333,7 @@ function geminiPaperToProcessedPackage(
   };
 }
 
-async function extractUploadText(
-  file: File,
-  kind: "paper" | "answer_key",
-  optional = false,
-): Promise<{ text: string; summary: Omit<import("@/types/cbt-paper-processing").PaperExtractionSummary, "questionsDetected"> } | null> {
-  const fileType = detectFileType(
-    file.name,
-    kind === "paper" ? PAPER_FILE_TYPES : ANSWER_KEY_FILE_TYPES,
-  ) as SupportedPaperFileType;
-  const formData = new FormData();
-  formData.set("kind", kind);
-  formData.set("fileType", fileType);
-  formData.set("file", file);
 
-  const response = await fetch("/api/institute/paper-extract", { method: "POST", body: formData, credentials: "include" });
-  if (!response.ok) {
-    if (optional) return { text: "", summary: { pages: 1, extractedChars: 0, usedOCR: false, warnings: [] } };
-    const plain = (await file.text()).trim();
-    return {
-      text: plain,
-      summary: { pages: 1, extractedChars: plain.length, usedOCR: false, warnings: [] },
-    };
-  }
-  return response.json();
-}
 
 function safeNumber(value: string, fallback: number): number {
   const n = Number(value);
@@ -1438,20 +1384,4 @@ function configureProcessedPackage(
   );
 }
 
-function shouldUseGeminiRepair(pkg: ProcessedPaperPackage): boolean {
-  const questions = pkg.sections.flatMap((section) => section.questions);
-  if (questions.length === 0) return true;
 
-  const blockingIssues = pkg.validationIssues.filter((issue) => issue.level === "error").length;
-  const lowConfidence = questions.filter((question) => question.confidence < 0.45).length;
-  const malformed = pkg.validationIssues.filter(
-    (issue) => issue.code === "malformed_options" || issue.code === "missing_answer",
-  ).length;
-  const questionCount = Math.max(1, questions.length);
-
-  return (
-    lowConfidence / questionCount >= 0.4 ||
-    blockingIssues / questionCount >= 0.25 ||
-    malformed / questionCount >= 0.25
-  );
-}

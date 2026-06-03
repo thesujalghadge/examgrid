@@ -35,7 +35,10 @@ export function fromNormalizedQuestion(
     detectionSource?: PreparedQuestionMeta["detectionSource"];
     hasEquation?: boolean;
     hasImage?: boolean;
+    images?: string[];
     metadata?: PreparedQuestionMeta["metadata"];
+    _debug_source?: string;
+    _debug_assets?: string[];
   },
 ): PreparedQuestionMeta {
   return {
@@ -57,12 +60,14 @@ export function fromNormalizedQuestion(
     marks: extras.marks ?? 4,
     negativeMarks: extras.negativeMarks ?? 1,
     optionLabels: normalized.type === "MCQ_SINGLE" ? [...normalized.options] : [],
-    images: [],
+    images: extras.images ?? [],
     explanation: undefined,
     metadata: extras.metadata ?? {
       parser: "deterministic_v3",
       sourceQuestionNumber: extras.sequence,
       answerKeySource: "missing",
     },
-  };
+    _debug_source: extras._debug_source,
+    _debug_assets: extras._debug_assets,
+  } as any;
 }
