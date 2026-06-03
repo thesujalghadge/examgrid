@@ -45,7 +45,7 @@ export async function* runVisualExtractor(buffer: Buffer, apiKey: string, instit
   let stderrOutput = "";
   
   try {
-    const child = spawn(python, [scriptPath, tempPdf, jobId, apiKey, "--max-pages=8"]);
+    const child = spawn(python, [scriptPath, tempPdf, jobId, apiKey, "--max-pages=3", "--lightweight"]);
     
     child.stderr.on("data", (data) => {
       stderrOutput += data.toString();

@@ -116,8 +116,9 @@ export async function POST(
             async start(controller) {
               try {
                 for await (const chunk of generator) {
-                  controller.enqueue(JSON.stringify(chunk) + "\n");
-                  if (chunk.questions) {
+                  const typedChunk = chunk as any;
+                  controller.enqueue(JSON.stringify(typedChunk) + "\n");
+                  if (typedChunk.questions) {
                     await fs.mkdir(cacheDir, { recursive: true });
                     await fs.writeFile(cacheFile, JSON.stringify(chunk), "utf-8");
                   }

@@ -21,19 +21,29 @@ def verify_dependencies():
     
     return True
 
-def run_stage(script_name, args):
-    print(f"\n--- Running {script_name} ---")
+def run_stage(script_name, args, warn_timeout=None):
+    print(f"\n--- Running {script_name} ---", flush=True)
     start = time.time()
     
     script_path = os.path.join(os.path.dirname(__file__), script_name)
-    cmd = [sys.executable, script_path] + args
+    cmd = [sys.executable, "-u", script_path] + args
     
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1)
     
-    if result.returncode != 0:
-        error_output = result.stderr.strip()
-        print(f"\n[PIPELINE FATAL ERROR] Stage Failed: {script_name}")
-        print(f"[ACTION REQUIRED] Fix the runtime error below before continuing.")
+    for line in iter(process.stdout.readline, ''):
+        print(line, end='', flush=True)
+        
+    process.stdout.close()
+    return_code = process.wait()
+    
+    elapsed = time.time() - start
+    if warn_timeout and elapsed > warn_timeout:
+        print(f"[WARNING] {script_name} exceeded timeout threshold! Took {elapsed:.2f}s (Threshold: {warn_timeout}s)", flush=True)
+    
+    if return_code != 0:
+        error_output = process.stderr.read().strip()
+        print(f"\n[PIPELINE FATAL ERROR] Stage Failed: {script_name}", flush=True)
+        print(f"[ACTION REQUIRED] Fix the runtime error below before continuing.", flush=True)
         
         missing_dep = ""
         if "ModuleNotFoundError: No module named" in error_output:
@@ -43,40 +53,42 @@ def run_stage(script_name, args):
                     break
         
         if missing_dep:
-            print(f"[DEPENDENCY ERROR] Missing dependency: '{missing_dep}' in stage '{script_name}'.")
-            print("Verify your Python environment matches the Next.js runtime environment.")
-            print(f"Current Python executable: {sys.executable}")
-            print(f"Please install it or run: pip install -r scripts/pipeline/requirements.txt")
+            print(f"[DEPENDENCY ERROR] Missing dependency: '{missing_dep}' in stage '{script_name}'.", flush=True)
+            print("Verify your Python environment matches the Next.js runtime environment.", flush=True)
+            print(f"Current Python executable: {sys.executable}", flush=True)
+            print(f"Please install it or run: pip install -r scripts/pipeline/requirements.txt", flush=True)
         else:
-            print(f"[RUNTIME ERROR] Actionable runtime error in {script_name}:")
-            print("-" * 50)
-            print(error_output)
-            print("-" * 50)
+            print(f"[RUNTIME ERROR] Actionable runtime error in {script_name}:", flush=True)
+            print("-" * 50, flush=True)
+            print(error_output, flush=True)
+            print("-" * 50, flush=True)
             
         sys.exit(1)
         
-    print(result.stdout)
-    print(f"--- Completed {script_name} in {time.time() - start:.2f}s ---\n")
+    print(f"--- Completed {script_name} in {elapsed:.2f}s ---\n", flush=True)
 
 def main():
     if "--verify" in sys.argv:
         verify_dependencies()
-        print("[VERIFICATION] All Python dependencies verified successfully.")
+        print("[VERIFICATION] All Python dependencies verified successfully.", flush=True)
         sys.exit(0)
         
     verify_dependencies()
     
     max_pages = None
+    is_lightweight = False
     positional_args = []
     
     for arg in sys.argv[1:]:
         if arg.startswith("--max-pages="):
             max_pages = arg.split("=")[1]
+        elif arg == "--lightweight":
+            is_lightweight = True
         else:
             positional_args.append(arg)
             
     if len(positional_args) < 2:
-        print("Usage: python orchestrator.py <pdf_path> <job_id> <api_key> [--max-pages=N]")
+        print("Usage: python orchestrator.py <pdf_path> <job_id> <api_key> [--max-pages=N] [--lightweight]", flush=True)
         sys.exit(1)
         
     pdf_path = positional_args[0]
@@ -86,29 +98,32 @@ def main():
     total_start = time.time()
     timings = {}
     
-    def run_stage_with_timing(script_name, args):
+    def run_stage_with_timing(script_name, args, warn_timeout=None):
         start = time.time()
-        run_stage(script_name, args)
+        run_stage(script_name, args, warn_timeout)
         timings[script_name] = time.time() - start
 
     stage1_args = [pdf_path, job_id]
     if max_pages:
         stage1_args.append(f"--max-pages={max_pages}")
         
-    run_stage_with_timing("stage1_render.py", stage1_args)
-    run_stage_with_timing("stage2_layout.py", [pdf_path, job_id, "--no-debug"])
-    run_stage_with_timing("stage3_ocr.py", [pdf_path, job_id, "--no-debug"])
-    run_stage_with_timing("stage4_math.py", [pdf_path, job_id, "--no-debug"])
-    run_stage_with_timing("stage6_semantic.py", [job_id, api_key])
+    run_stage_with_timing("stage1_render.py", stage1_args, warn_timeout=15)
+    run_stage_with_timing("stage2_layout.py", [pdf_path, job_id, "--no-debug"], warn_timeout=20)
+    run_stage_with_timing("stage3_ocr.py", [pdf_path, job_id, "--no-debug"], warn_timeout=30)
     
-    print("\n" + "="*50)
-    print("[PIPELINE TIMING SUMMARY]")
+    if not is_lightweight:
+        run_stage_with_timing("stage4_math.py", [pdf_path, job_id, "--no-debug"], warn_timeout=30)
+        
+    run_stage_with_timing("stage6_semantic.py", [job_id, api_key], warn_timeout=20)
+    
+    print("\n" + "="*50, flush=True)
+    print("[PIPELINE TIMING SUMMARY]", flush=True)
     for stage, t in timings.items():
-        print(f"  {stage}: {t:.2f}s")
-    print(f"  TOTAL: {time.time() - total_start:.2f}s")
-    print("="*50 + "\n")
+        print(f"  {stage}: {t:.2f}s", flush=True)
+    print(f"  TOTAL: {time.time() - total_start:.2f}s", flush=True)
+    print("="*50 + "\n", flush=True)
     
-    print("Pipeline Complete. Final package is ready at semantic.json.")
+    print("Pipeline Complete. Final package is ready at semantic.json.", flush=True)
 
 if __name__ == "__main__":
     main()

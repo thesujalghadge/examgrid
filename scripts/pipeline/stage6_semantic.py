@@ -118,8 +118,15 @@ def main():
     try:
         with open(os.path.join(base_dir, "ocr.json"), "r") as f:
             ocr_data = json.load(f)
-        with open(os.path.join(base_dir, "math.json"), "r") as f:
-            math_data = json.load(f)
+            
+        math_data = {"pages": []}
+        math_path = os.path.join(base_dir, "math.json")
+        if os.path.exists(math_path):
+            with open(math_path, "r") as f:
+                math_data = json.load(f)
+        else:
+            print("Notice: math.json not found, assuming lightweight mode. Math regions will be skipped.", file=sys.stderr)
+            
     except FileNotFoundError as e:
         print(f"Error loading intermediate artifacts: {e}", file=sys.stderr)
         sys.exit(1)
