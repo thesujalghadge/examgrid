@@ -5,17 +5,20 @@ import fitz
 import cv2
 import numpy as np
 from PIL import Image, ImageDraw
-import pytesseract
+import easyocr
 
 def rect_merge(r1, r2):
     return [min(r1[0], r2[0]), min(r1[1], r2[1]), max(r1[2], r2[2]), max(r1[3], r2[3])]
 
-def extract_text_anchor(crop_img):
+def extract_text_anchor(crop_img, reader):
     """Lightweight OCR to find anchors like Q29 or (1)"""
     try:
-        # pytesseract needs to be installed on system
-        text = pytesseract.image_to_string(crop_img, config='--psm 8').strip()
-        return text
+        # Convert crop to numpy array
+        if isinstance(crop_img, Image.Image):
+            crop_img = np.array(crop_img)
+        # EasyOCR returns list of (bbox, text, prob)
+        res = reader.readtext(crop_img, detail=0)
+        return " ".join(res).strip()
     except:
         return ""
 
@@ -32,7 +35,7 @@ def is_option_anchor(text):
         return True
     return False
 
-def detect_layout_cv2(img_path):
+def detect_layout_cv2(img_path, reader):
     img = cv2.imread(img_path)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     
@@ -102,7 +105,7 @@ def detect_layout_cv2(img_path):
         anchor_w = min(120, w)
         anchor_crop = gray[y0:y1, x0:x0+anchor_w]
         
-        anchor_text = extract_text_anchor(anchor_crop)
+        anchor_text = extract_text_anchor(anchor_crop, reader)
         
         if is_question_anchor(anchor_text):
             q_counter += 1
@@ -180,12 +183,15 @@ def main():
         "pages": []
     }
     
+    print("Initializing EasyOCR Model for Layout Anchor Detection...")
+    reader = easyocr.Reader(['en'], gpu=False)
+    
     for page_meta in meta_data["pages"]:
         page_num = page_meta["page_num"] - 1
         orig_img_path = page_meta["path"]
         
         # Use OpenCV CV2 to detect layout on the raw image
-        regions = detect_layout_cv2(orig_img_path)
+        regions = detect_layout_cv2(orig_img_path, reader)
         
         layout_data["pages"].append({
             "page_num": page_num + 1,

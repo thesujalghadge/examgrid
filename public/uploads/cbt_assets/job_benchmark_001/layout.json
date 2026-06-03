@@ -93,18 +93,18 @@
           "confidence": 0.9
         },
         {
-          "id": "stem_5",
-          "type": "QuestionStem",
+          "id": "opt_4_1",
+          "type": "Option",
           "bbox": [
             184,
             2599,
             1251,
             2700
           ],
-          "confidence": 0.6
+          "confidence": 0.8
         },
         {
-          "id": "stem_6",
+          "id": "stem_5",
           "type": "QuestionStem",
           "bbox": [
             94,
@@ -112,7 +112,7 @@
             2133,
             2860
           ],
-          "confidence": 0.6
+          "confidence": 0.8
         }
       ]
     }
