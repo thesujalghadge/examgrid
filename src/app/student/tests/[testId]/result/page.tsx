@@ -15,11 +15,10 @@ import {
 import { getExamById } from "@/lib/exam-catalog";
 import { loadExamAttempt } from "@/lib/persistence";
 import { getRepositories } from "@/lib/repositories/provider";
-import { getQuestionBank } from "@/services/question-bank-service";
-import { listTestSessionsForTest } from "@/services/test-session-engine";
 import { useAuthStore } from "@/stores/auth-store";
 import { useWorkspaceAuthStore } from "@/stores/workspace-auth-store";
-import type { ExamResult } from "@/types/exam";
+import type { ExamResult, SectionScore } from "@/types/exam";
+import type { TestQuestionResult, TestResultBreakdown } from "@/types/test-session";
 
 function formatDuration(seconds: number): string {
   const h = Math.floor(seconds / 3600);
@@ -53,28 +52,82 @@ export default function StudentCbtResultPage() {
     }
     const test = getRepositories().cbtTests.getById(testId);
     const ws = useWorkspaceAuthStore.getState().session;
-    if (!test || (ws?.instituteId && test.instituteId !== ws.instituteId)) {
+    if (
+      !test ||
+      !exam ||
+      (ws?.instituteId && test.instituteId !== ws.instituteId)
+    ) {
       router.replace("/student/tests");
       return;
     }
-    const attempt = loadExamAttempt(testId, candidate.rollNumber);
-    if (attempt?.result) {
-      setResult(attempt.result);
-    } else {
-      router.replace(`/student/tests/${testId}`);
-    }
+
     if (ws?.instituteId) {
-      const session = listTestSessionsForTest(testId, ws.instituteId).find(
-        (entry) =>
-          entry.studentId === candidate.rollNumber &&
-          (entry.status === "submitted" || entry.status === "auto_submitted"),
-      );
-      if (session) {
-        setIntegrityScore(session.integrityScore ?? null);
-        setFlagged(session.flagged ?? false);
+      // Institute CBT: fetch from server
+      fetch(`/api/cbt/test-session/result?testId=${encodeURIComponent(testId)}`)
+        .then((res) => {
+          if (!res.ok) throw new Error("Not found");
+          return res.json();
+        })
+        .then((data) => {
+          setIntegrityScore(data.integrityScore ?? null);
+          setFlagged(data.flagged ?? false);
+          
+          // Map backend breakdown to ExamResult format
+          const bd = data.resultBreakdown as TestResultBreakdown | undefined;
+          if (bd) {
+            const sectionScores: SectionScore[] = exam.sections.map((section) => {
+              const rows = bd.perQuestion.filter((row: TestQuestionResult) =>
+                section.questionIds.includes(row.questionId),
+              );
+              return {
+                sectionId: section.id,
+                sectionName: section.name,
+                total: section.questionIds.length,
+                attempted: rows.filter((row) => row.selected != null).length,
+                correct: rows.filter((row) => row.correct).length,
+                incorrect: rows.filter(
+                  (row) => row.selected != null && !row.correct,
+                ).length,
+                unattempted:
+                  section.questionIds.length -
+                  rows.filter((row) => row.selected != null).length,
+                score: rows.reduce(
+                  (sum, row) => sum + row.marksAwarded,
+                  0,
+                ),
+              };
+            });
+            setResult({
+              examId: testId,
+              examTitle: test.title,
+              totalQuestions: bd.correct + bd.incorrect + bd.unattempted,
+              candidateName: candidate.name,
+              rollNumber: candidate.rollNumber,
+              totalScore: bd.finalScore,
+              maxScore: bd.maxScore,
+              correct: bd.correct,
+              incorrect: bd.incorrect,
+              unattempted: bd.unattempted,
+              attempted: bd.attempted,
+              durationUsedSeconds: bd.durationSeconds,
+              submittedAt: data.submittedAt,
+              sectionScores,
+            });
+          }
+        })
+        .catch(() => {
+          router.replace(`/student/tests/${testId}`);
+        });
+    } else {
+      // Standalone/Mock fallback
+      const attempt = loadExamAttempt(testId, candidate.rollNumber);
+      if (attempt?.result) {
+        setResult(attempt.result);
+      } else {
+        router.replace(`/student/tests/${testId}`);
       }
     }
-  }, [candidate, router, testId]);
+  }, [candidate, exam, router, testId]);
 
   if (!candidate || !result || !exam) {
     return (
@@ -155,69 +208,19 @@ export default function StudentCbtResultPage() {
           </CardContent>
         </Card>
 
-        <SolutionsPanel testId={testId} />
-
         <div className="flex flex-wrap justify-center gap-3">
           <Link href="/student/tests" className={cn(buttonVariants({ variant: "outline" }))}>
             Back to tests
           </Link>
-          <Button className="bg-[#1a3c6e]" onClick={() => router.push("/student/reports")}>
+          <Link href={`/student/tests/${testId}/solutions`} className={cn(buttonVariants({ variant: "default" }), "bg-[#1a3c6e]")}>
+            View Solutions
+          </Link>
+          <Button variant="ghost" onClick={() => router.push("/student/reports")}>
             View analysis
           </Button>
         </div>
       </main>
     </div>
-  );
-}
-
-function SolutionsPanel({ testId }: { testId: string }) {
-  const test = getRepositories().cbtTests.getById(testId);
-  const bank = new Map(getQuestionBank().map((q) => [q.id, q]));
-  if (!test) return null;
-
-  const rows = test.questions
-    .map((row, index) => {
-      const bankQ = row.bankQuestionId ? bank.get(row.bankQuestionId) : null;
-      if (!bankQ?.solution) return null;
-      return {
-        key: row.questionId,
-        index: index + 1,
-        subject: bankQ.subject,
-        text: bankQ.questionText.slice(0, 120),
-        solution: bankQ.solution,
-        correct: bankQ.correctAnswer,
-      };
-    })
-    .filter(Boolean) as Array<{
-    key: string;
-    index: number;
-    subject: string;
-    text: string;
-    solution: string;
-    correct: string;
-  }>;
-
-  if (rows.length === 0) return null;
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Solutions & review</CardTitle>
-        <CardDescription>Official solutions for this paper (PYQ-style review).</CardDescription>
-      </CardHeader>
-      <CardContent className="max-h-96 space-y-3 overflow-y-auto text-sm">
-        {rows.map((row) => (
-          <div key={row.key} className="rounded border border-gray-100 p-3">
-            <p className="font-medium text-[#1a3c6e]">
-              Q{row.index} · {row.subject}
-            </p>
-            <p className="text-gray-600">{row.text}…</p>
-            <p className="mt-1 text-green-800">Answer: {row.correct}</p>
-            <p className="mt-1 text-gray-700">{row.solution}</p>
-          </div>
-        ))}
-      </CardContent>
-    </Card>
   );
 }
 

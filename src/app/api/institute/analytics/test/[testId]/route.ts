@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
-import { listCachedSubmissions } from "@/lib/server/cbt-results-cache";
+import {
+  listCbtSubmissions,
+  submissionToTestSession,
+} from "@/lib/server/cbt-submissions-store";
 import { computeTestAnalytics } from "@/services/test-analytics";
 import { readVerifiedWorkspaceSession } from "@/lib/workspace-session-server";
-import type { TestSession } from "@/types/test-session";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function GET(
   _request: Request,
@@ -17,23 +22,8 @@ export async function GET(
   }
 
   const { testId } = await context.params;
-  const cached = listCachedSubmissions(ws.instituteId, testId);
-  const sessions: TestSession[] = cached.map((c) => ({
-    id: c.sessionId,
-    studentId: c.studentId,
-    testId: c.testId,
-    instituteId: c.instituteId,
-    status: "submitted",
-    startedAt: c.submittedAt - c.durationSeconds * 1000,
-    endsAt: c.submittedAt,
-    lastSavedAt: c.submittedAt,
-    questionOrder: [],
-    optionOrderMap: {},
-    integrityScore: c.integrityScore,
-    flagged: c.flagged,
-    score: c.score,
-    resultBreakdown: c.resultBreakdown,
-  }));
+  const submissions = await listCbtSubmissions(ws.instituteId, testId);
+  const sessions = submissions.map(submissionToTestSession);
 
   const analytics = computeTestAnalytics(testId, sessions);
   return NextResponse.json(analytics);

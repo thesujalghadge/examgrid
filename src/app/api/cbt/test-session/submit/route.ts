@@ -10,7 +10,7 @@ import {
   CBT_TEST_TIMER_COOKIE,
   decodeTestTimerCookie,
 } from "@/lib/cbt/test-session-token";
-import { cacheCbtSubmission } from "@/lib/server/cbt-results-cache";
+import { saveCbtSubmission } from "@/lib/server/cbt-submissions-store";
 import { readVerifiedWorkspaceSession } from "@/lib/workspace-session-server";
 import { evaluateTestSession } from "@/services/test-evaluation";
 import type {
@@ -19,6 +19,7 @@ import type {
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 const integrityEventSchema = z.object({
   type: z.enum([
@@ -140,22 +141,42 @@ export async function POST(request: Request) {
     useCache: false,
   });
 
-  const status =
+  const status: "submitted" | "auto_submitted" =
     body.status === "auto_submitted" ? "auto_submitted" : "submitted";
 
-  cacheCbtSubmission({
+  const submission = {
     sessionId: body.sessionId,
     testId: body.testId,
     instituteId: body.instituteId,
     studentId: ws.userId,
+    status,
+    startedAt: timer.startedAt,
     submittedAt,
     score: resultBreakdown.finalScore,
     maxScore: resultBreakdown.maxScore,
     durationSeconds: resultBreakdown.durationSeconds,
     flagged,
     integrityScore,
+    answers: normalizedAnswers,
     resultBreakdown,
-  });
+  };
+
+  try {
+    await saveCbtSubmission(submission);
+  } catch (error) {
+    logCbtWarning("cbt submit persistence failed", {
+      testId: body.testId,
+      sessionId: body.sessionId,
+      studentId: ws.userId,
+      instituteId: body.instituteId,
+      error: error instanceof Error ? error.message : "unknown",
+    });
+    return NextResponse.json(
+      { error: "Submission could not be saved. Retrying is safe." },
+      { status: 503 },
+    );
+  }
+
   logCbtGuard("cbt submit accepted", {
     testId: body.testId,
     sessionId: body.sessionId,
