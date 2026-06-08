@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -108,6 +108,9 @@ export function InstitutePaperUploadFlow() {
   const [batches, setBatches] = useState<Batch[]>([]);
   const [publishedTestId, setPublishedTestId] = useState<string | null>(null);
   const [publishedTitle, setPublishedTitle] = useState("");
+  const [publishing, setPublishing] = useState(false);
+  const publishInFlightRef = useRef(false);
+  const publishTestIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     void hydrateSession();
@@ -376,8 +379,8 @@ export function InstitutePaperUploadFlow() {
 
       const { parsedPaper } = await parseWithGemini(paperFile, answerKeyText, tenantId);
       
-      const rawPkg = geminiPaperToProcessedPackage(parsedPaper, paperFile.name, paperType, tenantId);
-      let configured = configureProcessedPackage(
+      const rawPkg = cropsMetaToProcessedPackage(parsedPaper, paperFile.name, paperType, tenantId, answerKeyText);
+      const configured = configureProcessedPackage(
         rawPkg,
         title.trim(),
         duration,
@@ -399,6 +402,17 @@ export function InstitutePaperUploadFlow() {
 
   const publishTest = async () => {
     if (!pkg || !instituteId) return;
+    if (publishInFlightRef.current) return;
+    if (publishedTestId) {
+      setStep("done");
+      return;
+    }
+
+    publishInFlightRef.current = true;
+    setPublishing(true);
+    setPublishError("");
+
+    try {
     const finalPkg = normalizeProcessedPaper({
       ...pkg,
       title: title.trim(),
@@ -409,10 +423,13 @@ export function InstitutePaperUploadFlow() {
     if (errors.length > 0) {
       setPkg(finalPkg);
       setPublishError("Fix the highlighted items under each question, then publish again.");
+      publishInFlightRef.current = false;
+      setPublishing(false);
       return;
     }
 
-    const testId = makeCbtId("cbt");
+    const testId = publishTestIdRef.current ?? `${makeCbtId("cbt")}-${pkg.id}`;
+    publishTestIdRef.current = testId;
     const { test, bankQuestions } = buildCbtTestFromProcessedPaper(
       finalPkg,
       testId,
@@ -457,6 +474,13 @@ export function InstitutePaperUploadFlow() {
     setPublishedTitle(finalPkg.title);
     setStep("done");
     setPublishError("");
+    } catch (error) {
+      publishTestIdRef.current = null;
+      setPublishError(error instanceof Error ? error.message : "Publish failed. Please try again.");
+    } finally {
+      publishInFlightRef.current = false;
+      setPublishing(false);
+    }
   };
 
   const resetFlow = () => {
@@ -466,6 +490,7 @@ export function InstitutePaperUploadFlow() {
     setKeyFile(null);
     setPublishError("");
     setPublishedTestId(null);
+    publishTestIdRef.current = null;
   };
 
   return (
@@ -523,7 +548,7 @@ export function InstitutePaperUploadFlow() {
             {publishError ? (
               <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">{publishError}</p>
             ) : null}
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-2">
               <Button className="bg-[#14213d] px-6" disabled={!paperFile} onClick={() => setStep("configure")}>
                 Continue to configure
               </Button>
@@ -840,6 +865,8 @@ export function InstitutePaperUploadFlow() {
                   });
                 },
                 onContinue: () => void publishTest(),
+                continueDisabled: publishing,
+                continueLabel: publishing ? "Publishing..." : "Publish CBT",
               }}
             />
           </div>
@@ -848,13 +875,13 @@ export function InstitutePaperUploadFlow() {
             <p className="text-sm text-red-700">{publishError}</p>
           ) : null}
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" onClick={() => setStep("configure")}>
               Back
             </Button>
-            <Button className="bg-[#8a6f3e] px-6" onClick={() => void publishTest()}>
-              Publish CBT
-            </Button>
+            <p className="text-sm text-[#5e5a52]">
+              Use the Publish CBT button in the preview toolbar after final review.
+            </p>
           </div>
         </div>
       )}
@@ -1205,7 +1232,7 @@ async function parseWithGemini(
     formData.set("answerKey", answerKeyText);
   }
 
-  const res = await fetch(`/api/institute/${instituteId}/parse-paper`, {
+  const res = await fetch(`/api/institute/${instituteId}/parse-paper-v2`, {
     method: "POST",
     body: formData,
     credentials: "include",
@@ -1220,34 +1247,32 @@ async function parseWithGemini(
   return { parsedPaper: parsed, usedGemini: true };
 }
 
-function geminiPaperToProcessedPackage(
-  parsed: ParsedGeminiPaper,
+function cropsMetaToProcessedPackage(
+  parsed: any, // CropsMeta JSON
   paperFileName: string,
   paperFileType: string,
   instituteId: string,
+  answerKeyText: string = "",
 ): ProcessedPaperPackage {
   const id = `paper-${Date.now()}`;
   const title = paperFileName.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim() || "Institute CBT Paper";
   const sectionMap = new Map<string, PreparedQuestionMeta[]>();
 
+  // Parse answer key if provided
+  let answerMap = new Map<number, string>();
+  if (answerKeyText.trim()) {
+    const { parseAnswerKeyForTest } = require("@/lib/cbt/paper-processing");
+    const parsedAnswers = parseAnswerKeyForTest(answerKeyText);
+    parsedAnswers.forEach((entry: any) => answerMap.set(entry.questionNumber, entry.answer));
+  }
+
+  let index = 0;
   for (const q of parsed.questions) {
-    const sectionName = q.subject || "Imported Questions";
+    index++;
+    const sectionName = "Imported Questions";
     if (!sectionMap.has(sectionName)) sectionMap.set(sectionName, []);
 
-    const isNumerical = q.type === "numerical";
-    const optionLabels = isNumerical ? [] : (q.options ?? []).map((o: any) => o.latex || o.text || o.id || "");
-    const optionImages = isNumerical ? [] : (q.options ?? []).map((o: any) => o.image || "");
-    
-    // Convert 0-based or 1-based index or letter to option answer.
-    let correctAnswer = q.answer ? String(q.answer) : "";
-    if (!isNumerical && correctAnswer) {
-       // if answer is like "1", "2", "3", "4", convert to "A", "B", "C", "D" if needed
-       // Or the system uses optionLabels array directly. We'll leave it as is if it's already a letter, or convert index to letter.
-       const answerMap: Record<string, string> = { "1": "A", "2": "B", "3": "C", "4": "D", "0": "A", "A": "A", "B": "B", "C": "C", "D": "D" };
-       correctAnswer = answerMap[correctAnswer] ?? correctAnswer;
-    }
-
-    const questionNumber = Number(q.id) || 1;
+    const questionNumber = Number(q.q_num) || index;
 
     sectionMap.get(sectionName)!.push({
       questionId: `${id}-q${questionNumber}`,
@@ -1257,28 +1282,26 @@ function geminiPaperToProcessedPackage(
       chapter: undefined,
       topic: undefined,
       difficulty: undefined,
-      confidence: q.confidence ?? 0.95,
-      questionType: isNumerical ? "NUMERICAL" : "MCQ_SINGLE",
-      detectionSource: "gemini_vision",
-      questionText: q.stemLatex || q.stem || "",
-      stemImage: q.stem_image,
-      hasEquation: q.stem.includes("$"),
-      hasImage: q.hasImage ?? false,
-      correctAnswer,
+      confidence: 1.0,
+      questionType: q.q_type === "NAT" ? "NUMERICAL" : "MCQ_SINGLE",
+      detectionSource: "vision_crop",
+      questionText: "", // Blank because we rely on the image
+      stemImage: q.asset_path,
+      hasEquation: false,
+      hasImage: true,
+      correctAnswer: answerMap.get(questionNumber) || (q.q_type === "NAT" ? "" : "A"),
       solution: undefined,
       marks: 4,
-      negativeMarks: isNumerical ? 0 : 1,
-      optionLabels,
-      optionImages,
-      images: q.images || [],
-      explanation: q.explanation ?? undefined,
+      negativeMarks: 1,
+      optionLabels: [],
+      optionImages: [],
+      images: [],
+      explanation: undefined,
       metadata: {
-        parser: "gemini_vision",
+        parser: "vision_crop",
         sourceQuestionNumber: questionNumber,
-        answerKeySource: q.answer ? "gemini_extracted" : "manual",
+        answerKeySource: "manual",
       },
-      _debug_source: (q as any)._debug_source,
-      _debug_assets: (q as any)._debug_assets,
     } as any);
   }
 
@@ -1305,18 +1328,18 @@ function geminiPaperToProcessedPackage(
       "Submit before the timer ends.",
     ],
     sections,
-    processingLog: [`Parsed by Gemini Vision: ${totalQuestions} questions extracted.`],
+    processingLog: [`Image crops generated: ${totalQuestions} questions extracted.`],
     validationIssues: [],
-    extractionMode: "gemini_vision",
+    extractionMode: "vision_crop",
     extractionSummary: {
       pages: 1,
-      extractedChars: parsed.questions.reduce((n, q) => n + (q.stem?.length || 0), 0),
-      usedOCR: true,
+      extractedChars: 0,
+      usedOCR: false,
       questionsDetected: totalQuestions,
       warnings: [],
     },
     parsingDiagnostics: {
-      rawTextPreview: parsed.questions.slice(0, 2).map((q) => q.stem || "").join("\n"),
+      rawTextPreview: "",
       parsedQuestionCount: totalQuestions,
       unmatchedAnswerCount: 0,
       unmatchedAnswers: [],

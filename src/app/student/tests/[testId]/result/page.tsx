@@ -153,8 +153,16 @@ export default function StudentCbtResultPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-5">
               <Stat label="Total" value={`${result.totalScore} / ${result.maxScore}`} />
+              <Stat
+                label="Accuracy"
+                value={
+                  result.attempted > 0
+                    ? `${Math.round((result.correct / result.attempted) * 100)}%`
+                    : "0%"
+                }
+              />
               <Stat label="Correct" value={String(result.correct)} green />
               <Stat label="Incorrect" value={String(result.incorrect)} red />
               <Stat label="Unattempted" value={String(result.unattempted)} />

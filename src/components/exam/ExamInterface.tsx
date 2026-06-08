@@ -6,7 +6,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { getExamById } from "@/lib/exam-catalog";
 import { useExamPersistence } from "@/hooks/use-exam-persistence";
 import { useExamGuard } from "@/hooks/useExamGuard";
-import { bootstrapExamSession } from "@/lib/exam-bootstrap";
+import { bootstrapExamSession, startExamAttempt } from "@/lib/exam-bootstrap";
+import { ExamInstructions } from "./ExamInstructions";
 import { canSubmitExam, ensureExamReadyForCbt } from "@/lib/cbt/session-safety";
 import { requestExamFullscreen } from "@/lib/fullscreen";
 import { loadExamAttempt, saveExamAttempt } from "@/lib/persistence";
@@ -59,6 +60,8 @@ export interface ExamTeacherReviewConfig {
   onDeleteQuestion: (questionId: string) => void;
   onAddQuestion: (sectionId: string) => void;
   onContinue: () => void;
+  continueLabel?: string;
+  continueDisabled?: boolean;
 }
 
 const DEFAULT_EXAM_NAV: ExamInterfaceNavigate = {
@@ -93,7 +96,7 @@ export function ExamInterface({
   const [paletteCollapsed, setPaletteCollapsed] = useState(false);
   const [mobilePaletteOpen, setMobilePaletteOpen] = useState(false);
   const [submitOpen, setSubmitOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitState, setSubmitState] = useState<"idle" | "submitting" | "retrying" | "saved" | "failed">("idle");
   const [resumed, setResumed] = useState(false);
   const [ready, setReady] = useState(false);
   const submitInProgressRef = useRef(false);
@@ -105,6 +108,7 @@ export function ExamInterface({
   const wsSession = useWorkspaceAuthStore((s) => s.session);
   const instituteId = wsSession?.instituteId;
   const candidateRollNumber = candidate?.rollNumber;
+  const lifecyclePhase = useExamLifecycleStore((s) => s.phase);
   const cbtTest = useMemo(() => getRepositories().cbtTests.getById(examId), [examId]);
   const isInstituteCbt = !isTeacherReview && Boolean(cbtTest);
 
@@ -129,7 +133,7 @@ export function ExamInterface({
 
   const finalizeSubmit = useCallback(async () => {
     if (!candidate || !exam) {
-      setIsSubmitting(false);
+      setSubmitState("idle");
       return;
     }
 
@@ -148,73 +152,94 @@ export function ExamInterface({
         await exitFullscreenBeforeRedirect();
         router.replace(nav.result(examId));
       } else {
-        setIsSubmitting(false);
+        setSubmitState("idle");
       }
       return;
     }
 
     submitInProgressRef.current = true;
-    setIsSubmitting(true);
+    setSubmitState("submitting");
+
     if (isInstituteCbt) {
       testEngine.flushSave();
-      await testEngine.lockSubmit("submitted");
-    }
-    logCbtGuard("submit started", {
-      examId,
-      candidateRoll: candidate.rollNumber,
-      lifecyclePhase,
-    });
+      let attemptCount = 0;
+      let success = false;
+      const delays = [2000, 4000, 8000, 16000];
 
-    const qState = useQuestionStore.getState();
-    const timerState = useTimerStore.getState();
-    timerState.stop();
+      while (!success && attemptCount <= delays.length) {
+        try {
+          if (attemptCount > 0) setSubmitState("retrying");
+          await testEngine.lockSubmit("submitted");
+          success = true;
+          setSubmitState("saved");
+        } catch (error) {
+          if (attemptCount < delays.length) {
+            await new Promise((res) => setTimeout(res, delays[attemptCount]));
+            attemptCount++;
+          } else {
+            setSubmitState("failed");
+            submitInProgressRef.current = false;
+            return;
+          }
+        }
+      }
+    } else {
+      const qState = useQuestionStore.getState();
+      const timerState = useTimerStore.getState();
+      timerState.stop();
 
-    const safeCurrentQuestionId =
-      qState.currentQuestionId && exam.questions[qState.currentQuestionId]
-        ? qState.currentQuestionId
-        : Object.keys(exam.questions)[0];
+      const safeCurrentQuestionId =
+        qState.currentQuestionId && exam.questions[qState.currentQuestionId]
+          ? qState.currentQuestionId
+          : Object.keys(exam.questions)[0];
 
-    const safeCurrentSectionId =
-      qState.currentSectionId && exam.sections.some((s) => s.id === qState.currentSectionId)
-        ? qState.currentSectionId
-        : exam.sections[0].id;
+      const safeCurrentSectionId =
+        qState.currentSectionId && exam.sections.some((s) => s.id === qState.currentSectionId)
+          ? qState.currentSectionId
+          : exam.sections[0].id;
 
-    if (!safeCurrentQuestionId) {
-      submitInProgressRef.current = false;
-      setIsSubmitting(false);
-      return;
-    }
+      if (!safeCurrentQuestionId) {
+        submitInProgressRef.current = false;
+        setSubmitState("idle");
+        return;
+      }
 
-    const sessionViolations = useExamSessionStore.getState().violations;
-    const attempt: PersistedExamAttempt = {
-      version: 1,
-      examId,
-      candidateRoll: candidate.rollNumber,
-      lifecycle: "submitted",
-      examEndsAt: timerState.examEndsAt ?? Date.now(),
-      startedAt: previous?.startedAt ?? Date.now(),
-      currentQuestionId: safeCurrentQuestionId,
-      currentSectionId: safeCurrentSectionId,
-      answers: qState.answers,
-      visited: qState.visited,
-      markedForReview: qState.markedForReview,
-      violations: sessionViolations,
-      submittedAt: Date.now(),
-    };
-
-    const result = computeExamResult(exam, attempt, candidate.name);
-    attempt.result = result;
-    const saved = saveExamAttempt(attempt);
-    if (!saved) {
-      logCbtWarning("submit save failed", {
+      const sessionViolations = useExamSessionStore.getState().violations;
+      const attempt: PersistedExamAttempt = {
+        version: 1,
         examId,
         candidateRoll: candidate.rollNumber,
-      });
-      submitInProgressRef.current = false;
-      setIsSubmitting(false);
-      return;
+        lifecycle: "submitted",
+        examEndsAt: timerState.examEndsAt ?? Date.now(),
+        startedAt: previous?.startedAt ?? Date.now(),
+        currentQuestionId: safeCurrentQuestionId,
+        currentSectionId: safeCurrentSectionId,
+        answers: qState.answers,
+        visited: qState.visited,
+        markedForReview: qState.markedForReview,
+        violations: sessionViolations,
+        submittedAt: Date.now(),
+      };
+
+      const result = computeExamResult(exam, attempt as any, candidate.name);
+      attempt.result = result;
+      const saved = saveExamAttempt(attempt as any);
+      if (!saved) {
+        submitInProgressRef.current = false;
+        setSubmitState("idle");
+        return;
+      }
+
+      setResult(result);
+      persistNow();
     }
 
+    logCbtGuard("submit completed", {
+      examId,
+      candidateRoll: candidate.rollNumber,
+    });
+
+    useTimerStore.getState().stop();
     useExamLifecycleStore.getState().setPhase("submitted");
     recordAuditEvent({
       actorId: candidate.rollNumber,
@@ -222,29 +247,9 @@ export function ExamInterface({
       actionType: "exam_submit",
       resourceType: "exam",
       resourceId: examId,
-      metadata: {
-        violationCount: sessionViolations.length,
-        attempted: result.attempted,
-        totalScore: result.totalScore,
-      },
+      metadata: { serverBacked: isInstituteCbt },
     });
-    setResult(result);
-    persistNow();
-    try {
-      const ws = useWorkspaceAuthStore.getState().session;
-      if (ws?.instituteId) {
-        persistCbtFinalAttempt(exam, attempt, ws.instituteId);
-      }
-    } catch {
-      /* non-fatal */
-    }
-    logCbtGuard("submit completed", {
-      examId,
-      candidateRoll: candidate.rollNumber,
-      attempted: result.attempted,
-      totalScore: result.totalScore,
-      submittedAt: result.submittedAt,
-    });
+
     await exitFullscreenBeforeRedirect();
     router.replace(nav.result(examId));
   }, [candidate, exam, examId, isInstituteCbt, nav, persistNow, router, setResult, testEngine]);
@@ -252,6 +257,18 @@ export function ExamInterface({
   useEffect(() => {
     finalizeRef.current = finalizeSubmit;
   }, [finalizeSubmit]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (submitState === "submitting" || submitState === "retrying") {
+        e.preventDefault();
+        e.returnValue = "Answers are still being saved. Leaving now may interrupt submission.";
+        return e.returnValue;
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [submitState]);
 
   useEffect(() => {
     routerRef.current = router;
@@ -429,11 +446,7 @@ export function ExamInterface({
     ? currentReviewSectionQuestionIds.indexOf(currentQuestionId)
     : -1;
 
-  const activeExam = review?.exam ?? exam;
-  const currentQuestionType = currentQuestionId
-    ? activeExam?.questions[currentQuestionId]?.type
-    : undefined;
-  const showCalculator = currentQuestionType === "NUMERICAL";
+  const showCalculator = !isTeacherReview;
 
   if (!ready || (!isTeacherReview && (!candidate || !exam))) {
     return (
@@ -466,8 +479,8 @@ export function ExamInterface({
 
       <SectionTabs />
 
-      <div className="relative flex min-h-0 flex-1 overflow-hidden">
-        <main className="flex min-h-0 min-w-0 flex-1 flex-col border-r border-[#1a3c6e]/10 bg-white shadow-sm">
+      <div className="relative flex min-h-0 flex-1 overflow-hidden bg-white">
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col border-r border-gray-300 bg-white">
           <QuestionCard
             review={
               review && currentQuestionId
@@ -489,7 +502,7 @@ export function ExamInterface({
           />
           <QuestionNavigator
             onSubmitClick={() => setSubmitOpen(true)}
-            isSubmitting={isSubmitting}
+            isSubmitting={submitState === "submitting" || submitState === "retrying" || submitState === "saved"}
             review={
               review && currentQuestionId && currentReviewSection
                 ? {
@@ -501,7 +514,8 @@ export function ExamInterface({
                     onDeleteQuestion: () => review.onDeleteQuestion(currentQuestionId),
                     onAddQuestion: () => review.onAddQuestion(currentReviewSection.id),
                     onContinue: review.onContinue,
-                    continueLabel: "Publish CBT",
+                    continueLabel: review.continueLabel ?? "Publish CBT",
+                    continueDisabled: review.continueDisabled,
                   }
                 : undefined
             }
@@ -539,10 +553,10 @@ export function ExamInterface({
         <SubmitModal
           open={submitOpen}
           onOpenChange={setSubmitOpen}
-          isSubmitting={isSubmitting}
+          submitState={submitState}
           onConfirm={() => {
-            if (isSubmitting) return;
-            setIsSubmitting(true);
+            if (submitState === "submitting" || submitState === "retrying") return;
+            setSubmitState("submitting");
             setSubmitOpen(false);
             finalizeSubmit();
           }}

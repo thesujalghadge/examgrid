@@ -12,6 +12,7 @@ interface ReviewNavigatorProps {
   onAddQuestion: () => void;
   onContinue: () => void;
   continueLabel?: string;
+  continueDisabled?: boolean;
 }
 
 interface QuestionNavigatorProps {
@@ -101,9 +102,17 @@ export function QuestionNavigator({ onSubmitClick, isSubmitting = false, review,
               type="button"
               size="sm"
               className="h-9 bg-[#8a6f3e] px-5 font-bold text-white shadow-sm hover:bg-[#725c33]"
+              disabled={review.continueDisabled}
               onClick={review.onContinue}
             >
-              {review.continueLabel ?? "Continue"}
+              {review.continueDisabled ? (
+                <span className="inline-flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {review.continueLabel ?? "Working..."}
+                </span>
+              ) : (
+                review.continueLabel ?? "Continue"
+              )}
             </Button>
           ) : (
             <>

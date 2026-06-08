@@ -55,6 +55,11 @@ export function evaluateTestSession(input: {
     let isCorrect = false;
     if (key.type === "MCQ_SINGLE") {
       isCorrect = selected === key.correctOptionId;
+      if (!isCorrect && key.correctOptionId) {
+        const selectedLabel = optionLabelFromAnswer(selected);
+        const correctLabel = optionLabelFromAnswer(key.correctOptionId);
+        isCorrect = Boolean(selectedLabel && correctLabel && selectedLabel === correctLabel);
+      }
     } else {
       const norm = (s: string) => s.trim().toLowerCase();
       isCorrect =
@@ -107,4 +112,13 @@ export function evaluateTestSession(input: {
 
   if (useCache) evaluationCache.set(sessionId, breakdown);
   return breakdown;
+}
+
+function optionLabelFromAnswer(value: string): string | null {
+  const normalized = value.trim().toUpperCase();
+  if (/^[A-D]$/.test(normalized)) return normalized;
+  const numericLabels: Record<string, string> = { "1": "A", "2": "B", "3": "C", "4": "D" };
+  if (numericLabels[normalized]) return numericLabels[normalized];
+  const match = normalized.match(/-OPT-([A-D])$/);
+  return match?.[1] ?? null;
 }

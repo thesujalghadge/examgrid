@@ -150,24 +150,16 @@ export function useTestSessionEngine(params: {
           }),
         });
         if (!response.ok) {
-          logCbtWarning("server submit rejected", {
-            testId,
-            studentId,
-            status: response.status,
-            mode,
-          });
-          return null;
+          throw new Error("server submit rejected");
         }
-        logCbtGuard("server submit accepted", { testId, studentId, mode });
         return (await response.json()) as {
           score: number;
           resultBreakdown: TestSession["resultBreakdown"];
           integrityScore: number;
           flagged: boolean;
         };
-      } catch {
-        logCbtWarning("server submit request failed", { testId, studentId, mode });
-        return null;
+      } catch (error) {
+        throw error;
       }
     },
     [instituteId, studentId, testId],
@@ -261,12 +253,21 @@ export function useTestSessionEngine(params: {
       const fresh = hydrateSessionAnswers(
         getRepositories().testSessions.getById(session.id) ?? session,
       );
-      sessionRef.current = fresh;
+      
+      const responsePayload = await postServerSubmit(fresh, mode);
+
       const locked = submitTest(fresh.id, mode);
       if (!locked) return null;
 
+      if (responsePayload && responsePayload.resultBreakdown) {
+         locked.resultBreakdown = responsePayload.resultBreakdown;
+         locked.score = responsePayload.score;
+         locked.integrityScore = responsePayload.integrityScore;
+         locked.flagged = responsePayload.flagged;
+         getRepositories().testSessions.save(locked);
+      }
+
       sessionRef.current = locked;
-      await postServerSubmit(locked, mode);
       onSubmitted?.(locked);
       return locked;
     },
@@ -330,7 +331,10 @@ export function useTestSessionEngine(params: {
       }
     };
     const onFullscreen = () => {
-      if (!document.fullscreenElement && sessionRef.current) {
+      if (
+        !document.fullscreenElement &&
+        sessionRef.current?.status === "in_progress"
+      ) {
         logIntegrity("fullscreen_exit");
       }
     };

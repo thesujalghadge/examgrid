@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { getRepositories } from "@/lib/repositories/provider";
-import { listAssignedCbtTests } from "@/services/cbt-test-service";
+import { listAssignedExams } from "@/services/cbt-test-service";
 import {
   findStudentForCandidate,
   isOperationalSchedulingActive,
@@ -20,6 +20,7 @@ import {
 import { logCbtGuard } from "@/lib/logging/runtime-logger";
 import { useAuthStore } from "@/stores/auth-store";
 import { useWorkspaceAuthStore } from "@/stores/workspace-auth-store";
+import { hydrateSupabaseRepositories } from "@/lib/supabase/hydrate-repositories";
 
 export function StudentCbtTestList() {
   const candidate = useAuthStore((s) => s.candidate);
@@ -33,8 +34,24 @@ export function StudentCbtTestList() {
   }, [hydrateWs]);
 
   useEffect(() => {
-    const timer = window.setInterval(() => setTick((value) => value + 1), 15000);
-    return () => window.clearInterval(timer);
+    hydrateSupabaseRepositories().finally(() => {
+      setTick((value) => value + 1);
+    });
+    const timer = window.setInterval(() => {
+      hydrateSupabaseRepositories().finally(() => {
+        setTick((value) => value + 1);
+      });
+    }, 15000);
+    const onFocus = () => {
+      hydrateSupabaseRepositories().finally(() => {
+        setTick((value) => value + 1);
+      });
+    };
+    window.addEventListener("focus", onFocus);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", onFocus);
+    };
   }, []);
 
   const rows = useMemo(() => {
@@ -47,20 +64,27 @@ export function StudentCbtTestList() {
         .listByStudentId(candidate.rollNumber)
         .map((record) => [record.attempt.testId, record]),
     );
-    const tests = repos.cbtTests.list();
+    const exams = repos.exams.list();
     const schedules = repos.schedules.list();
-    const assigned = listAssignedCbtTests(student, tests, schedules).filter(
-      ({ test, schedule }) =>
-        (!instituteId || test.instituteId === instituteId) &&
+    const assigned = listAssignedExams(student, exams, schedules).filter(
+      ({ schedule }) =>
         (!schedule.instituteId || !instituteId || schedule.instituteId === instituteId),
     );
 
     return assigned.map((row) => {
-      const latestAttempt = latestByTestId.get(row.test.id);
+      const latestAttempt = latestByTestId.get(row.exam.id);
       const hasSubmitted = Boolean(latestAttempt?.attempt.submittedAt);
       const hasInProgress =
-        !hasSubmitted && Boolean(repos.attempts.load(row.test.id, candidate.rollNumber));
-      return { ...row, hasSubmitted, hasInProgress };
+        !hasSubmitted && Boolean(repos.attempts.load(row.exam.id, candidate.rollNumber));
+      
+      const testProxy = {
+        id: row.exam.id,
+        title: row.exam.title,
+        durationMinutes: row.exam.durationMinutes,
+        questions: Object.keys(row.exam.questions),
+      };
+
+      return { ...row, test: testProxy, hasSubmitted, hasInProgress };
     });
   }, [candidate, instituteId, tick]);
 
@@ -93,7 +117,11 @@ export function StudentCbtTestList() {
       ) : (
         <div className="grid gap-3">
           {rows.map(({ test, schedule, status, hasSubmitted, hasInProgress }) => {
-            const active = status === "active";
+            const startLimit = new Date(schedule.startAt).getTime() + 10 * 60 * 1000;
+            const isLate = Date.now() > startLimit;
+            const missed = status === "active" && !hasSubmitted && !hasInProgress && isLate;
+            const active = status === "active" && !missed;
+            
             const ctaLabel = hasSubmitted
               ? "View result"
               : hasInProgress
@@ -106,7 +134,7 @@ export function StudentCbtTestList() {
                   <CardTitle className="text-base text-[#14213d]">{test.title}</CardTitle>
                   <CardDescription className="text-[#5e5a52]">
                     {test.durationMinutes} min | {test.questions.length} questions |{" "}
-                    <span className="capitalize">{status}</span>
+                    <span className="capitalize">{missed ? "Missed" : status}</span>
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -127,6 +155,10 @@ export function StudentCbtTestList() {
                     >
                       {ctaLabel}
                     </Link>
+                  ) : missed ? (
+                    <span className="text-sm text-red-500 font-medium">
+                      Missed (joined more than 10 mins late)
+                    </span>
                   ) : status === "upcoming" ? (
                     <span className="text-sm text-[#5e5a52]">
                       Opens{" "}
