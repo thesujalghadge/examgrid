@@ -63,6 +63,7 @@ export function useTestSessionEngine(params: {
       markedForReview: questionState.markedForReview,
       visited: questionState.visited,
     });
+    console.log(`[flushSave] flushed ${Object.keys(questionState.answers).length} answers from question store`);
   }, []);
 
   const scheduleSave = useCallback(() => {
@@ -262,6 +263,7 @@ export function useTestSessionEngine(params: {
       
       const submitStartMs = performance.now();
       console.log(`[CBT] Starting server submission...`);
+      console.log(`[lockSubmit] hydrated fresh session with ${Object.keys(fresh.answers ?? {}).length} answers`);
       const responsePayload = await postServerSubmit(fresh, mode);
       console.log(`[CBT] Server submission complete in ${Math.round(performance.now() - submitStartMs)}ms`);
 

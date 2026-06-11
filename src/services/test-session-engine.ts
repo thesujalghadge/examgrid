@@ -136,11 +136,13 @@ export function saveAnswer(
   const session = hydrateSessionAnswers(raw);
 
   if (patch.answers) {
+    console.log(`[saveAnswer] Saving ${Object.keys(patch.answers).length} answers for session ${sessionId}`);
     saveSessionAnswers(sessionId, patch.answers);
   }
 
   const updated: TestSession = {
     ...session,
+    answers: patch.answers ?? session.answers,
     currentQuestionId: patch.currentQuestionId ?? session.currentQuestionId,
     currentSectionId: patch.currentSectionId ?? session.currentSectionId,
     markedForReview: patch.markedForReview ?? session.markedForReview,
@@ -148,7 +150,7 @@ export function saveAnswer(
     lastSavedAt: Date.now(),
   };
   repos.testSessions.save(updated);
-  return { ...updated, answers: patch.answers ?? session.answers };
+  return updated;
 }
 
 export function logIntegrityEvent(
