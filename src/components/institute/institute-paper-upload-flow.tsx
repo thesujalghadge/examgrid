@@ -809,20 +809,15 @@ export function InstitutePaperUploadFlow() {
                     return { ...q, optionLabels: next };
                   }),
                 onCorrectAnswerChange: (id, value) =>
-                  updateReviewQuestion(id, (q) => {
-                    const next = { ...q, correctAnswer: value.trim().toUpperCase() };
-                    const questionType = inferQuestionTypeFromMeta(next);
-                    return {
-                      ...next,
-                      questionType,
-                      optionLabels: questionType === "NUMERICAL" ? [] : (next.optionLabels.length < 4 ? ["", "", "", ""] : next.optionLabels),
-                      negativeMarks: questionType === "NUMERICAL" ? 0 : next.negativeMarks,
-                    };
-                  }),
+                  updateReviewQuestion(id, (q) => ({
+                    ...q,
+                    correctAnswer: value.trim().toUpperCase(),
+                  })),
                 onMarksChange: (id, value) =>
                   updateReviewQuestion(id, (q) => ({ ...q, marks: safeNumber(value, q.marks) })),
                 onNegativeMarksChange: (id, value) =>
                   updateReviewQuestion(id, (q) => ({ ...q, negativeMarks: safeNumber(value, q.negativeMarks) })),
+                onQuestionTypeChange: (id, value) => updateReviewQuestion(id, (q) => ({ ...q, questionType: value, optionLabels: value === 'NUMERICAL' ? [] : ['','','',''] })),
                 onToggleFlag: () => undefined,
                 onMoveQuestion: moveReviewQuestion,
                 onDeleteQuestion: deleteReviewQuestion,
@@ -1381,7 +1376,9 @@ function configureProcessedPackage(
       : {
           ...subjectMapping,
           mode: "multi" as const,
-          ranges: (subjectMapping.ranges ?? defaultSubjectMapping(totalQ, subjectMapping.layout).ranges ?? []).map(
+          ranges: (subjectMapping.ranges ?? defaultSubjectMapping(totalQ, subjectMapping.layout).ranges ?? [])
+                  .filter((range) => range.start <= totalQ)
+                  .map(
             (range) => ({
               ...range,
               end: Math.min(range.end, totalQ),

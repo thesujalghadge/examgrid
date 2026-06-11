@@ -32,7 +32,7 @@ export async function runVerification() {
   console.log('\n[RUNTIME VERIFICATION] Verifying Python Pipeline Dependencies...');
   try {
     const python = await resolveExistingPath(getPythonCandidates());
-    const scriptPath = path.join(process.cwd(), 'scripts', 'pipeline', 'orchestrator.py');
+    const scriptPath = path.join(process.cwd(), 'scripts', 'pipeline', 'vision_orchestrator.py');
     const { stdout } = await execFileAsync(python, [scriptPath, '--verify'], { shell: false });
     console.log(stdout.trim());
   } catch (error: any) {

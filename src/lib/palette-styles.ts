@@ -29,7 +29,7 @@ export const PALETTE_LEGEND: {
     status: "answered-and-marked",
     label: "Answered & Marked for Review",
     className:
-      "bg-violet-600 border-2 border-green-500 text-white ring-2 ring-green-400 ring-inset",
+      "bg-violet-600 border-2 border-violet-700 text-white relative after:absolute after:-bottom-1 after:-right-1 after:h-2.5 after:w-2.5 after:rounded-full after:bg-green-500 after:border after:border-white",
   },
   {
     label: "NAT question (orange dot indicator)",

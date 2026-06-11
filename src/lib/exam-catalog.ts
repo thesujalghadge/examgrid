@@ -46,12 +46,16 @@ export async function getExamByIdServer(examId: string): Promise<ExamDefinition 
 
   try {
     const client = requireSupabaseClient("exam-catalog.getExamByIdServer");
-    const query = client
-      .from("exams")
-      .select("*")
-      .or(`legacy_id.eq.${examId},id.eq.${examId}`)
-      .maybeSingle();
-    const { data: examRow, error: examError } = await query;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(examId);
+    
+    let query = client.from("exams").select("*");
+    if (isUuid) {
+      query = query.or(`legacy_id.eq.${examId},id.eq.${examId}`);
+    } else {
+      query = query.eq("legacy_id", examId);
+    }
+    
+    const { data: examRow, error: examError } = await query.maybeSingle();
     throwIfSupabaseError(examError, "exams", "getByIdServer");
     if (!examRow) return undefined;
 
@@ -72,10 +76,28 @@ export async function getExamByIdServer(examId: string): Promise<ExamDefinition 
       .order("sort_order", { ascending: true });
     throwIfSupabaseError(questionError, "exam_questions", "getByIdServer");
 
+    const questionRows = (questions ?? []) as ExamQuestionRow[];
+    const bankQuestionIds = questionRows.map(q => q.bank_question_id).filter(Boolean) as string[];
+    
+    let bankQuestionsMap: Record<string, any> = {};
+    if (bankQuestionIds.length > 0) {
+      const { data: bankData, error: bankErr } = await client
+        .from("questions")
+        .select("id, metadata, options")
+        .in("id", bankQuestionIds);
+      
+      if (bankData && !bankErr) {
+        bankData.forEach(bq => {
+           bankQuestionsMap[bq.id] = bq;
+        });
+      }
+    }
+
     const definition = rowsToExamDefinition(
       typedExamRow,
       (sections ?? []) as ExamSectionRow[],
-      (questions ?? []) as ExamQuestionRow[],
+      questionRows,
+      bankQuestionsMap
     );
     const valid = filterValidExams([definition]);
     return valid[0];

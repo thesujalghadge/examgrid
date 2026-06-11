@@ -1,17 +1,8 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { getPaletteButtonClass } from "@/lib/palette-styles";
+import { getPaletteButtonClass, PALETTE_LEGEND } from "@/lib/palette-styles";
 import { useQuestionStore } from "@/stores/question-store";
-
-const PALETTE_LEGEND = [
-  { status: "not-visited", label: "Not Visited", color: "bg-gray-300" },
-  { status: "not-answered", label: "Not Answered", color: "bg-red-400" },
-  { status: "answered", label: "Answered", color: "bg-green-500" },
-  { status: "marked", label: "Marked for Review", color: "bg-purple-500" },
-  { status: "answered-marked", label: "Answered & Marked", color: "bg-purple-700" },
-] as const;
-
 interface QuestionPaletteProps {
   collapsed?: boolean;
   onToggleCollapse?: () => void;
@@ -50,7 +41,7 @@ export function QuestionPalette({
         className="absolute inset-0 z-10 bg-black/20 md:hidden"
         onClick={onToggleCollapse}
       />
-      <aside className="absolute inset-y-0 right-0 z-20 flex w-[min(280px,86vw)] shrink-0 flex-col border-l-2 border-[#1a3c6e]/30 bg-[#f4f6f9] shadow-inner md:static md:w-[280px]">
+      <aside className="absolute inset-y-0 right-0 z-20 flex w-[min(280px,86vw)] shrink-0 flex-col bg-blue-50/30 md:static md:w-[300px]">
       <div className="flex items-center justify-between border-b border-gray-300 bg-[#1a3c6e] px-3 py-2 text-white">
         <h2 className="text-sm font-semibold tracking-wide">Question Palette</h2>
         <button
@@ -66,11 +57,11 @@ export function QuestionPalette({
         <p className="mb-1.5 font-semibold text-gray-800">Legend</p>
         <ul className="space-y-1">
           {PALETTE_LEGEND.map((item, index) => (
-            <li key={`legend-${item.status}-${index}`} className="flex items-center gap-2">
+            <li key={`legend-${item.status ?? "nat"}-${index}`} className="flex items-center gap-2">
               <span
                 className={cn(
                   "inline-block h-4 w-4 shrink-0 rounded-sm",
-                  item.color,
+                  item.className,
                 )}
               />
               <span className="text-gray-700">{item.label}</span>

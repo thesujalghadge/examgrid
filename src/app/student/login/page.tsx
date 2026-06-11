@@ -56,6 +56,9 @@ export default function StudentLoginPage() {
       return;
     }
 
+    const { hydrateSupabaseRepositories } = await import("@/lib/supabase/hydrate-repositories");
+    await hydrateSupabaseRepositories();
+
     const matched = getRepositories().students.getByRollNumber(roll);
     if (!matched || matched.instituteId !== instituteId || !matched.active) {
       await workspaceLogout();

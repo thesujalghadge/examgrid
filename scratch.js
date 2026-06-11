@@ -1,79 +1,137 @@
 const fs = require('fs');
+const file = 'c:/AI/examgrid/src/components/exam/ExamInterface.tsx';
+let content = fs.readFileSync(file, 'utf8');
 
-// Fix students/page.tsx
-let pagePath = 'src/app/institute/students/page.tsx';
-let page = fs.readFileSync(pagePath, 'utf8');
-page = page.replace(
-  'await awaitRepositoryPersist();',
-  'try { await awaitRepositoryPersist(); } catch (err) { alert(`Failed to save student: ${err.message || err.code}`); return; }'
-);
-fs.writeFileSync(pagePath, page);
+const startIdx = content.indexOf('const finalizeSubmit = useCallback(async () => {');
+const endIdx = content.indexOf('useEffect(() => {', startIdx);
 
-// Fix QuestionCard.tsx
-let qPath = 'src/components/exam/QuestionCard.tsx';
-let q = fs.readFileSync(qPath, 'utf8');
+if (startIdx !== -1 && endIdx !== -1) {
+  const newFinalize = `const finalizeSubmit = useCallback(async () => {
+    if (!candidate || !exam) {
+      setSubmitState("idle");
+      return;
+    }
 
-// Replace the span wrapping the option text
-let target = `<span
-                        className={cn(
-                          "flex-1 whitespace-pre-wrap break-words text-sm leading-6",
-                          isSelected && !isTeacherEdit ? "text-white" : "text-gray-950",
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            "mr-3 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-sm font-bold",
-                            isSelected && !isTeacherEdit
-                              ? "border-white bg-white text-[#1a3c6e]"
-                              : "border-[#1a3c6e] bg-white text-[#1a3c6e]",
-                          )}
-                        >
-                          {opt.label}
-                        </span>
-                        {isTeacherEdit ? (
-                          <input
-                            className="w-[calc(100%-2.5rem)] rounded-md border border-[#d7dde7] px-2 py-1 text-sm"
-                            value={opt.text}
-                            onChange={(event) => review?.onOptionTextChange?.(opt.label, event.target.value)}
-                          />
-                        ) : (
-                          <MathRenderer text={displayOptionText} className="text-sm leading-6" />
-                        )}
-                      </span>`;
+    const previous = loadExamAttempt(examId, candidate.rollNumber);
+    const lifecyclePhase = useExamLifecycleStore.getState().phase;
 
-let replacement = `<div
-                        className={cn(
-                          "flex flex-1 items-center gap-3 whitespace-pre-wrap break-words text-sm leading-6",
-                          isSelected && !isTeacherEdit ? "text-white" : "text-gray-950",
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-sm font-bold",
-                            isSelected && !isTeacherEdit
-                              ? "border-white bg-white text-[#1a3c6e]"
-                              : "border-[#1a3c6e] bg-white text-[#1a3c6e]",
-                          )}
-                        >
-                          {opt.label}
-                        </span>
-                        <div className="flex-1">
-                          {isTeacherEdit ? (
-                            <input
-                              className="w-full rounded-md border border-[#d7dde7] px-2 py-1 text-sm"
-                              value={opt.text}
-                              onChange={(event) => review?.onOptionTextChange?.(opt.label, event.target.value)}
-                            />
-                          ) : (
-                            <MathRenderer text={displayOptionText} className="text-sm leading-6" />
-                          )}
-                        </div>
-                      </div>`;
+    if (
+      !canSubmitExam({
+        lifecyclePhase,
+        submitInProgress: submitInProgressRef.current,
+        existingAttempt: previous,
+      })
+    ) {
+      logCbtGuard("submit blocked - duplicate or already submitted");
+      if (previous?.lifecycle === "submitted") {
+        await exitFullscreenBeforeRedirect();
+        router.replace(nav.result(examId));
+      } else {
+        setSubmitState("idle");
+      }
+      return;
+    }
 
-// Since it has Windows CRLF, replace using regex that ignores line endings:
-target = target.replace(/\r\n/g, '\n');
-q = q.replace(/\r\n/g, '\n');
-q = q.replace(target, replacement);
+    submitInProgressRef.current = true;
+    setSubmitState("submitting");
 
-fs.writeFileSync(qPath, q);
-console.log('Done');
+    if (isInstituteCbt) {
+      testEngine.flushSave();
+      let attemptCount = 0;
+      let success = false;
+      const delays = [2000, 4000, 8000, 16000];
+
+      while (!success && attemptCount <= delays.length) {
+        try {
+          if (attemptCount > 0) setSubmitState("retrying");
+          await testEngine.lockSubmit("submitted");
+          success = true;
+          setSubmitState("saved");
+        } catch (error) {
+          if (attemptCount < delays.length) {
+            await new Promise((res) => setTimeout(res, delays[attemptCount]));
+            attemptCount++;
+          } else {
+            setSubmitState("failed");
+            submitInProgressRef.current = false;
+            return;
+          }
+        }
+      }
+    } else {
+      const qState = useQuestionStore.getState();
+      const timerState = useTimerStore.getState();
+      timerState.stop();
+
+      const safeCurrentQuestionId =
+        qState.currentQuestionId && exam.questions[qState.currentQuestionId]
+          ? qState.currentQuestionId
+          : Object.keys(exam.questions)[0];
+
+      const safeCurrentSectionId =
+        qState.currentSectionId && exam.sections.some((s) => s.id === qState.currentSectionId)
+          ? qState.currentSectionId
+          : exam.sections[0].id;
+
+      if (!safeCurrentQuestionId) {
+        submitInProgressRef.current = false;
+        setSubmitState("idle");
+        return;
+      }
+
+      const sessionViolations = useExamSessionStore.getState().violations;
+      const attempt = {
+        version: 1,
+        examId,
+        candidateRoll: candidate.rollNumber,
+        lifecycle: "submitted",
+        examEndsAt: timerState.examEndsAt ?? Date.now(),
+        startedAt: previous?.startedAt ?? Date.now(),
+        currentQuestionId: safeCurrentQuestionId,
+        currentSectionId: safeCurrentSectionId,
+        answers: qState.answers,
+        visited: qState.visited,
+        markedForReview: qState.markedForReview,
+        violations: sessionViolations,
+        submittedAt: Date.now(),
+      };
+
+      const result = computeExamResult(exam, attempt as any, candidate.name);
+      attempt.result = result;
+      const saved = saveExamAttempt(attempt as any);
+      if (!saved) {
+        submitInProgressRef.current = false;
+        setSubmitState("idle");
+        return;
+      }
+
+      setResult(result);
+      persistNow();
+    }
+
+    logCbtGuard("submit completed", {
+      examId,
+      candidateRoll: candidate.rollNumber,
+    });
+
+    useTimerStore.getState().stop();
+    useExamLifecycleStore.getState().setPhase("submitted");
+    recordAuditEvent({
+      actorId: candidate.rollNumber,
+      actorRole: "student",
+      actionType: "exam_submit",
+      resourceType: "exam",
+      resourceId: examId,
+      metadata: { serverBacked: isInstituteCbt },
+    });
+
+    await exitFullscreenBeforeRedirect();
+    router.replace(nav.result(examId));
+  }, [candidate, exam, examId, isInstituteCbt, nav, persistNow, router, setResult, testEngine]);\n\n  `;
+  
+  content = content.substring(0, startIdx) + newFinalize + content.substring(endIdx);
+  fs.writeFileSync(file, content);
+  console.log('REPLACED SUCCESSFULLY');
+} else {
+  console.log('INDICES NOT FOUND');
+}

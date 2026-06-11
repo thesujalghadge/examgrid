@@ -18,6 +18,7 @@ import {
   syncTestSessionFromServerEndsAt,
 } from "@/services/test-session-engine";
 import { useQuestionStore } from "@/stores/question-store";
+
 import { useTimerStore } from "@/stores/timer-store";
 import type { TestSession, TestSessionIntegrityEventType } from "@/types/test-session";
 
@@ -25,7 +26,8 @@ const AUTOSAVE_DEBOUNCE_MS = 400;
 const AUTOSAVE_INTERVAL_MS = 15_000;
 
 export function useTestSessionEngine(params: {
-  enabled: boolean;
+  enabled?: boolean;
+  integrityState?: "ACTIVE" | "SUSPENDED_BY_SYSTEM" | "DISABLED";
   testId: string;
   studentId: string;
   instituteId: string;
@@ -41,6 +43,7 @@ export function useTestSessionEngine(params: {
     durationMinutes,
     onExpired,
     onSubmitted,
+    integrityState = "ACTIVE",
   } = params;
 
   const sessionRef = useRef<TestSession | null>(null);
@@ -132,7 +135,9 @@ export function useTestSessionEngine(params: {
 
   const postServerSubmit = useCallback(
     async (session: TestSession, mode: "submitted" | "auto_submitted") => {
-      if (!session.signedAnswerKey || !session.answerKey) return null;
+      if (!session.signedAnswerKey || !session.answerKey) {
+        throw new Error("Cannot submit to server: missing answer key or signature.");
+      }
       try {
         const response = await fetch("/api/cbt/test-session/submit", {
           method: "POST",
@@ -254,7 +259,10 @@ export function useTestSessionEngine(params: {
         getRepositories().testSessions.getById(session.id) ?? session,
       );
       
+      const submitStartMs = performance.now();
+      console.log(`[CBT] Starting server submission...`);
       const responsePayload = await postServerSubmit(fresh, mode);
+      console.log(`[CBT] Server submission complete in ${Math.round(performance.now() - submitStartMs)}ms`);
 
       const locked = submitTest(fresh.id, mode);
       if (!locked) return null;
@@ -331,6 +339,7 @@ export function useTestSessionEngine(params: {
       }
     };
     const onFullscreen = () => {
+      if (integrityState !== "ACTIVE") return;
       if (
         !document.fullscreenElement &&
         sessionRef.current?.status === "in_progress"

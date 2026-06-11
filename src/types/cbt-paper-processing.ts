@@ -1,6 +1,7 @@
 /** Prepared during paper processing. */
 export type PreparedDifficulty = "L1" | "L2" | "L3";
-export type UploadExtractionMode = "file" | "manual" | "hybrid" | "gemini_vision";
+export type UploadExtractionMode = "file" | "manual" | "hybrid" | "gemini_vision"
+    | "vision_crop";
 export type SupportedPaperFileType = "pdf" | "doc" | "docx" | "csv" | "xlsx" | "txt";
 
 export interface PaperExtractionSummary {
@@ -57,7 +58,7 @@ export interface PreparedQuestionMeta {
     | "section_header"
     | "stem_keywords"
     | "fallback"
-    | "gemini_vision";
+    | "gemini_vision" | "vision_crop";
   questionText: string;
   hasEquation?: boolean;
   hasImage?: boolean;

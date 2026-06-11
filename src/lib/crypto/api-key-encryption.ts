@@ -1,4 +1,4 @@
-import "server-only";
+// Removed server-only for standalone script access
 
 const ALGORITHM = "AES-GCM";
 

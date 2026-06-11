@@ -1,0 +1,137 @@
+
+
+=== Q1 ===
+[SEMANTIC OUTPUT]
+Stem: Let   be a G.P. of increasing positive terms. If   and  , then   is equal to: a1, a2, a3, … a1a5 = 28 a2 + a4 = 29 a6
+Opt 1: (1) 628
+Opt 2: (2) 812
+Opt 3: (3) 526
+Opt 4: (4) 784
+
+[OCR OUTPUT]
+[QuestionStem] Q1. Let   be a G.P. of increasing positive terms. If   and  , then   is equal to: (1) (2) (3) (4) a1, a2, a3, … a1a5 = 28 a2 + a4 = 29 a6 628 812 526 784
+
+[MATH OUTPUT]
+[QuestionStem] \text{mock math: } Q1. Let   be a G.P. of increasing positive terms. If   and  , then   is equal to: (1) (2) (3) (4) a1, a2, a3, … a1a5 = 28 a2 + a4 = 29 a6 628 812 526 784
+
+
+=== Q2 ===
+[SEMANTIC OUTPUT]
+Stem: Let   be the solution of the differential equation  . If  , then   is : x = x(y) y2 dx + (x −1 y )dy = 0 x(1) = 1 x ( 1 2 )
+Opt 1: (1) 1 2 + e
+Opt 2: (2) 3 + e
+Opt 3: (3) 3 −e
+Opt 4: (4) 3 2 + e
+
+[OCR OUTPUT]
+[QuestionStem] Q2. Let   be the solution of the differential equation  . If  , then   is : (1) (2) (3) (4) x = x(y) y2 dx + (x −1 y )dy = 0 x(1) = 1 x ( 1 2 ) 1 2 + e 3 + e 3 −e 3 2 + e
+
+[MATH OUTPUT]
+[QuestionStem] \text{mock math: } Q2. Let   be the solution of the differential equation  . If  , then   is : (1) (2) (3) (4) x = x(y) y2 dx + (x −1 y )dy = 0 x(1) = 1 x ( 1 2 ) 1 2 + e 3 + e 3 −e 3 2 + e
+
+
+=== Q10 ===
+[SEMANTIC OUTPUT]
+Stem: From all the English alphabets, five letters are chosen and are arranged in alphabetical order. The total number of ways, in which the middle letter is ' M ', is :
+Opt 1: (1) 5148
+Opt 2: (2) 6084
+Opt 3: (3) 4356
+Opt 4: (4) 14950
+
+[OCR OUTPUT]
+[QuestionStem] Q10.From all the English alphabets, five letters are chosen and are arranged in alphabetical order. The total number of ways, in which the middle letter is ' M ', is :
+[QuestionStem] Q1. Let   be a G.P. of increasing positive terms. If   and  , then   is equal to: (1) (2) (3) (4) a1, a2, a3, … a1a5 = 28 a2 + a4 = 29 a6 628 812 526 784
+[QuestionStem] Q2. Let   be the solution of the differential equation  . If  , then   is : (1) (2) (3) (4) x = x(y) y2 dx + (x −1 y )dy = 0 x(1) = 1 x ( 1 2 ) 1 2 + e 3 + e 3 −e 3 2 + e
+
+[MATH OUTPUT]
+[QuestionStem] \text{mock math: } Q19.Let   and   and  . Then   is equal to : (1) (2) A = {1, 2, 3, … , 10} B = { m n : m, n ∈A, m < n gcd(m, n) = 1} n(B) 36 31
+[QuestionStem] \text{mock math: } Q1. Let   be a G.P. of increasing positive terms. If   and  , then   is equal to: (1) (2) (3) (4) a1, a2, a3, … a1a5 = 28 a2 + a4 = 29 a6 628 812 526 784
+[QuestionStem] \text{mock math: } Q2. Let   be the solution of the differential equation  . If  , then   is : (1) (2) (3) (4) x = x(y) y2 dx + (x −1 y )dy = 0 x(1) = 1 x ( 1 2 ) 1 2 + e 3 + e 3 −e 3 2 + e
+
+
+=== Q20 ===
+[SEMANTIC OUTPUT]
+Stem: Let   and   be three complex numbers on the circle   with   and . If  , then the value of   is : z1, z2 z3 |z| = 1 arg (z1) = −π 4 , arg (z2) = 0 arg (z3) = π 4 |z1¯z2 + z2¯z3 + z3¯z1|2 = α + β√2, α, β ∈Z α2 + β2
+Opt 1: (1) 24
+Opt 2: (2) 29
+Opt 3: (3) 41
+Opt 4: (4) 31
+
+[OCR OUTPUT]
+[QuestionStem] Q1. Let   be a G.P. of increasing positive terms. If   and  , then   is equal to: (1) (2) (3) (4) a1, a2, a3, … a1a5 = 28 a2 + a4 = 29 a6 628 812 526 784
+[QuestionStem] Q2. Let   be the solution of the differential equation  . If  , then   is : (1) (2) (3) (4) x = x(y) y2 dx + (x −1 y )dy = 0 x(1) = 1 x ( 1 2 ) 1 2 + e 3 + e 3 −e 3 2 + e
+
+[MATH OUTPUT]
+[QuestionStem] \text{mock math: } Q1. Let   be a G.P. of increasing positive terms. If   and  , then   is equal to: (1) (2) (3) (4) a1, a2, a3, … a1a5 = 28 a2 + a4 = 29 a6 628 812 526 784
+[QuestionStem] \text{mock math: } Q2. Let   be the solution of the differential equation  . If  , then   is : (1) (2) (3) (4) x = x(y) y2 dx + (x −1 y )dy = 0 x(1) = 1 x ( 1 2 ) 1 2 + e 3 + e 3 −e 3 2 + e
+
+
+=== Q30 ===
+[SEMANTIC OUTPUT]
+Stem: An electron in the ground state of the hydrogen atom has the orbital radius of   while that for the electron in third excited state is  . The ratio of the de Broglie wavelengths of electron in the excited state to that in the ground state is 5.3 × 10−11 m 8.48 × 10−10 m
+Opt 1: (1) 3
+Opt 2: (2) 16
+Opt 3: (3) 9
+Opt 4: (4) 4
+
+[OCR OUTPUT]
+[QuestionStem] (3) (4) 13 11
+[QuestionStem] Q4. The product of all solutions of the equation  , is : (1) (2) (3) (4) e e5(loge x)2+3 = x8, x > 0 e8/5 e6/5 e2
+
+[MATH OUTPUT]
+[QuestionStem] \text{mock math: } (3) (4) 13 11
+[QuestionStem] \text{mock math: } Q4. The product of all solutions of the equation  , is : (1) (2) (3) (4) e e5(loge x)2+3 = x8, x > 0 e8/5 e6/5 e2
+
+
+=== Q40 ===
+[SEMANTIC OUTPUT]
+Stem: The work functions of cesium (Cs) and lithium (Li) metals are 1.9 eV and 2.5 eV , respectively. If we incident a light of wavelength 550 nm on these two metal surfaces, then photo-electric effect is possible for the case of
+Opt 1: (1) Both Cs and Li
+Opt 2: (2) Neither Cs nor Li
+Opt 3: (3) Cs only
+Opt 4: (4) Li only
+
+[OCR OUTPUT]
+[QuestionStem] Q1. Let   be a G.P. of increasing positive terms. If   and  , then   is equal to: (1) (2) (3) (4) a1, a2, a3, … a1a5 = 28 a2 + a4 = 29 a6 628 812 526 784
+[QuestionStem] Q2. Let   be the solution of the differential equation  . If  , then   is : (1) (2) (3) (4) x = x(y) y2 dx + (x −1 y )dy = 0 x(1) = 1 x ( 1 2 ) 1 2 + e 3 + e 3 −e 3 2 + e
+
+[MATH OUTPUT]
+[QuestionStem] \text{mock math: } Q1. Let   be a G.P. of increasing positive terms. If   and  , then   is equal to: (1) (2) (3) (4) a1, a2, a3, … a1a5 = 28 a2 + a4 = 29 a6 628 812 526 784
+[QuestionStem] \text{mock math: } Q2. Let   be the solution of the differential equation  . If  , then   is : (1) (2) (3) (4) x = x(y) y2 dx + (x −1 y )dy = 0 x(1) = 1 x ( 1 2 ) 1 2 + e 3 + e 3 −e 3 2 + e
+
+
+=== Q50 ===
+[SEMANTIC OUTPUT]
+Stem: A particle is projected at an angle of   from horizontal at a speed of  . The height traversed by the particle in the first second is   and height traversed in the last second, before it reaches the maximum height, is  . The ratio   is _________ [Take,   ] 30∘ 60 m/s h0 h1 h0 : h1 g = 10 m/s2
+
+[OCR OUTPUT]
+[QuestionStem] Q1. Let   be a G.P. of increasing positive terms. If   and  , then   is equal to: (1) (2) (3) (4) a1, a2, a3, … a1a5 = 28 a2 + a4 = 29 a6 628 812 526 784
+
+[MATH OUTPUT]
+[QuestionStem] \text{mock math: } Q1. Let   be a G.P. of increasing positive terms. If   and  , then   is equal to: (1) (2) (3) (4) a1, a2, a3, … a1a5 = 28 a2 + a4 = 29 a6 628 812 526 784
+
+
+=== Q60 ===
+[SEMANTIC OUTPUT]
+Stem: Which of the following acids is a vitamin?
+Opt 1: (1) Adipic acid
+Opt 2: (2) Ascorbic acid
+Opt 3: (3) Saccharic acid
+Opt 4: (4) Aspartic acid
+
+[OCR OUTPUT]
+[QuestionStem] Q5. Let the triangle PQR be the image of the triangle with vertices   and   in the line  . If the centroid of   is the point  , then   is equal to : (1) (2) (1, 3), (3, 1) (2, 4) x + 2y = 2 △PQR (α, β) 15(α −β) 19 24
+
+[MATH OUTPUT]
+[QuestionStem] \text{mock math: } Q5. Let the triangle PQR be the image of the triangle with vertices   and   in the line  . If the centroid of   is the point  , then   is equal to : (1) (2) (1, 3), (3, 1) (2, 4) x + 2y = 2 △PQR (α, β) 15(α −β) 19 24
+
+
+=== Q75 ===
+[SEMANTIC OUTPUT]
+Stem: In Carius method for estimation of halogens, 180 mg of an organic compound produced 143.5 mg of AgCl . The percentage composition of chlorine in the compound is _______ \%. (Given : molar mass in   of  ) gmol−1 Ag : 108, Cl : 35.5
+
+[OCR OUTPUT]
+[QuestionStem] Q1. Let   be a G.P. of increasing positive terms. If   and  , then   is equal to: (1) (2) (3) (4) a1, a2, a3, … a1a5 = 28 a2 + a4 = 29 a6 628 812 526 784
+
+[MATH OUTPUT]
+[QuestionStem] \text{mock math: } Q1. Let   be a G.P. of increasing positive terms. If   and  , then   is equal to: (1) (2) (3) (4) a1, a2, a3, … a1a5 = 28 a2 + a4 = 29 a6 628 812 526 784

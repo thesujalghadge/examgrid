@@ -12,6 +12,7 @@ const PENALTIES: Record<TestSessionIntegrityEventType, number> = {
   copy_attempt: 10,
   paste_attempt: 12,
   rapid_navigation: 4,
+  browser_back: 6,
 };
 
 export function computeIntegrityScore(

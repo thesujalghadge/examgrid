@@ -756,7 +756,7 @@ export function validateProcessedPaper(pkg: ProcessedPaperPackage): ProcessedPap
       } else {
         seenQuestionIds.add(normalized.id);
       }
-      if (!normalized.stem.trim() && !question.stemImage) {
+      if (!normalized.stem.trim() && question.detectionSource !== "vision_crop") {
         issues.push({
           level: "warning",
           questionId: normalized.id,
@@ -766,28 +766,32 @@ export function validateProcessedPaper(pkg: ProcessedPaperPackage): ProcessedPap
       }
       if (normalized.type === "MCQ_SINGLE") {
         const requiredOptionLabels = ["A", "B", "C", "D"];
-        for (const [optionIndex, label] of requiredOptionLabels.entries()) {
-          if (!normalized.options[optionIndex]?.trim() && !question.optionImages?.[optionIndex]) {
+        
+        if (question.detectionSource !== "vision_crop") {
+          for (const [optionIndex, label] of requiredOptionLabels.entries()) {
+            if (!normalized.options[optionIndex]?.trim() && !question.optionImages?.[optionIndex]) {
+              issues.push({
+                level: "warning",
+                code: "malformed_options",
+                questionId: normalized.id,
+                section: section.name,
+                message: `Question ${question.sequence} has an empty option ${label}.`,
+              });
+            }
+          }
+          if (normalized.options.filter((option, index) => option.trim() || question.optionImages?.[index]).length < requiredOptionLabels.length) {
             issues.push({
               level: "warning",
               code: "malformed_options",
               questionId: normalized.id,
               section: section.name,
-              message: `Question ${question.sequence} has an empty option ${label}.`,
+              message: `Question ${question.sequence} needs four complete options.`,
             });
           }
         }
-        if (normalized.options.filter((option, index) => option.trim() || question.optionImages?.[index]).length < requiredOptionLabels.length) {
-          issues.push({
-            level: "warning",
-            code: "malformed_options",
-            questionId: normalized.id,
-            section: section.name,
-            message: `Question ${question.sequence} needs four complete options.`,
-          });
-        }
+        
         const answerIndex = requiredOptionLabels.indexOf(normalized.answer.toUpperCase());
-        if (answerIndex < 0 || (!normalized.options[answerIndex]?.trim() && !question.optionImages?.[answerIndex])) {
+        if (answerIndex < 0 || (question.detectionSource !== "vision_crop" && !normalized.options[answerIndex]?.trim() && !question.optionImages?.[answerIndex])) {
           issues.push({
             level: "warning",
             code: "missing_answer",
@@ -866,6 +870,8 @@ export function normalizeProcessedPaper(pkg: ProcessedPaperPackage): ProcessedPa
           detectionSource: question.detectionSource,
           hasEquation: question.hasEquation,
           hasImage: question.hasImage,
+          stemImage: question.stemImage,
+          optionImages: question.optionImages,
           images: question.images,
           metadata: question.metadata,
           _debug_source: (question as any)._debug_source,
@@ -906,137 +912,7 @@ function sectionIndexIsFirst(
   return all[0]?.id === section.id;
 }
 
-export async function runPaperProcessing(input: ParsePaperInput): Promise<ProcessedPaperPackage> {
-  const log: string[] = [];
-  const id = `paper-${Date.now()}`;
-  const title =
-    input.paperFileName.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim() ||
-    "Institute CBT Paper";
-
-  logUploadEvent("paper_processing_started", {
-    instituteId: input.instituteId,
-    paperFileName: input.paperFileName,
-    paperFileType: input.paperFileType,
-    extractionMode: input.extractionMode,
-  });
-
-  for (const stage of getProcessingStageLabels()) {
-    input.onStage?.(stage, makeLog(log, getStageLabel(stage)));
-    await Promise.resolve();
-  }
-
-  const questionBlocks = parseQuestionBlocks(input.paperText);
-  const answerEntries = parseAnswerKeyEntries(input.answerKeyText);
-  const { mappedAnswers: answerKey, unmatchedAnswers, duplicateAnswers } = mapAnswerEntries(
-    answerEntries,
-    questionBlocks,
-  );
-  const questions = questionBlocks.map((block) =>
-    buildQuestionMeta(
-      id,
-      block,
-      answerKey,
-      input.extractionMode,
-      input.extractionSummary.usedOCR,
-    ),
-  );
-  const sections = buildSections(questions);
-
-  const initialPackage: ProcessedPaperPackage = {
-    id,
-    status: "DRAFT_REVIEW",
-    title,
-    instituteId: input.instituteId,
-    paperFileName: input.paperFileName,
-    paperFileType: input.paperFileType,
-    answerKeyFileName: input.answerKeyFileName,
-    answerKeyFileType: input.answerKeyFileType,
-    durationMinutes: DEFAULT_DURATION_MINUTES,
-    instructions: [
-      "Read each question carefully before answering.",
-      "Use the palette to review marked and unanswered questions.",
-      "Submit before the timer ends.",
-    ],
-    sections,
-    processingLog: log,
-    validationIssues: [],
-    extractionMode: input.extractionMode,
-    extractionSummary: {
-      ...input.extractionSummary,
-      questionsDetected: questions.length,
-    },
-    parsingDiagnostics: {
-      rawTextPreview: buildRawTextPreview(input.paperText),
-      parsedQuestionCount: questions.length,
-      unmatchedAnswerCount: unmatchedAnswers.length,
-      unmatchedAnswers,
-      duplicateAnswers,
-    },
-    preparedAt: Date.now(),
-    totalMarks: 0,
-    totalQuestions: 0,
-    subjectMapping: defaultSubjectMapping(questions.length, "full"),
-  };
-
-  makeLog(
-    initialPackage.processingLog,
-    JSON.stringify({
-      pages: initialPackage.extractionSummary.pages,
-      extractedChars: initialPackage.extractionSummary.extractedChars,
-      usedOCR: initialPackage.extractionSummary.usedOCR,
-      questionsDetected: questions.length,
-      warnings: initialPackage.extractionSummary.warnings,
-    }),
-  );
-
-  if (questionBlocks.length === 0) {
-    logParsingWarning("paper_parse_no_questions", {
-      instituteId: input.instituteId,
-      paperFileName: input.paperFileName,
-      pages: input.extractionSummary.pages,
-      extractedChars: input.extractionSummary.extractedChars,
-      usedOCR: input.extractionSummary.usedOCR,
-    });
-    makeLog(
-      initialPackage.processingLog,
-      "No numbered questions were detected automatically. Review the extracted content and add questions manually in the draft preview.",
-    );
-  }
-
-  const normalized = normalizeProcessedPaper(initialPackage);
-  const errorCount = normalized.validationIssues.filter((issue) => issue.level === "error").length;
-  const warningCount = normalized.validationIssues.length - errorCount;
-
-  if (errorCount > 0) {
-    logValidationFailure(
-      "paper-processing",
-      `${errorCount} blocking issue(s) detected for ${input.paperFileName}`,
-    );
-  }
-
-  logParsingEvent("paper_processing_completed", {
-    instituteId: input.instituteId,
-    paperFileName: input.paperFileName,
-    pages: normalized.extractionSummary.pages,
-    extractedChars: normalized.extractionSummary.extractedChars,
-    usedOCR: normalized.extractionSummary.usedOCR,
-    totalQuestions: normalized.totalQuestions,
-    totalSections: normalized.sections.length,
-    answerMappings: answerKey.size,
-    unmatchedAnswerCount: unmatchedAnswers.length,
-    duplicateAnswerCount: duplicateAnswers.length,
-    warnings: normalized.extractionSummary.warnings,
-    errors: errorCount,
-  });
-
-  return {
-    ...normalized,
-    processingLog: makeLog(
-      normalized.processingLog,
-      `Validation completed with ${errorCount} error(s) and ${warningCount} warning(s).`,
-    ),
-  };
-}
+// runPaperProcessing removed to deprecate legacy extraction path
 
 export function inferQuestionTypeFromMeta(meta: PreparedQuestionMeta): "MCQ_SINGLE" | "NUMERICAL" {
   const options: ParsedOption[] = meta.optionLabels
@@ -1101,7 +977,9 @@ export function preparedMetaToBankQuestion(
   for (const [index, label] of ["A", "B", "C", "D"].entries()) {
     const text = normalized.options[index]?.trim();
     const image = (meta as any).optionImages?.[index];
-    if (text || image) options.push({ label, text: text || "", image });
+    if (text || image || meta.detectionSource === "vision_crop") {
+      options.push({ label, text: text || "", image });
+    }
   }
 
   return {

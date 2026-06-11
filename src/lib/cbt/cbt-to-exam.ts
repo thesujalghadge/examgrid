@@ -11,7 +11,7 @@ function bankToExamQuestion(
   marks: number,
   negativeMarks: number,
 ): ExamQuestion {
-  const hasImage = bank.metadata?.hasImage === true;
+  const hasImage = bank.metadata?.hasImage === true || !!bank.stemImage;
   if (bank.questionType === "NUMERICAL") {
     return {
       id: examQuestionId,

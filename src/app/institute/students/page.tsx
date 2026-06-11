@@ -11,6 +11,7 @@ import { createSupabaseClient } from "@/lib/supabase/client";
 import { scopeByInstituteId, withInstituteId } from "@/lib/tenant-scope";
 import { recordAuditEvent } from "@/services/audit-service";
 import { useWorkspaceAuthStore } from "@/stores/workspace-auth-store";
+import { instituteStudentSchema } from "@/lib/validation/institute-ops-schema";
 import {
   createStudentInput,
   importPreviewedStudents,
@@ -127,7 +128,7 @@ export default function InstituteStudentsPage() {
       return;
     }
     const existing = editingId ? repos.students.getById(editingId) : undefined;
-    repos.students.save(withInstituteId({
+    const studentPayload = withInstituteId({
       ...(existing ?? createStudentInput(form)),
       fullName: form.fullName.trim(),
       email: form.email.trim(),
@@ -137,7 +138,16 @@ export default function InstituteStudentsPage() {
       batchId: form.batchId,
       active: form.active,
       updatedAt: Date.now(),
-    }, tenantId));
+    }, tenantId);
+
+    const parsed = instituteStudentSchema.safeParse(studentPayload);
+    if (!parsed.success) {
+      const errorMsg = parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join(", ");
+      alert(`Validation Error: ${errorMsg}`);
+      return;
+    }
+
+    repos.students.save(studentPayload);
     recordAuditEvent({
       actorRole: "admin",
       actionType: existing ? "student_edit" : "student_create",

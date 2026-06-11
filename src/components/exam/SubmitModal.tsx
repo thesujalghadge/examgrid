@@ -18,14 +18,14 @@ interface SubmitModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
-  isSubmitting?: boolean;
+  submitState?: "idle" | "submitting" | "retrying" | "saved" | "failed";
 }
 
 export function SubmitModal({
   open,
   onOpenChange,
   onConfirm,
-  isSubmitting = false,
+  submitState = "idle",
 }: SubmitModalProps) {
   const counts = useQuestionStore(selectPaletteCounts);
   const exam = useQuestionStore((s) => s.exam);
@@ -34,7 +34,7 @@ export function SubmitModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Submit Examination</DialogTitle>
           <DialogDescription>
@@ -43,30 +43,76 @@ export function SubmitModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="rounded border border-gray-200 bg-gray-50 p-4 text-sm">
-          <p className="mb-2 font-semibold">Summary</p>
-          <ul className="space-y-1 text-gray-700">
-            <li>Answered: {counts.answered + counts.answeredAndMarked}</li>
-            <li>Not Answered (visited): {counts.notAnswered}</li>
-            <li>Not Visited: {counts.notVisited}</li>
-            <li>
-              Marked for Review:{" "}
-              {counts.markedForReview + counts.answeredAndMarked}
-            </li>
-          </ul>
+        <div className="rounded border border-gray-200 bg-gray-50 overflow-hidden text-sm max-w-full overflow-x-auto">
+          <table className="w-full text-center">
+            <thead className="bg-gray-100 text-xs font-semibold text-gray-700">
+              <tr>
+                <th className="px-3 py-2 text-left">Section</th>
+                <th className="px-2 py-2">Total</th>
+                <th className="px-2 py-2">Answered</th>
+                <th className="px-2 py-2">Not Answered</th>
+                <th className="px-2 py-2">Marked</th>
+                <th className="px-2 py-2">Not Visited</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 bg-white">
+              {exam?.sections.map((section) => {
+                let sAns = 0;
+                let sNotAns = 0;
+                let sMarked = 0;
+                let sNotVis = 0;
+                const statuses = useQuestionStore.getState().questionStatuses;
+                section.questionIds.forEach((id) => {
+                  const s = statuses[id];
+                  if (s === "answered" || s === "answered-and-marked") sAns++;
+                  else if (s === "not-answered") sNotAns++;
+                  else if (s === "marked-for-review") sMarked++;
+                  else sNotVis++;
+                });
+                return (
+                  <tr key={section.id}>
+                    <td className="px-3 py-2 text-left font-medium truncate max-w-[100px]" title={section.name}>{section.name}</td>
+                    <td className="px-2 py-2">{section.questionIds.length}</td>
+                    <td className="px-2 py-2 text-green-600 font-medium">{sAns}</td>
+                    <td className="px-2 py-2 text-red-500 font-medium">{sNotAns}</td>
+                    <td className="px-2 py-2 text-purple-600 font-medium">{sMarked}</td>
+                    <td className="px-2 py-2 text-gray-400">{sNotVis}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot className="bg-gray-50 font-bold divide-y divide-gray-200">
+              <tr>
+                <td className="px-3 py-2 text-left">Total</td>
+                <td className="px-2 py-2">{totalQuestions}</td>
+                <td className="px-2 py-2 text-green-600">{counts.answered + counts.answeredAndMarked}</td>
+                <td className="px-2 py-2 text-red-500">{counts.notAnswered}</td>
+                <td className="px-2 py-2 text-purple-600">{counts.markedForReview}</td>
+                <td className="px-2 py-2 text-gray-400">{counts.notVisited}</td>
+              </tr>
+            </tfoot>
+          </table>
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">
           <Button
             type="button"
             variant="outline"
-            disabled={isSubmitting}
+            disabled={submitState !== "idle" && submitState !== "failed"}
             onClick={() => onOpenChange(false)}
           >
             Cancel
           </Button>
-          <Button type="button" variant="destructive" disabled={isSubmitting} onClick={onConfirm}>
-            {isSubmitting ? "Submitting..." : "Yes, Submit"}
+          <Button 
+            type="button" 
+            variant="destructive" 
+            disabled={submitState !== "idle" && submitState !== "failed"} 
+            onClick={onConfirm}
+          >
+            {submitState === "submitting" ? "Submitting..." : 
+             submitState === "retrying" ? "Retrying..." : 
+             submitState === "saved" ? "Saved!" : 
+             "Yes, Submit"}
           </Button>
         </DialogFooter>
       </DialogContent>

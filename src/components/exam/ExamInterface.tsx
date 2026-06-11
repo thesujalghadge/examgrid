@@ -55,6 +55,7 @@ export interface ExamTeacherReviewConfig {
   onCorrectAnswerChange: (questionId: string, value: string) => void;
   onMarksChange: (questionId: string, value: string) => void;
   onNegativeMarksChange: (questionId: string, value: string) => void;
+  onQuestionTypeChange?: (questionId: string, value: 'MCQ_SINGLE' | 'NUMERICAL') => void;
   onToggleFlag: (questionId: string) => void;
   onMoveQuestion: (questionId: string, delta: -1 | 1) => void;
   onDeleteQuestion: (questionId: string) => void;
@@ -450,14 +451,14 @@ export function ExamInterface({
 
   if (!ready || (!isTeacherReview && (!candidate || !exam))) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-200 text-sm text-gray-600">
+      <div className="flex min-h-[100dvh] items-center justify-center bg-gray-200 text-sm text-gray-600">
         Preparing examination...
       </div>
     );
   }
 
   return (
-    <div className={isTeacherReview ? "flex h-full min-h-0 flex-col bg-[#c8d0dc]" : "flex min-h-screen flex-col bg-[#c8d0dc]"}>
+    <div className={isTeacherReview ? "flex h-full min-h-0 flex-col bg-[#c8d0dc]" : "flex min-h-[100dvh] flex-col bg-[#c8d0dc]"}>
       <ExamHeader
         examTitle={exam?.title ?? review?.exam.title ?? "CBT Test"}
         candidate={isTeacherReview ? reviewCandidate : candidate!}
@@ -496,6 +497,7 @@ export function ExamInterface({
                     onCorrectAnswerChange: (value) => review.onCorrectAnswerChange(currentQuestionId, value),
                     onMarksChange: (value) => review.onMarksChange(currentQuestionId, value),
                     onNegativeMarksChange: (value) => review.onNegativeMarksChange(currentQuestionId, value),
+                    onQuestionTypeChange: review.onQuestionTypeChange ? (value) => review.onQuestionTypeChange!(currentQuestionId, value) : undefined,
                   }
                 : undefined
             }

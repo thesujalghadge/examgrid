@@ -87,6 +87,9 @@ export async function POST(request: Request) {
   const answerKey: TestAnswerKey | undefined = authoritativeExam
     ? buildAnswerKeyFromExam(authoritativeExam)
     : body.answerKey;
+  
+  require('fs').writeFileSync('cbt_start_log.txt', 'AnswerKey: ' + JSON.stringify(answerKey));
+
   if (answerKey && Object.keys(answerKey).length > 0) {
     signedAnswerKey = signAnswerKey(answerKey, body.testId);
     if (!verifySignedAnswerKey(signedAnswerKey, body.testId)) {

@@ -14,5 +14,13 @@
   "e4c7431f-7355-4109-8d39-7a45cab8acba": {
     "gemini_api_key_encrypted": "e1VuyeaXTe8DxvLjXyfrvvqErLo2dLY1Va8jEdMALZYExiVqwybH/65iSUm9NL50pqgtESUi7Z1BZdwHJnY3foZnWUhq",
     "gemini_api_key_iv": "gh7K520QU99ux9ij"
+  },
+  "ddcc7407-fbb6-42bd-9751-576ef43e2241": {
+    "gemini_api_key_encrypted": "Yf9PHtcXCdOoPU6C8pjLiuNMChVy5Q13poI5LNEk//PrqpeoZRDiZKK0cGn1ZbpoKKuAckwzwO5B30FAUlxSATTGvutk",
+    "gemini_api_key_iv": "xYGWQFqAm8Ne5eoU"
+  },
+  "6f2f2bf3-5503-48ce-bd87-0f5a2d446f74": {
+    "gemini_api_key_encrypted": "b4DfgioXBk1sA8LE4z4ANSz2aIVTf3xLXeKxBXiMstbgft6P4qCQJOuJlMwiHroXjTVV4fWA/NJQMfw4G/hrM6SvxBWS",
+    "gemini_api_key_iv": "nyp7uDvV/GhPuAI2"
   }
 }

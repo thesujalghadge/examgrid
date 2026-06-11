@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ExamInterface } from "@/components/exam/ExamInterface";
+import { ExamInstructions } from "@/components/exam/ExamInstructions";
 import { getExamById } from "@/lib/exam-catalog";
 import { ensureExamReadyForCbt } from "@/lib/cbt/session-safety";
 import { useAuthStore } from "@/stores/auth-store";
@@ -37,12 +38,6 @@ export default function StudentCbtTestTakePage() {
   useEffect(() => {
     if (!candidate) {
       router.replace("/student/login");
-      return;
-    }
-    const test = getRepositories().cbtTests.getById(testId);
-    const ws = useWorkspaceAuthStore.getState().session;
-    if (!test || (ws?.instituteId && test.instituteId !== ws.instituteId)) {
-      setAllowed(false);
       return;
     }
     const examDef = getExamById(testId);
@@ -77,30 +72,13 @@ export default function StudentCbtTestTakePage() {
   }
 
   if (!started) {
-    const test = getRepositories().cbtTests.getById(testId);
+    const test = getExamById(testId);
+    if (!test) return null;
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-200 p-4">
-        <Card className="w-full max-w-lg">
-          <CardHeader>
-            <CardTitle>{test?.title ?? "CBT Test"}</CardTitle>
-            <CardDescription>
-              {test?.durationMinutes} minutes | timer runs in fullscreen. Do not refresh; answers
-              autosave.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex gap-3">
-            <Button
-              className="bg-[#1a3c6e] hover:bg-[#152d52]"
-              onClick={() => setStarted(true)}
-            >
-              Start test
-            </Button>
-            <Button variant="outline" onClick={() => router.push("/student/tests")}>
-              Back
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+      <ExamInstructions 
+        exam={test} 
+        onProceed={() => setStarted(true)} 
+      />
     );
   }
 

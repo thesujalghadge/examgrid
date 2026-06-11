@@ -8,6 +8,7 @@ import { useWorkspaceAuthStore } from "@/stores/workspace-auth-store";
 import { getLocalTestAnalytics } from "@/lib/cbt/client-test-analytics";
 import { scopeByInstituteId } from "@/lib/tenant-scope";
 import { getScheduleStatus } from "@/services/institute-ops-service";
+import { SolutionHealthWidget } from "@/components/institute/SolutionHealthWidget";
 
 export default function InstituteOverviewPage() {
   const instituteId = useWorkspaceAuthStore((s) => s.session?.instituteId);
@@ -76,6 +77,8 @@ export default function InstituteOverviewPage() {
         <MetricCard label="Live tests" value={String(overview.liveTests)} />
         <MetricCard label="Reports ready" value={String(overview.reportsReady)} />
       </div>
+
+      {instituteId && <SolutionHealthWidget instituteId={instituteId} />}
 
       <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
         <Card className="border-[#d8d2c7]">

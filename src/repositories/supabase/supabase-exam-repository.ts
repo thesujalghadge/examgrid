@@ -121,6 +121,21 @@ export class SupabaseExamRepository implements ExamRepository {
       const sectionRows = (sections ?? []) as ExamSectionRow[];
       const questionRows = (questions ?? []) as ExamQuestionRow[];
 
+      const bankQuestionIds = questionRows.map(q => q.bank_question_id).filter(Boolean) as string[];
+      let bankQuestionsMap: Record<string, any> = {};
+      if (bankQuestionIds.length > 0) {
+        const { data: bankData } = await client
+          .from("questions")
+          .select("id, metadata, options")
+          .in("id", bankQuestionIds);
+        
+        if (bankData) {
+          bankData.forEach((bq: any) => {
+             bankQuestionsMap[bq.id] = bq;
+          });
+        }
+      }
+
       this.cache = examRows.map((examRow) => {
         const publicId = examRow.legacy_id ?? examRow.id;
         this.idMap.set(publicId, examRow.id);
@@ -128,6 +143,7 @@ export class SupabaseExamRepository implements ExamRepository {
           examRow,
           sectionRows.filter((s) => s.exam_id === examRow.id),
           questionRows.filter((q) => q.exam_id === examRow.id),
+          bankQuestionsMap
         );
       });
       this.hydrated = true;
@@ -226,6 +242,22 @@ export class SupabaseExamRepository implements ExamRepository {
           })),
         );
         throwIfSupabaseError(qErr, "exam_questions", "insert");
+        
+        // Enqueue solution generation at Priority 100
+        const bankQuestionIds = questions
+          .map((q) => q.bank_question_id)
+          .filter((id): id is string => Boolean(id));
+
+        if (bankQuestionIds.length > 0) {
+          fetch(`/api/institute/${session.instituteId}/solution`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              questionIds: bankQuestionIds,
+              priority: 100,
+            }),
+          }).catch((err) => console.error("Failed to enqueue solution generation:", err));
+        }
       }
 
       this.idMap.set(exam.id, examUuid);

@@ -35,6 +35,8 @@ export function fromNormalizedQuestion(
     detectionSource?: PreparedQuestionMeta["detectionSource"];
     hasEquation?: boolean;
     hasImage?: boolean;
+    stemImage?: string;
+    optionImages?: string[];
     images?: string[];
     metadata?: PreparedQuestionMeta["metadata"];
     _debug_source?: string;
@@ -55,6 +57,8 @@ export function fromNormalizedQuestion(
     questionText: normalized.stem,
     hasEquation: extras.hasEquation,
     hasImage: extras.hasImage,
+    stemImage: extras.stemImage,
+    optionImages: extras.optionImages,
     correctAnswer: normalized.answer,
     solution: undefined,
     marks: extras.marks ?? 4,

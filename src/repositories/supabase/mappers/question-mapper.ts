@@ -28,7 +28,10 @@ export function bankQuestionToRow(
     solution: question.solution,
     marks: question.marks,
     negative_marks: question.negativeMarks,
-    metadata: {},
+    metadata: {
+      ...(question.metadata || {}),
+      stemImage: question.stemImage,
+    },
     created_at: new Date(question.createdAt).toISOString(),
     updated_at: new Date(question.updatedAt).toISOString() || now,
   };
@@ -36,6 +39,7 @@ export function bankQuestionToRow(
 
 export function rowToBankQuestion(row: QuestionRow): BankQuestion {
   const publicId = row.legacy_id ?? row.id;
+  const metadata = (row.metadata as Record<string, any>) || {};
   return {
     id: publicId,
     subject: row.subject,
@@ -44,11 +48,13 @@ export function rowToBankQuestion(row: QuestionRow): BankQuestion {
     difficulty: row.difficulty as BankQuestion["difficulty"],
     questionType: row.question_type,
     questionText: row.question_text,
+    stemImage: metadata.stemImage,
     options: Array.isArray(row.options) ? row.options : [],
     correctAnswer: row.correct_answer,
     solution: row.solution ?? "",
     marks: Number(row.marks),
     negativeMarks: Number(row.negative_marks),
+    metadata: metadata,
     createdAt: new Date(row.created_at).getTime(),
     updatedAt: new Date(row.updated_at).getTime(),
   };

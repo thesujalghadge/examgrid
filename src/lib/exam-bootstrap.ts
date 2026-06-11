@@ -64,6 +64,7 @@ export type BootstrapResult =
   | { status: "not_found" }
   | { status: "already_submitted"; attempt: PersistedExamAttempt }
   | { status: "resumed"; attempt: PersistedExamAttempt }
+  | { status: "instructions" }
   | { status: "started" };
 
 export function bootstrapExamSession(
@@ -126,10 +127,25 @@ export function bootstrapExamSession(
     return { status: "not_found" };
   }
   useQuestionStore.getState().loadExam(exam, firstQuestionId);
+  useExamLifecycleStore.getState().setExamId(examId);
+  useExamLifecycleStore.getState().setPhase("instructions_viewed");
+
+  return { status: "instructions" };
+}
+
+export function startExamAttempt(
+  examId: string,
+  candidateRoll: string,
+  startedAt: number,
+) {
+  const exam = getExamById(examId);
+  if (!exam) return;
+  const activeSchedule = getActiveScheduleForRoll(examId, candidateRoll);
+  const firstQuestionId = getSafeFirstQuestionId(exam)!;
+
   useTimerStore
     .getState()
     .start(activeSchedule?.durationMinutes ?? exam.durationMinutes);
-  useExamLifecycleStore.getState().setExamId(examId);
   useExamLifecycleStore.getState().setPhase("in_progress");
 
   const examEndsAt = useTimerStore.getState().examEndsAt!;
@@ -158,6 +174,4 @@ export function bootstrapExamSession(
       examEndsAt,
     });
   }
-
-  return { status: "started" };
 }

@@ -16,6 +16,7 @@ interface QuestionCardReviewProps {
   onCorrectAnswerChange?: (value: string) => void;
   onMarksChange?: (value: string) => void;
   onNegativeMarksChange?: (value: string) => void;
+  onQuestionTypeChange?: (value: 'MCQ_SINGLE' | 'NUMERICAL') => void;
 }
 
 interface QuestionCardProps {
@@ -81,7 +82,16 @@ export function QuestionCard({ review }: QuestionCardProps) {
             >
               {isNumerical ? "NAT" : "MCQ"}
             </span>
-            <span className="text-sm font-semibold text-gray-700">
+            {isTeacherEdit && review?.onQuestionTypeChange && (
+              <button
+                type="button"
+                onClick={() => review.onQuestionTypeChange!(isNumerical ? "MCQ_SINGLE" : "NUMERICAL")}
+                className="ml-2 text-[10px] text-blue-600 underline hover:text-blue-800"
+              >
+                Change to {isNumerical ? "MCQ" : "NAT"}
+              </button>
+            )}
+            <span className="text-sm font-semibold text-gray-700 ml-1">
               Q{question.number}
             </span>
           </div>
@@ -143,7 +153,7 @@ export function QuestionCard({ review }: QuestionCardProps) {
                 )
               ))}
             </div>
-          ) : question.hasImage ? (
+          ) : question.hasImage && !question.stemImage ? (
             <div className="mx-5 mb-6 rounded-lg border border-blue-100 bg-blue-50/80 px-4 py-3 text-sm font-medium text-blue-800 flex items-center gap-2">
               <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -182,94 +192,103 @@ export function QuestionCard({ review }: QuestionCardProps) {
             <legend className="mb-3 px-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
               Options
             </legend>
-            <ul className="space-y-3">
-              {displayOptions.map((option, optionIndex) => {
-                const displayLabel = String(optionIndex + 1);
-                const teacherValue = labelMap[option.label] ?? displayLabel;
-                const isSelected = isTeacherEdit
-                  ? reviewCorrectValue === teacherValue
-                  : selected === option.id;
-                return (
-                  <li key={option.id}>
-                    <label
-                      className={cn(
-                        isTeacherEdit
-                          ? "flex items-start gap-3 rounded border px-3 py-2 transition-colors"
-                          : "flex w-full cursor-pointer items-center gap-3 rounded border px-4 py-2 text-sm transition-colors",
-                        isTeacherEdit
-                          ? "border-gray-300 bg-white"
-                          : isSelected
-                            ? "border-[#1a3c6e] bg-blue-50/50 text-gray-900"
-                            : "border-gray-300 bg-white text-gray-900 hover:bg-gray-50 hover:border-gray-400",
-                        isTeacherEdit && isSelected && "border-[#1a3c6e] bg-[#eef3fa]",
-                      )}
-                      onClick={() => {
-                        if (!isTeacherEdit) selectOption(question.id, option.id);
-                      }}
-                    >
-                      {isTeacherEdit ? (
-                        <input
-                          type="radio"
-                          name={question.id}
-                          value={teacherValue}
-                          checked={isSelected}
-                          onChange={() => review?.onCorrectAnswerChange?.(option.label)}
-                          className="mt-0.5 h-4 w-4 shrink-0 accent-[#1a3c6e]"
-                        />
-                      ) : (
-                        <input
-                          type="radio"
-                          name={question.id}
-                          value={option.id}
-                          checked={isSelected}
-                          readOnly
-                          className="mt-0.5 h-4 w-4 shrink-0 accent-[#1a3c6e] cursor-pointer"
-                        />
-                      )}
-                      <div
-                        className={cn(
-                          "flex flex-1 items-center gap-3 whitespace-pre-wrap break-words text-[15px] leading-relaxed",
-                          "text-gray-900",
-                        )}
-                      >
-                        <span
+            {(() => {
+              const isVisionCrop = question.hasImage && !!question.stemImage;
+              const allOptionsEmpty = displayOptions.every((opt) => !opt.text && !opt.image);
+              const renderHorizontal = isVisionCrop && allOptionsEmpty;
+
+              return (
+                <ul className={cn(renderHorizontal ? "flex flex-wrap gap-8" : "space-y-3")}>
+                  {displayOptions.map((option, optionIndex) => {
+                    const displayLabel = String(optionIndex + 1);
+                    const teacherValue = labelMap[option.label] ?? displayLabel;
+                    const isSelected = isTeacherEdit
+                      ? reviewCorrectValue === teacherValue
+                      : selected === option.id;
+                    return (
+                      <li key={option.id} className={cn(renderHorizontal && "flex-1 min-w-[80px]")}>
+                        <label
                           className={cn(
-                            "font-bold text-gray-700 w-6 shrink-0",
+                            isTeacherEdit
+                              ? "flex items-start gap-3 rounded border px-3 py-2 transition-colors"
+                              : "flex w-full cursor-pointer items-center gap-3 rounded border px-4 py-2 text-sm transition-colors",
+                            isTeacherEdit
+                              ? "border-gray-300 bg-white"
+                              : isSelected
+                                ? "border-[#1a3c6e] bg-blue-50/50 text-gray-900"
+                                : "border-gray-300 bg-white text-gray-900 hover:bg-gray-50 hover:border-gray-400",
+                            isTeacherEdit && isSelected && "border-[#1a3c6e] bg-[#eef3fa]",
+                            renderHorizontal && "border-none shadow-none bg-transparent hover:bg-transparent p-0",
                           )}
+                          onClick={() => {
+                            if (!isTeacherEdit) selectOption(question.id, option.id);
+                          }}
                         >
-                          ○ {displayLabel}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          {option.image ? (
-                            <img
-                              src={option.image}
-                              alt={`Option ${displayLabel}`}
-                              className="max-h-40 max-w-full rounded border border-slate-100 object-contain"
+                          {isTeacherEdit ? (
+                            <input
+                              type="radio"
+                              name={question.id}
+                              value={teacherValue}
+                              checked={isSelected}
+                              onChange={() => review?.onCorrectAnswerChange?.(option.label)}
+                              className={cn("mt-0.5 h-4 w-4 shrink-0 accent-[#1a3c6e]", renderHorizontal && "mt-1")}
                             />
-                          ) : option.text ? (
-                            isTeacherEdit ? (
-                              <input
-                                className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
-                                value={option.text}
-                                onChange={(event) =>
-                                  review?.onOptionTextChange?.(option.label, event.target.value)
-                                }
-                              />
-                            ) : (
-                              <MathRenderer text={option.text} />
-                            )
                           ) : (
-                            <span className="text-sm italic text-slate-400">
-                              Option text unavailable
-                            </span>
+                            <input
+                              type="radio"
+                              name={question.id}
+                              value={option.id}
+                              checked={isSelected}
+                              readOnly
+                              className={cn("mt-0.5 h-4 w-4 shrink-0 accent-[#1a3c6e] cursor-pointer", renderHorizontal && "mt-1")}
+                            />
                           )}
-                        </div>
-                      </div>
-                    </label>
-                  </li>
-                );
-              })}
-            </ul>
+                          <div
+                            className={cn(
+                              "flex flex-1 items-center gap-3 whitespace-pre-wrap break-words text-[15px] leading-relaxed",
+                              "text-gray-900",
+                            )}
+                          >
+                            <span
+                              className={cn(
+                                "font-bold text-gray-700 shrink-0",
+                                !renderHorizontal && "w-6"
+                              )}
+                            >
+                              {displayLabel})
+                            </span>
+                            {!renderHorizontal && (
+                              <div className="min-w-0 flex-1">
+                                {option.image ? (
+                                  <img
+                                    src={option.image}
+                                    alt={`Option ${displayLabel}`}
+                                    className="max-h-40 max-w-full rounded border border-slate-100 object-contain"
+                                  />
+                                ) : isTeacherEdit ? (
+                                  (question.hasImage || question.stemImage) && !option.text ? null : (
+                                    <input
+                                      className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
+                                      value={option.text || ""}
+                                      placeholder="Option text (optional)"
+                                      onChange={(event) =>
+                                        review?.onOptionTextChange?.(option.label, event.target.value)
+                                      }
+                                    />
+                                  )
+                                ) : option.text ? (
+                                  <MathRenderer text={option.text} />
+                                ) : null}
+                              </div>
+                            )}
+                          </div>
+                        </label>
+                      </li>
+                    );
+                  })}
+                </ul>
+              );
+            })()}
             {isTeacherEdit && (
               <div className="mt-5 border-t border-gray-200 pt-4">
                 <label className="flex items-center gap-3 text-sm font-semibold text-gray-700">
@@ -277,13 +296,22 @@ export function QuestionCard({ review }: QuestionCardProps) {
                   <select
                     className="rounded-md border border-[#d7dde7] bg-white px-3 py-1.5 text-sm"
                     value={reviewCorrectValue}
-                    onChange={(e) => review?.onCorrectAnswerChange?.(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const opt = displayOptions.find(o => {
+                        const lbl = String(displayOptions.indexOf(o) + 1);
+                        const tVal = labelMap[o.label] ?? lbl;
+                        return tVal === val;
+                      });
+                      if (opt) review?.onCorrectAnswerChange?.(opt.label);
+                    }}
                   >
                     <option value="">Select option...</option>
                     {displayOptions.map((option, optionIndex) => {
                       const displayLabel = String(optionIndex + 1);
+                      const teacherValue = labelMap[option.label] ?? displayLabel;
                       return (
-                      <option key={option.id} value={option.label}>
+                      <option key={option.id} value={teacherValue}>
                         Option {displayLabel}
                       </option>
                       );
