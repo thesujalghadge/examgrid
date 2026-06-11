@@ -36,6 +36,7 @@ export default function StudentCbtResultPage() {
   const candidate = useAuthStore((s) => s.candidate);
   const hydrateWs = useWorkspaceAuthStore((s) => s.hydrate);
   const [result, setResult] = useState<ExamResult | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [integrityScore, setIntegrityScore] = useState<number | null>(null);
   const [flagged, setFlagged] = useState(false);
 
@@ -116,7 +117,7 @@ export default function StudentCbtResultPage() {
           }
         })
         .catch(() => {
-          router.replace(`/student/tests/${testId}`);
+          setFetchError("Fetch failed");
         });
     } else {
       // Standalone/Mock fallback
@@ -128,6 +129,28 @@ export default function StudentCbtResultPage() {
       }
     }
   }, [candidate, exam, router, testId]);
+
+  if (fetchError) {
+    return (
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <div className="text-red-600 bg-red-50 p-6 rounded border border-red-200">
+          <h2 className="font-bold text-lg mb-2">Pipeline Divergence Detected</h2>
+          <pre className="text-sm whitespace-pre-wrap">{fetchError}</pre>
+        </div>
+      </div>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <div className="text-red-600 bg-red-50 p-6 rounded border border-red-200">
+          <h2 className="font-bold text-lg mb-2">Pipeline Divergence Detected</h2>
+          <pre className="text-sm whitespace-pre-wrap">{fetchError}</pre>
+        </div>
+      </div>
+    );
+  }
 
   if (!candidate || !result || !exam) {
     return (
