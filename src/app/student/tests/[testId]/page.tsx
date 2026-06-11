@@ -31,12 +31,14 @@ export default function StudentCbtTestTakePage() {
   const [started, setStarted] = useState(false);
   const [allowed, setAllowed] = useState<boolean | null>(null);
 
+  const wsSession = useWorkspaceAuthStore((s) => s.session);
+
   useEffect(() => {
     hydrateWs();
   }, [hydrateWs]);
 
   useEffect(() => {
-    if (!candidate) {
+    if (!candidate || (wsSession && wsSession.role !== "student")) {
       router.replace("/student/login");
       return;
     }

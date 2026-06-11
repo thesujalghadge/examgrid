@@ -19,6 +19,7 @@ interface SubmitModalProps {
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
   submitState?: "idle" | "submitting" | "retrying" | "saved" | "failed";
+  submitErrorText?: string | null;
 }
 
 export function SubmitModal({
@@ -26,6 +27,7 @@ export function SubmitModal({
   onOpenChange,
   onConfirm,
   submitState = "idle",
+  submitErrorText,
 }: SubmitModalProps) {
   const counts = useQuestionStore(selectPaletteCounts);
   const exam = useQuestionStore((s) => s.exam);
@@ -94,7 +96,12 @@ export function SubmitModal({
           </table>
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter className="gap-2 sm:gap-0 mt-4">
+          {submitErrorText ? (
+            <div className="flex-1 text-left text-sm text-red-600 self-center">
+              Error: {submitErrorText}
+            </div>
+          ) : null}
           <Button
             type="button"
             variant="outline"

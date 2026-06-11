@@ -155,7 +155,8 @@ export function useTestSessionEngine(params: {
           }),
         });
         if (!response.ok) {
-          throw new Error("server submit rejected");
+          const body = await response.json().catch(() => ({}));
+          throw new Error(`server submit rejected: ${body.error || response.status}`);
         }
         return (await response.json()) as {
           score: number;

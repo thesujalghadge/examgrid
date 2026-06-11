@@ -25,10 +25,23 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
   const workspaceLogout = useWorkspaceAuthStore((s) => s.logout);
   const logout = useAuthStore((s) => s.logout);
 
+  const wsHydrated = useWorkspaceAuthStore((s) => s.isHydrated);
+  const sessionRole = useWorkspaceAuthStore((s) => s.session?.role);
+
   useEffect(() => {
     if (!isHydrated || pathname === "/student/login") return;
-    if (!candidate) router.replace("/student/login");
-  }, [candidate, isHydrated, pathname, router]);
+    
+    if (wsHydrated && sessionRole && sessionRole !== "student") {
+      logout();
+      void workspaceLogout();
+      router.replace("/student/login");
+      return;
+    }
+
+    if (!candidate) {
+      router.replace("/student/login");
+    }
+  }, [candidate, isHydrated, wsHydrated, sessionRole, pathname, router, logout, workspaceLogout]);
 
   if (pathname === "/student/login") return <>{children}</>;
   if (!isHydrated || !candidate) return null;

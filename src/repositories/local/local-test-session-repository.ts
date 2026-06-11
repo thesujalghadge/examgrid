@@ -78,8 +78,19 @@ const sessionSchema = z.object({
 });
 
 function parseList(raw: unknown): TestSession[] {
-  const res = z.array(sessionSchema).safeParse(raw);
-  return res.success ? (res.data as TestSession[]) : [];
+  if (!Array.isArray(raw)) return [];
+  const valid: TestSession[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object" || !item.id) continue;
+    const res = sessionSchema.safeParse(item);
+    if (res.success) {
+      valid.push(res.data as TestSession);
+    } else {
+      console.warn("[LocalTestSessionRepository] schema mismatch, recovering raw session", item.id);
+      valid.push(item as TestSession);
+    }
+  }
+  return valid;
 }
 
 function stripAnswers(session: TestSession): TestSession {
@@ -133,7 +144,11 @@ export class LocalTestSessionRepository implements TestSessionRepository {
     }
     const lean = stripAnswers(withDefaults);
     const parsed = sessionSchema.safeParse(lean);
-    if (!parsed.success) return;
+    if (!parsed.success) {
+      console.warn("[LocalTestSessionRepository] save validation mismatch, saving raw", parsed.error);
+    }
+    const sessionToSave = parsed.success ? parsed.data : lean;
+
     const all = parseList(
       readStorageJson({
         storage: "local",
@@ -141,8 +156,8 @@ export class LocalTestSessionRepository implements TestSessionRepository {
         fallback: [],
         validate: (data) => ({ ok: true, value: data }),
       }),
-    ).filter((s) => s.id !== parsed.data.id);
-    all.push(parsed.data as TestSession);
+    ).filter((s) => s.id !== sessionToSave.id);
+    all.push(sessionToSave as TestSession);
     writeStorageJson("local", STORAGE_KEYS.testSessions, all);
   }
 

@@ -98,6 +98,7 @@ export function ExamInterface({
   const [mobilePaletteOpen, setMobilePaletteOpen] = useState(false);
   const [submitOpen, setSubmitOpen] = useState(false);
   const [submitState, setSubmitState] = useState<"idle" | "submitting" | "retrying" | "saved" | "failed">("idle");
+  const [submitErrorText, setSubmitErrorText] = useState<string | null>(null);
   const [resumed, setResumed] = useState(false);
   const [ready, setReady] = useState(false);
   const submitInProgressRef = useRef(false);
@@ -179,6 +180,7 @@ export function ExamInterface({
             attemptCount++;
           } else {
             setSubmitState("failed");
+            setSubmitErrorText(String(error));
             submitInProgressRef.current = false;
             return;
           }
@@ -556,6 +558,7 @@ export function ExamInterface({
           open={submitOpen}
           onOpenChange={setSubmitOpen}
           submitState={submitState}
+          submitErrorText={submitErrorText}
           onConfirm={() => {
             if (submitState === "submitting" || submitState === "retrying") return;
             setSubmitState("submitting");
