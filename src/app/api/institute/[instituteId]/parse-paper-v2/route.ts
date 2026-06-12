@@ -10,6 +10,7 @@ export async function POST(
   request: Request,
   context: { params: Promise<{ instituteId: string }> }
 ) {
+  console.log("HELLO FROM PARSE PAPER API ROUTE");
   try {
     const { instituteId } = await context.params;
     const session = await readVerifiedWorkspaceSession();

@@ -26,47 +26,35 @@ function validateSolution(text: string, expectedAnswer: string) {
 }
 
 export async function runGeminiWorker() {
-  // 1. Fetch exactly 1 queue item to process
-  const { data: queueItems, error: queueError } = await supabase
-    .from("solution_generation_queue")
-    .select(`
-      id, 
-      test_question_asset_id,
-      attempts,
-      status,
-      institute_id,
-      test_question_assets!inner (
-        exam_id,
-        exam_question_id,
-        storage_path,
-        asset_status
-      )
-    `)
-    .in("status", ["PENDING", "WAITING_RETRY", "VALIDATION_FAILED"])
-    .lt("attempts", 3)
-    .order("priority", { ascending: false })
-    .order("created_at", { ascending: true })
-    .limit(1);
+  // 1. Fetch and Lock 1 queue item atomically using SKIP LOCKED RPC
+  const { data: leasedJobs, error: queueError } = await supabase.rpc("lease_solution_generation_job_v2");
 
   if (queueError) {
     console.error("Failed to fetch queue item:", queueError);
     return { success: false, reason: "Queue fetch error" };
   }
 
-  if (!queueItems || queueItems.length === 0) {
+  if (!leasedJobs || leasedJobs.length === 0) {
     return { success: true, processed: 0, reason: "Queue empty" };
   }
 
-  const job = queueItems[0] as any;
+  const job = leasedJobs[0] as any;
   const assetId = job.test_question_asset_id;
-  const examQuestionId = job.test_question_assets.exam_question_id;
-  const storagePath = job.test_question_assets.storage_path;
 
-  // Lock row
-  await supabase
-    .from("solution_generation_queue")
-    .update({ status: "PROCESSING", started_at: new Date().toISOString() })
-    .eq("id", job.id);
+  // We need to fetch the asset details since the RPC only returns the ID
+  const { data: asset, error: assetError } = await supabase
+    .from("test_question_assets")
+    .select("exam_question_id, storage_path")
+    .eq("id", assetId)
+    .single();
+
+  if (assetError || !asset) {
+    await supabase.from("solution_generation_queue").update({ status: "FAILED", last_error: "Asset fetch failed" }).eq("id", job.id);
+    return { success: false, reason: "Asset fetch error" };
+  }
+
+  const examQuestionId = asset.exam_question_id;
+  const storagePath = asset.storage_path;
 
   try {
     // 2. Idempotency Check
@@ -157,12 +145,14 @@ Required Structure:
       .from("question_solutions")
       .upsert({
         test_question_asset_id: assetId,
+        question_id: examQuestionId,
         institute_id: job.institute_id,
-        solution_text: solutionText,
+        content_markdown: solutionText,
+        is_active: true,
         generation_status: finalStatus,
         model_name: MODEL_NAME,
         prompt_version: PROMPT_VERSION,
-        prompt_snapshot: promptSnapshot, // TEXT ONLY
+        prompt_snapshot: promptSnapshot,
         generation_duration_ms: durationMs,
         generation_attempts: attempts,
         validation_passed: validation.passed,
@@ -193,21 +183,26 @@ Required Structure:
     // Calculate current attempt safely
     const currentAttempts = job.attempts + 1;
     let nextStatus = "FAILED";
+    let nextRetryAt = undefined;
 
     if ((isRateLimit || isNetwork) && currentAttempts < 3) {
       nextStatus = "WAITING_RETRY";
+      nextRetryAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
     }
 
     await supabase.from("solution_generation_queue").update({ 
       status: nextStatus,
       attempts: currentAttempts,
-      last_error: error.message || String(error)
+      last_error: error.message || String(error),
+      next_retry_at: nextRetryAt
     }).eq("id", job.id);
 
     // Also track attempt natively on question_solutions if we can
     await supabase.from("question_solutions").upsert({
       test_question_asset_id: assetId,
+      question_id: examQuestionId,
       institute_id: job.institute_id,
+      is_active: false,
       generation_status: nextStatus,
       generation_attempts: currentAttempts,
       last_error: error.message || String(error)

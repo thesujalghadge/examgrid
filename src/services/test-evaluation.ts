@@ -91,7 +91,9 @@ export function evaluateTestSession(input: {
     ? computeIntegrityScore(input.integrityEvents)
     : 100;
   const penalty = integrityPenaltyPoints(integrityScore, maxScore);
-  const finalScore = Math.max(0, Math.round((rawScore - penalty) * 100) / 100);
+  const hasNegativeMarking = Object.values(input.answerKey).some((k) => k.negativeMarks > 0);
+  const calculatedScore = Math.round((rawScore - penalty) * 100) / 100;
+  const finalScore = hasNegativeMarking ? calculatedScore : Math.max(0, calculatedScore);
   const durationSeconds = Math.max(
     0,
     Math.floor((input.submittedAt - input.startedAt) / 1000),

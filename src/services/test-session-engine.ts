@@ -83,8 +83,7 @@ export function startTest(params: {
       })
     : {};
   const answerKey = exam ? buildAnswerKeyFromExam(exam) : undefined;
-  const displayFirst =
-    questionOrder.find((id) => id === firstQ) ?? questionOrder[0] ?? firstQ;
+  const displayFirst = questionOrder[0] ?? firstQ;
 
   const now = Date.now();
   const session: TestSession = {

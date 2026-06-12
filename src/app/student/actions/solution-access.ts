@@ -48,15 +48,12 @@ export async function verifyAndFetchSolution(
 
   // If no release time is set, assume it's NOT released. Or we can allow it for testing if it's null?
   // Usually, exams have a default. Let's assume if it's null, it's not released.
-  if (!exam.solutions_release_time) {
-    return { error: "403: Solutions unavailable (no release time set)" };
-  }
-
-  const releaseTime = new Date(exam.solutions_release_time).getTime();
-  const now = Date.now();
-
-  if (now < releaseTime) {
-    return { error: `403: Solutions unavailable. Will be released at ${new Date(releaseTime).toLocaleString()}` };
+  if (exam.solutions_release_time) {
+    const releaseTime = new Date(exam.solutions_release_time).getTime();
+    const now = Date.now();
+    if (now < releaseTime) {
+      return { error: `403: Solutions unavailable. Will be released at ${new Date(releaseTime).toLocaleString()}` };
+    }
   }
 
   // Phase 4.3 Lazy Loading: Fetch the solution
