@@ -35,12 +35,23 @@ export async function verifyAndFetchSolution(
   }
 
   // Phase 3.5 Test A & B: Release time enforcement
-  const { data: exam } = await supabase
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(testId);
+  const query = supabase
     .from("exams")
     .select("id, solutions_release_time")
-    .or(`id.eq.${testId},legacy_id.eq.${testId}`)
-    .eq("institute_id", instituteId)
-    .maybeSingle();
+    .eq("institute_id", instituteId);
+    
+  if (isUuid) {
+    query.or(`id.eq.${testId},legacy_id.eq.${testId}`);
+  } else {
+    query.eq("legacy_id", testId);
+  }
+  
+  const { data: exam, error } = await query.maybeSingle();
+
+  if (error) {
+    console.error("Exam lookup error:", error);
+  }
 
   if (!exam) {
     return { error: "403: Exam not found in tenant" };

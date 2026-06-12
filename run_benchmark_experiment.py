@@ -5,7 +5,9 @@ from PIL import Image
 from google import genai
 from google.genai import types
 
-API_KEY = "AIzaSyASKA2mogruul73DCV0WyxfP3vTRDh6PtQ"
+API_KEY = os.environ.get("GEMINI_API_KEY")
+if not API_KEY:
+    raise RuntimeError("GEMINI_API_KEY environment variable is required")
 
 client = genai.Client(api_key=API_KEY)
 

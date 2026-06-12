@@ -32,6 +32,7 @@ type AttemptResultPayload = {
 type SolutionQuestionRow = {
   questionId: string;
   text: string;
+  questionImage?: string;
   studentAnswer: string | null;
   correctAnswer: string | null;
   isCorrect: boolean;
@@ -40,10 +41,10 @@ type SolutionQuestionRow = {
 
 function LazySolutionCard({ 
   instituteId, testId, studentRoll, questionId, hasAttempted, 
-  studentAnswer, correctAnswer, isCorrect, questionText
+  studentAnswer, correctAnswer, isCorrect, questionText, questionImage
 }: { 
   instituteId: string, testId: string, studentRoll: string, questionId: string, hasAttempted: boolean,
-  studentAnswer: string | null, correctAnswer: string | null, isCorrect: boolean, questionText: string
+  studentAnswer: string | null, correctAnswer: string | null, isCorrect: boolean, questionText: string, questionImage?: string
 }) {
   const [solution, setSolution] = useState<SolutionPayload | null>(null);
   const [loading, setLoading] = useState(false);
@@ -64,7 +65,14 @@ function LazySolutionCard({
   return (
     <Card className="mb-4 border border-[#ece6da]">
       <CardContent className="pt-4 space-y-4">
-        <p className="font-medium text-[#14213d] whitespace-pre-wrap">{questionText}</p>
+        {questionImage ? (
+          <div className="mb-4">
+            <span className="font-bold text-[#14213d] mr-2">{questionText.split('.')[0]}.</span>
+            <img src={questionImage} alt="Question" className="max-w-full h-auto object-contain rounded-md mt-2" />
+          </div>
+        ) : (
+          <p className="font-medium text-[#14213d] whitespace-pre-wrap">{questionText}</p>
+        )}
         
         <div className="flex gap-4 items-center">
           <div className="flex flex-col">
@@ -201,9 +209,12 @@ export default function StudentSolutionsPage() {
     const question = exam.questions[questionId];
     const response = resultByQuestion.get(questionId);
 
+    const questionImage = question?.stemImage || (question?.images && question.images.length > 0 ? question.images[0] : undefined);
+
     return {
       questionId,
       text: question?.text || "Question text unavailable",
+      questionImage,
       studentAnswer: question ? answerLabel(question, response?.selected) : null,
       correctAnswer: question ? correctLabel(question) : null,
       isCorrect: response?.correct ?? false,
@@ -241,6 +252,7 @@ export default function StudentSolutionsPage() {
             correctAnswer={q.correctAnswer}
             isCorrect={q.isCorrect}
             questionText={`Q${i+1}. ${q.text}`}
+            questionImage={q.questionImage}
           />
         ))}
       </main>
