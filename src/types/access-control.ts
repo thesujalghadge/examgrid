@@ -1,7 +1,7 @@
 export type UserRole =
-  | "super_admin"
-  | "institute_admin"
-  | "teacher"
+  | "platform_admin"
+  | "institute"
+  | "parent"
   | "student";
 
 export interface TenantContext {

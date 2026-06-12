@@ -11,13 +11,16 @@ const examQuestionSchema = z.object({
   sectionId: z.string().min(1),
   number: z.number().int().positive(),
   type: z.enum(["MCQ_SINGLE", "NUMERICAL"]),
-  text: z.string().min(1),
+  text: z.string(),
+  stemImage: z.string().optional(),
+  images: z.array(z.string()).optional(),
+  hasImage: z.boolean().optional(),
   options: z.array(examOptionSchema),
   correctOptionId: z.string().optional(),
   correctNumericalAnswer: z.string().optional(),
   marks: z.number().nonnegative(),
   negativeMarks: z.number().nonnegative(),
-});
+}).passthrough();
 
 const examSectionSchema = z.object({
   id: z.string().min(1),

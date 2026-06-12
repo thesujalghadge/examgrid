@@ -12,4 +12,5 @@ export const STORAGE_KEYS = {
   cbtTests: "examgrid:cbt-tests",
   cbtFinalAttempts: "examgrid:cbt-final-attempts",
   testSessions: "examgrid:test-sessions",
+  platformInstitutes: "examgrid:platform-institutes",
 } as const;

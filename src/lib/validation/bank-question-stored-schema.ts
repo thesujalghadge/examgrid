@@ -14,15 +14,18 @@ export const bankQuestionStoredSchema = z.object({
   topic: z.string().min(1),
   difficulty: z.enum(["easy", "medium", "hard"]),
   questionType: z.enum(["MCQ_SINGLE", "NUMERICAL"]),
-  questionText: z.string().min(1),
+  questionText: z.string(),
+  stemImage: z.string().optional(),
   options: z.array(bankOptionSchema),
+  images: z.array(z.string()).optional(),
   correctAnswer: z.string().min(1),
   solution: z.string(),
   marks: z.number().nonnegative(),
   negativeMarks: z.number().nonnegative(),
+  metadata: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])).optional(),
   createdAt: z.number(),
   updatedAt: z.number(),
-});
+}).passthrough();
 
 export const bankQuestionListSchema = z.array(bankQuestionStoredSchema);
 

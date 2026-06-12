@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 
 interface TimerProps {
   onTimeUp?: () => void;
+  fixedSeconds?: number;
 }
 
 function formatTime(totalSeconds: number): string {
@@ -18,19 +19,25 @@ function formatTime(totalSeconds: number): string {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-export function Timer({ onTimeUp }: TimerProps) {
+export function Timer({ onTimeUp, fixedSeconds }: TimerProps) {
   const isRunning = useTimerStore((s) => s.isRunning);
   const examEndsAt = useTimerStore((s) => s.examEndsAt);
   const getRemainingSeconds = useTimerStore((s) => s.getRemainingSeconds);
-  const [remaining, setRemaining] = useState(0);
+  const [remaining, setRemaining] = useState(fixedSeconds ?? 0);
   const timeUpFiredRef = useRef(false);
 
   useEffect(() => {
+    if (typeof fixedSeconds === "number") {
+      timeUpFiredRef.current = false;
+      setRemaining(fixedSeconds);
+      return;
+    }
     timeUpFiredRef.current = false;
     setRemaining(getRemainingSeconds());
-  }, [examEndsAt, getRemainingSeconds]);
+  }, [examEndsAt, fixedSeconds, getRemainingSeconds]);
 
   useEffect(() => {
+    if (typeof fixedSeconds === "number") return;
     if (!isRunning || !examEndsAt) return;
 
     const tick = () => {
@@ -45,7 +52,7 @@ export function Timer({ onTimeUp }: TimerProps) {
     tick();
     const interval = window.setInterval(tick, 1000);
     return () => window.clearInterval(interval);
-  }, [isRunning, examEndsAt, getRemainingSeconds, onTimeUp]);
+  }, [examEndsAt, fixedSeconds, getRemainingSeconds, isRunning, onTimeUp]);
 
   const isLow = remaining > 0 && remaining <= 300;
   const isCritical = remaining > 0 && remaining <= 60;

@@ -3,19 +3,13 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { SessionHydrationGate } from "@/components/auth/session-hydration-gate";
 import { WorkspaceShell } from "@/components/shells/workspace-shell";
 import { useWorkspaceAuthStore } from "@/stores/workspace-auth-store";
 
 const NAV = [
-  { href: "/platform", label: "Operations" },
+  { href: "/platform", label: "Overview" },
   { href: "/platform/institutes", label: "Institutes" },
-  { href: "/platform/intelligence", label: "Intelligence" },
-  { href: "/platform/question-bank", label: "Question Bank" },
-  { href: "/platform/ingestion", label: "Ingestion" },
-  { href: "/platform/system-health", label: "System Health" },
-  { href: "/platform/review", label: "Review" },
-  { href: "/platform/analytics", label: "Analytics" },
+  { href: "/platform/monitoring", label: "Monitoring" },
 ];
 
 export function PlatformShell({ children }: { children: React.ReactNode }) {
@@ -27,46 +21,36 @@ export function PlatformShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!isHydrated || pathname === "/platform/login") return;
-    if (!session || session.role !== "super_admin") {
+    if (!session || session.role !== "platform_admin") {
+      void logout();
       router.replace("/platform/login");
     }
-  }, [isHydrated, pathname, router, session]);
+  }, [isHydrated, logout, pathname, router, session]);
 
   if (pathname === "/platform/login") return <>{children}</>;
+  if (!session || session.role !== "platform_admin") return null;
 
   return (
-    <SessionHydrationGate loginPath="/platform/login">
-      {!session || session.role !== "super_admin" ? (
-        <div className="flex min-h-screen items-center justify-center bg-gray-100 text-sm text-gray-600">
-          Checking access…
-        </div>
-      ) : (
-        <WorkspaceShell
-          title="Super Admin Platform"
-          subtitle="Academic Infrastructure Layer"
-          identity={session.userId}
-          role={session.role}
-          instituteId={session.instituteId}
-          nav={NAV}
-          footer={
-            <div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full"
-                onClick={() => {
-                  void logout();
-                  router.push("/platform/login");
-                }}
-              >
-                Logout
-              </Button>
-            </div>
-          }
+    <WorkspaceShell
+      title="Platform Admin"
+      subtitle="ExamGrid Operations Console"
+      identity={session.userId}
+      nav={NAV}
+      footer={
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full bg-white"
+          onClick={() => {
+            void logout();
+            router.push("/platform/login");
+          }}
         >
-          {children}
-        </WorkspaceShell>
-      )}
-    </SessionHydrationGate>
+          Logout
+        </Button>
+      }
+    >
+      {children}
+    </WorkspaceShell>
   );
 }

@@ -12,6 +12,7 @@ export type QuestionSubject =
 export interface BankOption {
   label: string;
   text: string;
+  image?: string;
 }
 
 export interface BankQuestion {
@@ -22,12 +23,14 @@ export interface BankQuestion {
   difficulty: QuestionDifficulty;
   questionType: QuestionType;
   questionText: string;
+  stemImage?: string;
   options: BankOption[];
   /** MCQ: option label (A/B/C/D) or option id. Numerical: numeric string. */
   correctAnswer: string;
   solution: string;
   marks: number;
   negativeMarks: number;
+  metadata?: Record<string, string | number | boolean | null>;
   createdAt: number;
   updatedAt: number;
 }

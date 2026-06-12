@@ -1,10 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { DEMO_INSTITUTE } from "@/config/demo";
-import { DEMO_LOGIN } from "@/data/demo-data";
 import {
   Card,
   CardContent,
@@ -14,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { listPlatformInstitutes } from "@/lib/platform-institute-registry";
 import { getRepositories } from "@/lib/repositories/provider";
 import { useAuthStore } from "@/stores/auth-store";
 import { useWorkspaceAuthStore } from "@/stores/workspace-auth-store";
@@ -23,101 +22,104 @@ export default function StudentLoginPage() {
   const login = useAuthStore((s) => s.login);
   const workspaceLogin = useWorkspaceAuthStore((s) => s.login);
   const workspaceLogout = useWorkspaceAuthStore((s) => s.logout);
-  const [name, setName] = useState<string>(DEMO_LOGIN.studentName);
-  const [rollNumber, setRollNumber] = useState<string>(DEMO_LOGIN.studentRoll);
-  const [applicationNumber, setApplicationNumber] = useState<string>(
-    DEMO_LOGIN.applicationNumber,
-  );
-  const [instituteId, setInstituteId] = useState<string>(DEMO_INSTITUTE.id);
+  const [rollNumber, setRollNumber] = useState("");
+  const [applicationNumber, setApplicationNumber] = useState("");
+  const [instituteId, setInstituteId] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const institutes = useMemo(
+    () => listPlatformInstitutes().filter((institute) => institute.status === "active"),
+    [],
+  );
+
+  useEffect(() => {
+    if (institutes.length > 0 && !instituteId) setInstituteId(institutes[0].id);
+  }, [institutes, instituteId]);
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     setError(null);
-    const workspaceOk = workspaceLogin({
-      userId: rollNumber,
+    const roll = rollNumber.trim();
+    if (!roll || !instituteId) {
+      setError("Enter roll number and select institute.");
+      return;
+    }
+
+    const workspaceOk = await workspaceLogin({
+      userId: roll,
       role: "student",
-      password: "student-session",
+      password: "dev",
       instituteId,
     });
     if (!workspaceOk) {
-      setError("Enter a valid institute tenant ID.");
+      setError("Could not start session.");
       return;
     }
-    const roster = getRepositories().students.list();
-    const matched = getRepositories().students.getByRollNumber(rollNumber);
-    if (roster.length > 0 && !matched) {
-      workspaceLogout();
-      setError("No active institute student found for this roll number.");
+
+    const { hydrateSupabaseRepositories } = await import("@/lib/supabase/hydrate-repositories");
+    await hydrateSupabaseRepositories();
+
+    const matched = getRepositories().students.getByRollNumber(roll);
+    if (!matched || matched.instituteId !== instituteId || !matched.active) {
+      await workspaceLogout();
+      setError("No active student found for this roll in the selected institute.");
       return;
     }
-    if (matched && !matched.active) {
-      workspaceLogout();
-      setError("This student account is inactive. Contact the institute admin.");
-      return;
-    }
+
     login({
-      name: matched?.fullName ?? name,
-      rollNumber,
-      applicationNumber,
-      studentId: matched?.id,
-      batchId: matched?.batchId,
-      courseType: matched?.courseType,
+      name: matched.fullName,
+      rollNumber: roll,
+      applicationNumber: applicationNumber.trim() || roll,
+      studentId: matched.id,
+      batchId: matched.batchId,
+      courseType: matched.courseType,
     });
-    router.push("/student/dashboard");
+    router.push("/student/tests");
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-[#eef3f8] to-gray-200 p-4">
-      <Card className="w-full max-w-md border-[#1a3c6e]/20 shadow-lg">
-        <CardHeader className="border-b bg-[#1a3c6e] text-white">
-          <CardTitle className="text-lg">{DEMO_INSTITUTE.name}</CardTitle>
-          <CardDescription className="text-blue-100">
-            Student Experience Layer
+    <div className="flex min-h-screen items-center justify-center bg-[linear-gradient(180deg,#f5f1e8_0%,#fbf9f4_100%)] p-4">
+      <Card className="w-full max-w-md border-[#d8d2c7] bg-white">
+        <CardHeader className="border-b border-[#ece6da] bg-[#fbf9f4]">
+          <CardTitle className="text-2xl text-[#14213d]">Student access</CardTitle>
+          <CardDescription className="text-[#5e5a52]">
+            Use roll number from institute records. Password not required during workflow testing.
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Candidate Name</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="roll">Roll Number</Label>
-              <Input
-                id="roll"
-                value={rollNumber}
-                onChange={(e) => setRollNumber(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="app">Application Number</Label>
-              <Input
-                id="app"
-                value={applicationNumber}
-                onChange={(e) => setApplicationNumber(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="tenant">Institute Tenant ID</Label>
-              <Input
-                id="tenant"
+              <Label>Institute</Label>
+              <select
+                className="w-full rounded-md border border-[#ece6da] px-3 py-2 text-sm"
                 value={instituteId}
                 onChange={(e) => setInstituteId(e.target.value)}
-                required
-              />
+                disabled={institutes.length === 0}
+              >
+                {institutes.map((i) => (
+                  <option key={i.id} value={i.id}>
+                    {i.name}
+                  </option>
+                ))}
+              </select>
+              {institutes.length === 0 ? (
+                <p className="text-sm text-amber-800">
+                  No active institute is available for student login.
+                </p>
+              ) : null}
             </div>
-            <Button type="submit" className="w-full bg-[#1a3c6e] hover:bg-[#152d52]">
-              Login to Student Layer
+            <div className="space-y-2">
+              <Label htmlFor="roll">Roll number</Label>
+              <Input id="roll" value={rollNumber} onChange={(e) => setRollNumber(e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="app">Application number (optional)</Label>
+              <Input id="app" value={applicationNumber} onChange={(e) => setApplicationNumber(e.target.value)} />
+            </div>
+            {error ? <p className="text-sm text-red-700">{error}</p> : null}
+            <Button type="submit" className="w-full bg-[#14213d]" disabled={institutes.length === 0}>
+              Enter tests
             </Button>
-            {error && <p className="text-sm text-red-700">{error}</p>}
           </form>
         </CardContent>
       </Card>

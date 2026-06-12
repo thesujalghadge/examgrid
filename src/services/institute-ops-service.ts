@@ -10,6 +10,7 @@ import type {
   StudentImportPreview,
   StudentImportPreviewRow,
 } from "@/types/institute-ops";
+import { z } from "zod";
 
 function makeId(prefix: string): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -258,8 +259,11 @@ export function previewStudentCsvImport(
     if (!student.batchId || !batchIds.has(student.batchId)) {
       errors.push("batchId/batch must match an existing batch");
     }
-    if (student.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(student.email)) {
-      errors.push("email is invalid");
+    if (student.email) {
+      const emailParse = z.string().email().safeParse(student.email);
+      if (!emailParse.success) {
+        errors.push("email is invalid");
+      }
     }
     if (duplicate) errors.push("duplicate rollNumber");
 

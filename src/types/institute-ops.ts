@@ -43,7 +43,7 @@ export interface ExamSchedule {
   updatedAt: number;
 }
 
-export type ScheduledExamStatus = "upcoming" | "active" | "completed";
+export type ScheduledExamStatus = "upcoming" | "active" | "missed" | "completed";
 
 export interface ScheduledExamView {
   exam: ExamDefinition;

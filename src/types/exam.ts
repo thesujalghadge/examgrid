@@ -22,6 +22,7 @@ export interface ExamViolation {
 export interface ExamOption {
   id: string;
   label: string;
+  image?: string;
   text: string;
 }
 
@@ -32,10 +33,15 @@ export interface ExamQuestion {
   type: QuestionType;
   text: string;
   options: ExamOption[];
+  hasImage?: boolean;
+  stemImage?: string;
+  images?: string[];
   correctOptionId?: string;
   correctNumericalAnswer?: string;
   marks: number;
   negativeMarks: number;
+  _debug_source?: string;
+  _debug_assets?: string[];
 }
 
 export interface ExamSection {

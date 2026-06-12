@@ -3,10 +3,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { getExamById } from "@/data/mock-exams";
+import { getExamById } from "@/lib/exam-catalog";
 import { useExamPersistence } from "@/hooks/use-exam-persistence";
 import { useExamGuard } from "@/hooks/useExamGuard";
-import { bootstrapExamSession } from "@/lib/exam-bootstrap";
+import { bootstrapExamSession, startExamAttempt } from "@/lib/exam-bootstrap";
+import { ExamInstructions } from "./ExamInstructions";
 import { canSubmitExam, ensureExamReadyForCbt } from "@/lib/cbt/session-safety";
 import { requestExamFullscreen } from "@/lib/fullscreen";
 import { loadExamAttempt, saveExamAttempt } from "@/lib/persistence";
@@ -27,6 +28,8 @@ import { useQuestionStore } from "@/stores/question-store";
 import { useTimerStore } from "@/stores/timer-store";
 import { useWorkspaceAuthStore } from "@/stores/workspace-auth-store";
 import type { PersistedExamAttempt } from "@/types/exam";
+import type { ExamDefinition } from "@/types/exam";
+import type { ProcessedPaperStatus } from "@/types/cbt-paper-processing";
 import { ExamCalculator } from "./ExamCalculator";
 import { ExamGuardDialogs } from "./ExamGuardDialogs";
 import { ExamHeader } from "./ExamHeader";
@@ -42,61 +45,99 @@ export type ExamInterfaceNavigate = {
   login: string;
 };
 
+export interface ExamTeacherReviewConfig {
+  exam: ExamDefinition;
+  status: ProcessedPaperStatus;
+  flaggedQuestionIds: string[];
+  questionIssues: Record<string, string[]>;
+  onQuestionTextChange: (questionId: string, value: string) => void;
+  onOptionTextChange: (questionId: string, label: string, value: string) => void;
+  onCorrectAnswerChange: (questionId: string, value: string) => void;
+  onMarksChange: (questionId: string, value: string) => void;
+  onNegativeMarksChange: (questionId: string, value: string) => void;
+  onQuestionTypeChange?: (questionId: string, value: 'MCQ_SINGLE' | 'NUMERICAL') => void;
+  onToggleFlag: (questionId: string) => void;
+  onMoveQuestion: (questionId: string, delta: -1 | 1) => void;
+  onDeleteQuestion: (questionId: string) => void;
+  onAddQuestion: (sectionId: string) => void;
+  onContinue: () => void;
+  continueLabel?: string;
+  continueDisabled?: boolean;
+}
+
 const DEFAULT_EXAM_NAV: ExamInterfaceNavigate = {
-  result: (id) => `/exam/${id}/result`,
-  unauthorized: "/exams",
-  login: "/login",
+  result: (id) => `/student/tests/${id}/result`,
+  unauthorized: "/student/tests",
+  login: "/student/login",
 };
+
+async function exitFullscreenBeforeRedirect() {
+  if (typeof document === "undefined" || !document.fullscreenElement) return;
+  await document.exitFullscreen().catch(() => {});
+}
 
 interface ExamInterfaceProps {
   examId: string;
   navigate?: Partial<ExamInterfaceNavigate>;
+  review?: ExamTeacherReviewConfig;
 }
 
 export function ExamInterface({
   examId,
   navigate: navigatePartial,
+  review,
 }: ExamInterfaceProps) {
   const router = useRouter();
-  const nav = useMemo(
-    () => ({ ...DEFAULT_EXAM_NAV, ...navigatePartial }),
-    [navigatePartial],
-  );
+  const nav = useMemo(() => ({ ...DEFAULT_EXAM_NAV, ...navigatePartial }), [navigatePartial]);
+  const isTeacherReview = Boolean(review);
   const candidate = useAuthStore((s) => s.candidate);
   const exam = useQuestionStore((s) => s.exam);
+  const currentQuestionId = useQuestionStore((s) => s.currentQuestionId);
+  const currentSectionId = useQuestionStore((s) => s.currentSectionId);
   const [paletteCollapsed, setPaletteCollapsed] = useState(false);
+  const [mobilePaletteOpen, setMobilePaletteOpen] = useState(false);
   const [submitOpen, setSubmitOpen] = useState(false);
+  const [submitState, setSubmitState] = useState<"idle" | "submitting" | "retrying" | "saved" | "failed">("idle");
+  const [submitErrorText, setSubmitErrorText] = useState<string | null>(null);
   const [resumed, setResumed] = useState(false);
   const [ready, setReady] = useState(false);
   const submitInProgressRef = useRef(false);
   const finalizeRef = useRef<() => void>(() => {});
+  const routerRef = useRef(router);
+  const navRef = useRef(nav);
   const { persistNow, setStartedAt, setResult } = useExamPersistence();
+  const setStartedAtRef = useRef(setStartedAt);
   const wsSession = useWorkspaceAuthStore((s) => s.session);
-  const cbtTest = useMemo(
-    () => getRepositories().cbtTests.getById(examId),
-    [examId],
-  );
-  const isInstituteCbt = Boolean(cbtTest);
+  const instituteId = wsSession?.instituteId;
+  const candidateRollNumber = candidate?.rollNumber;
+  const lifecyclePhase = useExamLifecycleStore((s) => s.phase);
+  const cbtTest = useMemo(() => getRepositories().cbtTests.getById(examId), [examId]);
+  const isInstituteCbt = !isTeacherReview && Boolean(cbtTest);
 
   const testEngine = useTestSessionEngine({
-    enabled: isInstituteCbt && Boolean(candidate && wsSession?.instituteId),
+    enabled: isInstituteCbt && Boolean(candidateRollNumber && instituteId),
     testId: examId,
-    studentId: candidate?.rollNumber ?? "",
-    instituteId: wsSession?.instituteId ?? "",
+    studentId: candidateRollNumber ?? "",
+    instituteId: instituteId ?? "",
     durationMinutes: cbtTest?.durationMinutes ?? 180,
     onExpired: () => finalizeRef.current(),
   });
+  const testEngineRef = useRef(testEngine);
 
   const guard = useExamGuard({
-    enabled: ready,
+    enabled: ready && !isTeacherReview,
     onPersist: persistNow,
-    auditContext: candidate
-      ? { actorId: candidate.rollNumber, actorRole: "student", examId }
-      : undefined,
+    auditContext:
+      !isTeacherReview && candidate
+        ? { actorId: candidate.rollNumber, actorRole: "student", examId }
+        : undefined,
   });
 
   const finalizeSubmit = useCallback(async () => {
-    if (!candidate || !exam) return;
+    if (!candidate || !exam) {
+      setSubmitState("idle");
+      return;
+    }
 
     const previous = loadExamAttempt(examId, candidate.rollNumber);
     const lifecyclePhase = useExamLifecycleStore.getState().phase;
@@ -108,74 +149,100 @@ export function ExamInterface({
         existingAttempt: previous,
       })
     ) {
-      logCbtGuard("submit blocked — duplicate or already submitted");
+      logCbtGuard("submit blocked - duplicate or already submitted");
       if (previous?.lifecycle === "submitted") {
+        await exitFullscreenBeforeRedirect();
         router.replace(nav.result(examId));
+      } else {
+        setSubmitState("idle");
       }
       return;
     }
 
     submitInProgressRef.current = true;
+    setSubmitState("submitting");
+
     if (isInstituteCbt) {
       testEngine.flushSave();
-      await testEngine.lockSubmit("submitted");
-    }
-    logCbtGuard("submit started", {
-      examId,
-      candidateRoll: candidate.rollNumber,
-      lifecyclePhase,
-    });
+      let attemptCount = 0;
+      let success = false;
+      const delays = [2000, 4000, 8000, 16000];
 
-    const qState = useQuestionStore.getState();
-    const timerState = useTimerStore.getState();
-    timerState.stop();
+      while (!success && attemptCount <= delays.length) {
+        try {
+          if (attemptCount > 0) setSubmitState("retrying");
+          await testEngine.lockSubmit("submitted");
+          success = true;
+          setSubmitState("saved");
+        } catch (error) {
+          if (attemptCount < delays.length) {
+            await new Promise((res) => setTimeout(res, delays[attemptCount]));
+            attemptCount++;
+          } else {
+            setSubmitState("failed");
+            setSubmitErrorText(String(error));
+            submitInProgressRef.current = false;
+            return;
+          }
+        }
+      }
+    } else {
+      const qState = useQuestionStore.getState();
+      const timerState = useTimerStore.getState();
+      timerState.stop();
 
-    const currentQuestionId =
-      qState.currentQuestionId &&
-      exam.questions[qState.currentQuestionId]
-        ? qState.currentQuestionId
-        : Object.keys(exam.questions)[0];
+      const safeCurrentQuestionId =
+        qState.currentQuestionId && exam.questions[qState.currentQuestionId]
+          ? qState.currentQuestionId
+          : Object.keys(exam.questions)[0];
 
-    const currentSectionId =
-      qState.currentSectionId &&
-      exam.sections.some((s) => s.id === qState.currentSectionId)
-        ? qState.currentSectionId
-        : exam.sections[0].id;
+      const safeCurrentSectionId =
+        qState.currentSectionId && exam.sections.some((s) => s.id === qState.currentSectionId)
+          ? qState.currentSectionId
+          : exam.sections[0].id;
 
-    if (!currentQuestionId) {
-      submitInProgressRef.current = false;
-      return;
-    }
+      if (!safeCurrentQuestionId) {
+        submitInProgressRef.current = false;
+        setSubmitState("idle");
+        return;
+      }
 
-    const sessionViolations = useExamSessionStore.getState().violations;
-    const attempt: PersistedExamAttempt = {
-      version: 1,
-      examId,
-      candidateRoll: candidate.rollNumber,
-      lifecycle: "submitted",
-      examEndsAt: timerState.examEndsAt ?? Date.now(),
-      startedAt: previous?.startedAt ?? Date.now(),
-      currentQuestionId,
-      currentSectionId,
-      answers: qState.answers,
-      visited: qState.visited,
-      markedForReview: qState.markedForReview,
-      violations: sessionViolations,
-      submittedAt: Date.now(),
-    };
-
-    const result = computeExamResult(exam, attempt, candidate.name);
-    attempt.result = result;
-    const saved = saveExamAttempt(attempt);
-    if (!saved) {
-      logCbtWarning("submit save failed", {
+      const sessionViolations = useExamSessionStore.getState().violations;
+      const attempt: PersistedExamAttempt = {
+        version: 1,
         examId,
         candidateRoll: candidate.rollNumber,
-      });
-      submitInProgressRef.current = false;
-      return;
+        lifecycle: "submitted",
+        examEndsAt: timerState.examEndsAt ?? Date.now(),
+        startedAt: previous?.startedAt ?? Date.now(),
+        currentQuestionId: safeCurrentQuestionId,
+        currentSectionId: safeCurrentSectionId,
+        answers: qState.answers,
+        visited: qState.visited,
+        markedForReview: qState.markedForReview,
+        violations: sessionViolations,
+        submittedAt: Date.now(),
+      };
+
+      const result = computeExamResult(exam, attempt as any, candidate.name);
+      attempt.result = result;
+      const saved = saveExamAttempt(attempt as any);
+      if (!saved) {
+        submitInProgressRef.current = false;
+        setSubmitState("idle");
+        return;
+      }
+
+      setResult(result);
+      persistNow();
     }
 
+    logCbtGuard("submit completed", {
+      examId,
+      candidateRoll: candidate.rollNumber,
+    });
+
+    useTimerStore.getState().stop();
     useExamLifecycleStore.getState().setPhase("submitted");
     recordAuditEvent({
       actorId: candidate.rollNumber,
@@ -183,29 +250,10 @@ export function ExamInterface({
       actionType: "exam_submit",
       resourceType: "exam",
       resourceId: examId,
-      metadata: {
-        violationCount: sessionViolations.length,
-        attempted: result.attempted,
-        totalScore: result.totalScore,
-      },
+      metadata: { serverBacked: isInstituteCbt },
     });
-    setResult(result);
-    persistNow();
-    try {
-      const ws = useWorkspaceAuthStore.getState().session;
-      if (ws?.instituteId) {
-        persistCbtFinalAttempt(exam, attempt, ws.instituteId);
-      }
-    } catch {
-      /* non-fatal */
-    }
-    logCbtGuard("submit completed", {
-      examId,
-      candidateRoll: candidate.rollNumber,
-      attempted: result.attempted,
-      totalScore: result.totalScore,
-      submittedAt: result.submittedAt,
-    });
+
+    await exitFullscreenBeforeRedirect();
     router.replace(nav.result(examId));
   }, [candidate, exam, examId, isInstituteCbt, nav, persistNow, router, setResult, testEngine]);
 
@@ -214,8 +262,82 @@ export function ExamInterface({
   }, [finalizeSubmit]);
 
   useEffect(() => {
-    if (!candidate) {
-      router.replace(nav.login);
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (submitState === "submitting" || submitState === "retrying") {
+        e.preventDefault();
+        e.returnValue = "Answers are still being saved. Leaving now may interrupt submission.";
+        return e.returnValue;
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [submitState]);
+
+  useEffect(() => {
+    routerRef.current = router;
+    navRef.current = nav;
+    setStartedAtRef.current = setStartedAt;
+    testEngineRef.current = testEngine;
+  }, [nav, router, setStartedAt, testEngine]);
+
+  const reviewExamSignature = useMemo(() => {
+    if (!review) return "";
+    return review.exam.sections
+      .map((section) => `${section.id}:${section.questionIds.map((id) => review.exam.questions[id]?.text ?? "").join("~")}`)
+      .join("|");
+  }, [review]);
+
+  useEffect(() => {
+    if (!review) return;
+
+    const firstQuestionId = review.exam.sections[0]?.questionIds[0];
+    if (!firstQuestionId) {
+      setReady(false);
+      return;
+    }
+
+    const state = useQuestionStore.getState();
+    const nextQuestionId =
+      state.currentQuestionId && review.exam.questions[state.currentQuestionId]
+        ? state.currentQuestionId
+        : firstQuestionId;
+    const nextSectionId =
+      state.currentSectionId && review.exam.sections.some((section) => section.id === state.currentSectionId)
+        ? state.currentSectionId
+        : review.exam.sections.find((section) => section.questionIds.includes(nextQuestionId))?.id ??
+          review.exam.sections[0].id;
+
+    if (!state.exam || state.exam.id !== review.exam.id) {
+      state.loadExam(review.exam, nextQuestionId);
+    } else {
+      state.restoreState({
+        exam: review.exam,
+        answers: state.answers,
+        visited: { ...state.visited, [nextQuestionId]: true },
+        markedForReview: state.markedForReview,
+        currentQuestionId: nextQuestionId,
+        currentSectionId: nextSectionId,
+      });
+    }
+
+    useTimerStore.getState().stop();
+    setResumed(false);
+    setReady(true);
+  }, [review, reviewExamSignature]);
+
+  useEffect(() => {
+    if (!isTeacherReview) return;
+    return () => {
+      useQuestionStore.getState().reset();
+      useTimerStore.getState().stop();
+    };
+  }, [isTeacherReview]);
+
+  useEffect(() => {
+    if (isTeacherReview || !candidateRollNumber) {
+      if (!isTeacherReview && !candidateRollNumber) {
+        routerRef.current.replace(navRef.current.login);
+      }
       return;
     }
 
@@ -224,46 +346,51 @@ export function ExamInterface({
       !examDef ||
       !ensureExamReadyForCbt(examDef) ||
       (isOperationalSchedulingActive() &&
-        !canCandidateAccessExam(candidate, examId))
+        !canCandidateAccessExam(
+          {
+            name: "",
+            rollNumber: candidateRollNumber,
+            applicationNumber: "",
+          },
+          examId,
+        ))
     ) {
       logCbtWarning("test load denied", {
         examId,
-        candidateRoll: candidate.rollNumber,
+        candidateRoll: candidateRollNumber,
       });
-      router.replace(nav.unauthorized);
+      routerRef.current.replace(navRef.current.unauthorized);
       return;
     }
 
     logCbtGuard("test load allowed", {
       examId,
-      candidateRoll: candidate.rollNumber,
+      candidateRoll: candidateRollNumber,
     });
 
     const startedAt = Date.now();
 
-    const finishBootstrap = (
-      result: ReturnType<typeof bootstrapExamSession>,
-    ) => {
+    const finishBootstrap = (result: ReturnType<typeof bootstrapExamSession>) => {
       if (result.status === "not_found") {
-        router.replace(nav.unauthorized);
+        routerRef.current.replace(navRef.current.unauthorized);
         return;
       }
       if (result.status === "already_submitted") {
-        router.replace(nav.result(examId));
+        routerRef.current.replace(navRef.current.result(examId));
         return;
       }
       if (result.status === "resumed") {
         setResumed(true);
-        setStartedAt(result.attempt.startedAt);
+        setStartedAtRef.current(result.attempt.startedAt);
         if (useTimerStore.getState().getRemainingSeconds() <= 0) {
           setReady(true);
-          queueMicrotask(() => finalizeSubmit());
+          queueMicrotask(() => finalizeRef.current());
           return;
         }
       } else {
-        setStartedAt(startedAt);
+        setStartedAtRef.current(startedAt);
         recordAuditEvent({
-          actorId: candidate.rollNumber,
+          actorId: candidateRollNumber,
           actorRole: "student",
           actionType: "exam_start",
           resourceType: "exam",
@@ -275,15 +402,15 @@ export function ExamInterface({
       setReady(true);
     };
 
-    if (isInstituteCbt && wsSession?.instituteId) {
-      const boot = bootstrapExamSession(examId, candidate.rollNumber, startedAt);
-      void testEngine.beginSession().then((ts) => {
+    if (isInstituteCbt && instituteId) {
+      const boot = bootstrapExamSession(examId, candidateRollNumber, startedAt);
+      void testEngineRef.current.beginSession().then((ts) => {
         if (!ts && boot.status === "already_submitted") {
-          router.replace(nav.result(examId));
+          routerRef.current.replace(navRef.current.result(examId));
           return;
         }
         if (!ts) {
-          router.replace(nav.unauthorized);
+          routerRef.current.replace(navRef.current.unauthorized);
           return;
         }
         finishBootstrap(boot);
@@ -291,76 +418,155 @@ export function ExamInterface({
       return;
     }
 
-    finishBootstrap(
-      bootstrapExamSession(examId, candidate.rollNumber, startedAt),
-    );
+    finishBootstrap(bootstrapExamSession(examId, candidateRollNumber, startedAt));
   }, [
-    candidate,
     examId,
-    finalizeSubmit,
+    candidateRollNumber,
     isInstituteCbt,
-    nav,
-    router,
-    setStartedAt,
-    testEngine,
-    wsSession?.instituteId,
+    isTeacherReview,
+    instituteId,
   ]);
 
   const handleTimeUp = useCallback(() => {
     finalizeSubmit();
   }, [finalizeSubmit]);
 
-  if (!ready || !candidate || !exam) {
+  const reviewCandidate = useMemo(
+    () => ({
+      name: "Teacher Review",
+      rollNumber: "DRAFT",
+      applicationNumber: review?.status ?? "DRAFT_REVIEW",
+    }),
+    [review?.status],
+  );
+
+  const currentReviewSection = useMemo(
+    () => review?.exam.sections.find((section) => section.id === currentSectionId) ?? null,
+    [currentSectionId, review?.exam.sections],
+  );
+  const currentReviewSectionQuestionIds = currentReviewSection?.questionIds ?? [];
+  const currentReviewQuestionIndex = currentQuestionId
+    ? currentReviewSectionQuestionIds.indexOf(currentQuestionId)
+    : -1;
+
+  const showCalculator = !isTeacherReview;
+
+  if (!ready || (!isTeacherReview && (!candidate || !exam))) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-200 text-sm text-gray-600">
-        Preparing examination…
+      <div className="flex min-h-[100dvh] items-center justify-center bg-gray-200 text-sm text-gray-600">
+        Preparing examination...
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#c8d0dc]">
+    <div className={isTeacherReview ? "flex h-full min-h-0 flex-col bg-[#c8d0dc]" : "flex min-h-[100dvh] flex-col bg-[#c8d0dc]"}>
       <ExamHeader
-        examTitle={exam.title}
-        candidate={candidate}
-        violationCount={guard.violationCount}
-        onTimeUp={handleTimeUp}
+        examTitle={exam?.title ?? review?.exam.title ?? "CBT Test"}
+        candidate={isTeacherReview ? reviewCandidate : candidate!}
+        violationCount={isTeacherReview ? 0 : guard.violationCount}
+        onTimeUp={isTeacherReview ? undefined : handleTimeUp}
+        fixedSeconds={isTeacherReview ? (review?.exam.durationMinutes ?? 0) * 60 : undefined}
+        modeLabel={isTeacherReview ? `Draft status: ${review?.status ?? "DRAFT_REVIEW"}` : undefined}
       />
 
-      {resumed && (
+      {!isTeacherReview && resumed ? (
         <Alert className="mx-4 mt-2 border-amber-300 bg-amber-50">
           <AlertTitle>Session restored</AlertTitle>
           <AlertDescription>
-            Your previous attempt was recovered from local storage, including
-            answers, timer, palette, and integrity violations.
+            Your previous attempt was recovered from local storage, including answers, timer, palette,
+            and integrity violations.
           </AlertDescription>
         </Alert>
-      )}
+      ) : null}
 
       <SectionTabs />
 
-      <div className="relative flex flex-1 overflow-hidden">
-        <main className="flex min-w-0 flex-1 flex-col border-r border-[#1a3c6e]/10 bg-white shadow-sm">
-          <QuestionCard />
-          <QuestionNavigator onSubmitClick={() => setSubmitOpen(true)} />
+      <div className="relative flex min-h-0 flex-1 overflow-hidden bg-white">
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col border-r border-gray-300 bg-white">
+          <QuestionCard
+            review={
+              review && currentQuestionId
+                ? {
+                    issues: review.questionIssues[currentQuestionId] ?? [],
+                    flagged: review.flaggedQuestionIds.includes(currentQuestionId),
+                    onToggleFlag: review.onToggleFlag
+                      ? () => review.onToggleFlag(currentQuestionId)
+                      : undefined,
+                    onQuestionTextChange: (value) => review.onQuestionTextChange(currentQuestionId, value),
+                    onOptionTextChange: (label, value) =>
+                      review.onOptionTextChange(currentQuestionId, label, value),
+                    onCorrectAnswerChange: (value) => review.onCorrectAnswerChange(currentQuestionId, value),
+                    onMarksChange: (value) => review.onMarksChange(currentQuestionId, value),
+                    onNegativeMarksChange: (value) => review.onNegativeMarksChange(currentQuestionId, value),
+                    onQuestionTypeChange: review.onQuestionTypeChange ? (value) => review.onQuestionTypeChange!(currentQuestionId, value) : undefined,
+                  }
+                : undefined
+            }
+          />
+          <QuestionNavigator
+            onSubmitClick={() => setSubmitOpen(true)}
+            isSubmitting={submitState === "submitting" || submitState === "retrying" || submitState === "saved"}
+            review={
+              review && currentQuestionId && currentReviewSection
+                ? {
+                    canMoveQuestionUp: currentReviewQuestionIndex > 0,
+                    canMoveQuestionDown:
+                      currentReviewQuestionIndex >= 0 &&
+                      currentReviewQuestionIndex < currentReviewSectionQuestionIds.length - 1,
+                    onMoveQuestion: (delta) => review.onMoveQuestion(currentQuestionId, delta),
+                    onDeleteQuestion: () => review.onDeleteQuestion(currentQuestionId),
+                    onAddQuestion: () => review.onAddQuestion(currentReviewSection.id),
+                    onContinue: review.onContinue,
+                    continueLabel: review.continueLabel ?? "Publish CBT",
+                    continueDisabled: review.continueDisabled,
+                  }
+                : undefined
+            }
+          />
         </main>
-        <QuestionPalette
-          collapsed={paletteCollapsed}
-          onToggleCollapse={() => setPaletteCollapsed((c) => !c)}
-        />
+        <div className="hidden md:contents">
+          <QuestionPalette
+            collapsed={paletteCollapsed}
+            onToggleCollapse={() => setPaletteCollapsed((collapsed) => !collapsed)}
+          />
+        </div>
+        {mobilePaletteOpen ? (
+          <QuestionPalette
+            collapsed={false}
+            onToggleCollapse={() => setMobilePaletteOpen(false)}
+          />
+        ) : null}
       </div>
 
-      <ExamCalculator />
-      <ExamGuardDialogs guard={guard} />
+      {!isTeacherReview ? (
+        <button
+          type="button"
+          className="fixed bottom-4 right-4 z-30 inline-flex h-12 w-12 items-center justify-center rounded-full bg-[#1a3c6e] text-2xl font-bold text-white shadow-lg md:hidden"
+          aria-label="Open question palette"
+          onClick={() => setMobilePaletteOpen(true)}
+        >
+          ☰
+        </button>
+      ) : null}
 
-      <SubmitModal
-        open={submitOpen}
-        onOpenChange={setSubmitOpen}
-        onConfirm={() => {
-          setSubmitOpen(false);
-          finalizeSubmit();
-        }}
-      />
+      {showCalculator ? <ExamCalculator /> : null}
+      {!isTeacherReview ? <ExamGuardDialogs guard={guard} /> : null}
+
+      {!isTeacherReview ? (
+        <SubmitModal
+          open={submitOpen}
+          onOpenChange={setSubmitOpen}
+          submitState={submitState}
+          submitErrorText={submitErrorText}
+          onConfirm={() => {
+            if (submitState === "submitting" || submitState === "retrying") return;
+            setSubmitState("submitting");
+            setSubmitOpen(false);
+            finalizeSubmit();
+          }}
+        />
+      ) : null}
     </div>
   );
 }

@@ -223,11 +223,7 @@ export function wrapAttemptRepository(
 
 function canManageCbtTests(role: UserRole | undefined): boolean {
   if (!role) return false;
-  return (
-    role === "super_admin" ||
-    role === "institute_admin" ||
-    role === "teacher"
-  );
+  return role === "institute";
 }
 
 export function wrapCbtTestRepository(inner: CbtTestRepository): CbtTestRepository {
@@ -275,7 +271,7 @@ export function wrapCbtAttemptRepository(
           if (record.attempt.instituteId !== session.instituteId) {
             throw new Error("Tenant mismatch on attempt.");
           }
-        } else if (session.role !== "super_admin") {
+        } else {
           throw new Error("Only students may submit CBT attempts.");
         }
         inner.save(record);
@@ -285,7 +281,7 @@ export function wrapCbtAttemptRepository(
         const session = getClientWorkspaceSession();
         const rows = inner.listByTestId(testId);
         if (!session) return [];
-        if (session.role === "super_admin") return rows;
+        if (session.role === "platform_admin") return rows;
         if (session.role === "student") return [];
         return rows.filter((r) => r.attempt.instituteId === session.instituteId);
       }),
@@ -294,7 +290,7 @@ export function wrapCbtAttemptRepository(
         const session = getClientWorkspaceSession();
         const rows = inner.listByStudentId(studentId);
         if (!session) return [];
-        if (session.role === "super_admin") return rows;
+        if (session.role === "platform_admin") return rows;
         if (session.role === "student") {
           if (studentId !== session.userId) return [];
           return rows.filter((r) => r.attempt.studentId === session.userId);
@@ -306,12 +302,12 @@ export function wrapCbtAttemptRepository(
         const session = getClientWorkspaceSession();
         const row = inner.getLatest(testId, studentId);
         if (!row || !session) return undefined;
+        if (session.role === "platform_admin") return row;
         if (session.role === "student") {
           if (studentId !== session.userId) return undefined;
           if (row.attempt.instituteId !== session.instituteId) return undefined;
           return row;
         }
-        if (session.role === "super_admin") return row;
         if (row.attempt.instituteId !== session.instituteId) return undefined;
         return row;
       }),
@@ -326,7 +322,7 @@ export function wrapTestSessionRepository(
     const ws = getClientWorkspaceSession();
     const rows = inner.list();
     if (!ws) return [];
-    if (ws.role === "super_admin") return rows;
+    if (ws.role === "platform_admin") return rows;
     if (ws.role === "student") {
       return rows.filter(
         (r) => r.studentId === ws.userId && r.instituteId === ws.instituteId,
@@ -361,7 +357,7 @@ export function wrapTestSessionRepository(
           if (session.instituteId !== ws.instituteId) {
             throw new Error("Tenant mismatch on test session.");
           }
-        } else if (ws.role !== "super_admin" && session.instituteId !== ws.instituteId) {
+        } else if (session.instituteId !== ws.instituteId) {
           throw new Error("Cross-institute session write blocked.");
         }
         inner.save(session);

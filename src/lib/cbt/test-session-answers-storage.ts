@@ -12,8 +12,13 @@ export function loadSessionAnswers(
   if (typeof window === "undefined") return null;
   try {
     const raw = localStorage.getItem(key(sessionId));
-    if (!raw) return null;
-    return JSON.parse(raw) as Record<string, string | null>;
+    if (!raw) {
+      console.log(`[loadSessionAnswers] No answers found for ${sessionId}`);
+      return null;
+    }
+    const parsed = JSON.parse(raw) as Record<string, string | null>;
+    console.log(`[loadSessionAnswers] Loaded ${Object.keys(parsed).length} answers for ${sessionId}`);
+    return parsed;
   } catch {
     return null;
   }
@@ -24,6 +29,7 @@ export function saveSessionAnswers(
   answers: Record<string, string | null>,
 ): void {
   if (typeof window === "undefined") return;
+  console.log(`[saveSessionAnswers] Persisting ${Object.keys(answers).length} answers to localStorage for ${sessionId}`);
   localStorage.setItem(key(sessionId), JSON.stringify(answers));
 }
 

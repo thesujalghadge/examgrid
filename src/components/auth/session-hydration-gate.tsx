@@ -16,26 +16,27 @@ export function SessionHydrationGate({
   const checkExpiry = useWorkspaceAuthStore((s) => s.checkExpiry);
 
   useEffect(() => {
+    if (isHydrated) return;
     void hydrateSession();
-  }, [hydrateSession]);
+  }, [hydrateSession, isHydrated]);
 
   useEffect(() => {
     if (!isHydrated) return;
     checkExpiry();
-  }, [isHydrated, checkExpiry, session]);
+  }, [checkExpiry, isHydrated, session]);
 
   if (!isHydrated) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-100 text-sm text-gray-600">
-        Validating session…
+      <div className="flex min-h-screen items-center justify-center bg-[#f5f1e8] text-sm text-[#5e5a52]">
+        Validating session...
       </div>
     );
   }
 
   if (loginPath && !session) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-100 text-sm text-gray-600">
-        Redirecting to login…
+      <div className="flex min-h-screen items-center justify-center bg-[#f5f1e8] text-sm text-[#5e5a52]">
+        Redirecting to login...
       </div>
     );
   }

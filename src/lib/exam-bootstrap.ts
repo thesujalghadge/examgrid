@@ -1,5 +1,4 @@
 import { getExamById } from "@/lib/exam-catalog";
-import { getFirstQuestionId } from "@/data/mock-exams";
 import {
   clearExamAttempt,
   loadExamAttempt,
@@ -21,6 +20,7 @@ import {
 } from "@/services/institute-ops-service";
 import { getOrCreateSessionId, recordAuditEvent } from "@/services/audit-service";
 import { STORAGE_KEYS } from "@/repositories/storage-keys";
+import { getSafeFirstQuestionId } from "@/lib/validation/exam-integrity";
 
 const ACTIVE_EXAM_SESSION_TTL_MS = 6 * 60 * 60 * 1000;
 
@@ -64,6 +64,7 @@ export type BootstrapResult =
   | { status: "not_found" }
   | { status: "already_submitted"; attempt: PersistedExamAttempt }
   | { status: "resumed"; attempt: PersistedExamAttempt }
+  | { status: "instructions" }
   | { status: "started" };
 
 export function bootstrapExamSession(
@@ -121,12 +122,30 @@ export function bootstrapExamSession(
 
   useExamSessionStore.getState().reset();
 
-  const firstQuestionId = getFirstQuestionId(exam);
+  const firstQuestionId = getSafeFirstQuestionId(exam);
+  if (!firstQuestionId) {
+    return { status: "not_found" };
+  }
   useQuestionStore.getState().loadExam(exam, firstQuestionId);
+  useExamLifecycleStore.getState().setExamId(examId);
+  useExamLifecycleStore.getState().setPhase("instructions_viewed");
+
+  return { status: "instructions" };
+}
+
+export function startExamAttempt(
+  examId: string,
+  candidateRoll: string,
+  startedAt: number,
+) {
+  const exam = getExamById(examId);
+  if (!exam) return;
+  const activeSchedule = getActiveScheduleForRoll(examId, candidateRoll);
+  const firstQuestionId = getSafeFirstQuestionId(exam)!;
+
   useTimerStore
     .getState()
     .start(activeSchedule?.durationMinutes ?? exam.durationMinutes);
-  useExamLifecycleStore.getState().setExamId(examId);
   useExamLifecycleStore.getState().setPhase("in_progress");
 
   const examEndsAt = useTimerStore.getState().examEndsAt!;
@@ -155,6 +174,4 @@ export function bootstrapExamSession(
       examEndsAt,
     });
   }
-
-  return { status: "started" };
 }

@@ -1,5 +1,6 @@
-import { DEFAULT_INSTITUTE_ID, isUuid } from "@/config/institute";
+import { isUuid } from "@/config/institute";
 import { logRepositoryFailure } from "@/lib/logging/runtime-logger";
+import { getClientWorkspaceSession } from "@/lib/workspace-session";
 import type { ExamRepository } from "@/repositories/interfaces/exam-repository";
 import {
   examDefinitionToRows,
@@ -73,12 +74,20 @@ export class SupabaseExamRepository implements ExamRepository {
   }
 
   private async doRefresh(): Promise<void> {
+    const session = getClientWorkspaceSession();
+    if (!session?.instituteId) {
+      this.cache = [];
+      this.idMap.clear();
+      this.hydrated = true;
+      return;
+    }
+
     try {
       const client = requireSupabaseClient("exams.list");
       const { data: exams, error: examErr } = await client
         .from("exams")
         .select("*")
-        .eq("institute_id", DEFAULT_INSTITUTE_ID)
+        .eq("institute_id", session.instituteId)
         .order("scheduled_at", { ascending: false });
 
       throwIfSupabaseError(examErr, "exams", "list");
@@ -112,6 +121,21 @@ export class SupabaseExamRepository implements ExamRepository {
       const sectionRows = (sections ?? []) as ExamSectionRow[];
       const questionRows = (questions ?? []) as ExamQuestionRow[];
 
+      const bankQuestionIds = questionRows.map(q => q.bank_question_id).filter(Boolean) as string[];
+      let bankQuestionsMap: Record<string, any> = {};
+      if (bankQuestionIds.length > 0) {
+        const { data: bankData } = await client
+          .from("questions")
+          .select("id, metadata, options")
+          .in("id", bankQuestionIds);
+        
+        if (bankData) {
+          bankData.forEach((bq: any) => {
+             bankQuestionsMap[bq.id] = bq;
+          });
+        }
+      }
+
       this.cache = examRows.map((examRow) => {
         const publicId = examRow.legacy_id ?? examRow.id;
         this.idMap.set(publicId, examRow.id);
@@ -119,6 +143,7 @@ export class SupabaseExamRepository implements ExamRepository {
           examRow,
           sectionRows.filter((s) => s.exam_id === examRow.id),
           questionRows.filter((q) => q.exam_id === examRow.id),
+          bankQuestionsMap
         );
       });
       this.hydrated = true;
@@ -129,7 +154,7 @@ export class SupabaseExamRepository implements ExamRepository {
     }
   }
 
-  private async resolveExamUuid(publicId: string): Promise<string> {
+  private async resolveExamUuid(publicId: string, instituteId: string): Promise<string> {
     const cached = this.idMap.get(publicId);
     if (cached) return cached;
 
@@ -150,7 +175,7 @@ export class SupabaseExamRepository implements ExamRepository {
     const { data } = await client
       .from("exams")
       .select("id, legacy_id")
-      .eq("institute_id", DEFAULT_INSTITUTE_ID)
+      .eq("institute_id", instituteId)
       .eq("legacy_id", publicId)
       .maybeSingle();
 
@@ -166,11 +191,14 @@ export class SupabaseExamRepository implements ExamRepository {
 
   private async persistExam(exam: ExamDefinition): Promise<void> {
     try {
+      const session = getClientWorkspaceSession();
+      if (!session?.instituteId) return;
       const client = requireSupabaseClient("exams.save");
-      const examUuid = await this.resolveExamUuid(exam.id);
+      const examUuid = await this.resolveExamUuid(exam.id, session.instituteId);
       const { examRow, sections, questions } = examDefinitionToRows(
         exam,
         examUuid,
+        session.instituteId,
       );
 
       const { error: examError } = await client.from("exams").upsert(
@@ -214,6 +242,22 @@ export class SupabaseExamRepository implements ExamRepository {
           })),
         );
         throwIfSupabaseError(qErr, "exam_questions", "insert");
+        
+        // Enqueue solution generation at Priority 100
+        const bankQuestionIds = questions
+          .map((q) => q.bank_question_id)
+          .filter((id): id is string => Boolean(id));
+
+        if (bankQuestionIds.length > 0) {
+          fetch(`/api/institute/${session.instituteId}/solution`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              questionIds: bankQuestionIds,
+              priority: 100,
+            }),
+          }).catch((err) => console.error("Failed to enqueue solution generation:", err));
+        }
       }
 
       this.idMap.set(exam.id, examUuid);
@@ -224,8 +268,10 @@ export class SupabaseExamRepository implements ExamRepository {
 
   private async removeExam(publicId: string): Promise<void> {
     try {
+      const session = getClientWorkspaceSession();
+      if (!session?.instituteId) return;
       const client = requireSupabaseClient("exams.delete");
-      const examUuid = await this.resolveExamUuid(publicId);
+      const examUuid = await this.resolveExamUuid(publicId, session.instituteId);
       const { error } = await client.from("exams").delete().eq("id", examUuid);
       throwIfSupabaseError(error, "exams", "delete");
       this.idMap.delete(publicId);

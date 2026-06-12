@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import {
   Card,
   CardContent,
@@ -11,8 +10,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import { getRepositories } from "@/lib/repositories/provider";
-import { listAssignedCbtTests } from "@/services/cbt-test-service";
+import { listAssignedExams } from "@/services/cbt-test-service";
 import {
   findStudentForCandidate,
   isOperationalSchedulingActive,
@@ -20,10 +20,12 @@ import {
 import { logCbtGuard } from "@/lib/logging/runtime-logger";
 import { useAuthStore } from "@/stores/auth-store";
 import { useWorkspaceAuthStore } from "@/stores/workspace-auth-store";
+import { hydrateSupabaseRepositories } from "@/lib/supabase/hydrate-repositories";
 
 export function StudentCbtTestList() {
   const candidate = useAuthStore((s) => s.candidate);
   const ws = useWorkspaceAuthStore((s) => s.session);
+  const instituteId = ws?.instituteId;
   const hydrateWs = useWorkspaceAuthStore((s) => s.hydrate);
   const [tick, setTick] = useState(0);
 
@@ -32,11 +34,28 @@ export function StudentCbtTestList() {
   }, [hydrateWs]);
 
   useEffect(() => {
-    const t = window.setInterval(() => setTick((x) => x + 1), 15000);
-    return () => window.clearInterval(t);
+    hydrateSupabaseRepositories().finally(() => {
+      setTick((value) => value + 1);
+    });
+    const timer = window.setInterval(() => {
+      hydrateSupabaseRepositories().finally(() => {
+        setTick((value) => value + 1);
+      });
+    }, 15000);
+    const onFocus = () => {
+      hydrateSupabaseRepositories().finally(() => {
+        setTick((value) => value + 1);
+      });
+    };
+    window.addEventListener("focus", onFocus);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", onFocus);
+    };
   }, []);
 
   const rows = useMemo(() => {
+    void tick;
     if (!candidate) return [];
     const repos = getRepositories();
     const student = findStudentForCandidate(candidate);
@@ -45,77 +64,84 @@ export function StudentCbtTestList() {
         .listByStudentId(candidate.rollNumber)
         .map((record) => [record.attempt.testId, record]),
     );
-    const tests = repos.cbtTests.list();
+    const exams = repos.exams.list();
     const schedules = repos.schedules.list();
-    const assigned = listAssignedCbtTests(student, tests, schedules).filter(
-      ({ test, schedule }) =>
-        (!ws?.instituteId || test.instituteId === ws.instituteId) &&
-        (!schedule.instituteId ||
-          !ws?.instituteId ||
-          schedule.instituteId === ws.instituteId),
+    const assigned = listAssignedExams(student, exams, schedules).filter(
+      ({ schedule }) =>
+        (!schedule.instituteId || !instituteId || schedule.instituteId === instituteId),
     );
+
     return assigned.map((row) => {
-      const latestAttempt = latestByTestId.get(row.test.id);
+      const latestAttempt = latestByTestId.get(row.exam.id);
       const hasSubmitted = Boolean(latestAttempt?.attempt.submittedAt);
-      const hasInProgress = !hasSubmitted &&
-        Boolean(repos.attempts.load(row.test.id, candidate.rollNumber));
-      return { ...row, hasSubmitted, hasInProgress };
+      const hasInProgress =
+        !hasSubmitted && Boolean(repos.attempts.load(row.exam.id, candidate.rollNumber));
+      
+      const testProxy = {
+        id: row.exam.id,
+        title: row.exam.title,
+        durationMinutes: row.exam.durationMinutes,
+        questions: Object.keys(row.exam.questions),
+      };
+
+      return { ...row, test: testProxy, hasSubmitted, hasInProgress };
     });
-  }, [candidate, tick, ws?.instituteId]);
+  }, [candidate, instituteId, tick]);
 
   useEffect(() => {
     if (!candidate) return;
     logCbtGuard("student test list loaded", {
       candidateRoll: candidate.rollNumber,
-      instituteId: ws?.instituteId ?? null,
+      instituteId: instituteId ?? null,
       rowCount: rows.length,
     });
-  }, [candidate, rows.length, ws?.instituteId]);
+  }, [candidate, instituteId, rows.length]);
 
   if (!candidate) return null;
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold text-gray-900">Institute CBT tests</h2>
-        <Link
-          href="/exams"
-          className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-        >
-          Other exam catalog
-        </Link>
+      <div className="space-y-1">
+        <h2 className="text-2xl font-semibold text-[#14213d]">Upcoming tests</h2>
+        <p className="text-sm text-[#5e5a52]">
+          Start live tests, resume unfinished attempts, or wait for upcoming windows to open.
+        </p>
       </div>
 
       {!isOperationalSchedulingActive() ? (
-        <p className="text-sm text-gray-600">
-          No schedules configured — institute tests appear when your coordinator publishes a
-          window.
+        <p className="text-sm text-[#5e5a52]">
+          No CBT windows are active yet. Your institute will publish tests here when they are ready.
         </p>
       ) : rows.length === 0 ? (
-        <p className="text-sm text-gray-600">No institute tests assigned to you right now.</p>
+        <p className="text-sm text-[#5e5a52]">No institute tests are assigned to you right now.</p>
       ) : (
         <div className="grid gap-3">
           {rows.map(({ test, schedule, status, hasSubmitted, hasInProgress }) => {
-            const active = status === "active";
+            const startLimit = new Date(schedule.startAt).getTime() + 10 * 60 * 1000;
+            const isLate = Date.now() > startLimit;
+            const missed = status === "active" && !hasSubmitted && !hasInProgress && isLate;
+            const active = status === "active" && !missed;
+            
             const ctaLabel = hasSubmitted
               ? "View result"
               : hasInProgress
                 ? "Resume test"
                 : "Start test";
+
             return (
-              <Card key={`${test.id}-${schedule.id}`}>
+              <Card key={`${test.id}-${schedule.id}`} className="border-[#d8d2c7]">
                 <CardHeader>
-                  <CardTitle className="text-base text-[#1a3c6e]">{test.title}</CardTitle>
-                  <CardDescription>
-                    {test.durationMinutes} min · {test.questions.length} questions ·{" "}
-                    <span className="capitalize">{status}</span>
+                  <CardTitle className="text-base text-[#14213d]">{test.title}</CardTitle>
+                  <CardDescription className="text-[#5e5a52]">
+                    {test.durationMinutes} min | {test.questions.length} questions |{" "}
+                    <span className="capitalize">{missed ? "Missed" : status}</span>
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   {hasSubmitted ? (
                     <Link
                       href={`/student/tests/${test.id}/result`}
-                      className={cn(buttonVariants({ variant: "outline" }))}
+                      className={cn(buttonVariants({ variant: "outline" }), "bg-white")}
                     >
                       {ctaLabel}
                     </Link>
@@ -124,13 +150,17 @@ export function StudentCbtTestList() {
                       href={`/student/tests/${test.id}`}
                       className={cn(
                         buttonVariants(),
-                        "bg-[#1a3c6e] text-white hover:bg-[#152d52]",
+                        "bg-[#14213d] text-white hover:bg-[#0f1a31]",
                       )}
                     >
                       {ctaLabel}
                     </Link>
+                  ) : missed ? (
+                    <span className="text-sm text-red-500 font-medium">
+                      Missed (joined more than 10 mins late)
+                    </span>
                   ) : status === "upcoming" ? (
-                    <span className="text-sm text-gray-500">
+                    <span className="text-sm text-[#5e5a52]">
                       Opens{" "}
                       {new Date(schedule.startAt).toLocaleString("en-IN", {
                         dateStyle: "medium",
@@ -138,7 +168,7 @@ export function StudentCbtTestList() {
                       })}
                     </span>
                   ) : (
-                    <span className="text-sm text-gray-500">Window closed</span>
+                    <span className="text-sm text-[#5e5a52]">Window closed</span>
                   )}
                 </CardContent>
               </Card>

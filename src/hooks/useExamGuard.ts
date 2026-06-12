@@ -7,7 +7,8 @@ import { useExamSessionStore } from "@/stores/exam-session-store";
 import type { AuditActorRole } from "@/types/audit";
 
 export interface UseExamGuardOptions {
-  enabled: boolean;
+  enabled?: boolean;
+  integrityState?: "ACTIVE" | "SUSPENDED_BY_SYSTEM" | "DISABLED";
   onPersist?: () => void;
   auditContext?: {
     actorId: string;
@@ -32,6 +33,7 @@ export function useExamGuard({
   enabled,
   onPersist,
   auditContext,
+  integrityState = "ACTIVE",
 }: UseExamGuardOptions): UseExamGuardResult {
   const violations = useExamSessionStore((s) => s.violations);
   const lastViolationMessage = useExamSessionStore((s) => s.lastViolationMessage);
@@ -90,7 +92,7 @@ export function useExamGuard({
   );
 
   useEffect(() => {
-    if (!enabled) return;
+    if (integrityState === "DISABLED" && !enabled) return;
 
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (leaveConfirmedRef.current) return;
@@ -105,7 +107,7 @@ export function useExamGuard({
   }, [enabled]);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (integrityState === "DISABLED" && !enabled) return;
 
     if (!guardPushedRef.current) {
       window.history.pushState({ examGuard: true }, "", window.location.href);
@@ -123,7 +125,7 @@ export function useExamGuard({
   }, [enabled, recordWithPersist]);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (integrityState !== "ACTIVE" && !enabled) return;
 
     const handleVisibility = () => {
       if (document.visibilityState === "hidden") {
@@ -150,7 +152,7 @@ export function useExamGuard({
   }, [enabled, recordWithPersist]);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (integrityState !== "ACTIVE" && !enabled) return;
 
     const handleFullscreenChange = () => {
       if (!isFullscreenActive()) {
@@ -174,7 +176,7 @@ export function useExamGuard({
   }, [enabled, recordWithPersist]);
 
   useEffect(() => {
-    if (!enabled || lastViolationMessage == null) return;
+    if ((integrityState === "DISABLED" && !enabled) || lastViolationMessage == null) return;
     const t = window.setTimeout(() => clearLastMessage(), 6000);
     return () => window.clearTimeout(t);
   }, [enabled, lastViolationMessage, clearLastMessage]);

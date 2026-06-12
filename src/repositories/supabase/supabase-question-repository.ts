@@ -1,5 +1,6 @@
-import { DEFAULT_INSTITUTE_ID, isUuid } from "@/config/institute";
+import { isUuid } from "@/config/institute";
 import { logRepositoryFailure } from "@/lib/logging/runtime-logger";
+import { getClientWorkspaceSession } from "@/lib/workspace-session";
 import type { QuestionRepository } from "@/repositories/interfaces/question-repository";
 import {
   bankQuestionToRow,
@@ -75,12 +76,19 @@ export class SupabaseQuestionRepository implements QuestionRepository {
   }
 
   private async doRefresh(): Promise<void> {
+    const session = getClientWorkspaceSession();
+    if (!session?.instituteId) {
+      this.cache = [];
+      this.hydrated = true;
+      return;
+    }
+
     try {
       const client = requireSupabaseClient("questions.list");
       const { data, error } = await client
         .from("questions")
         .select("*")
-        .eq("institute_id", DEFAULT_INSTITUTE_ID)
+        .eq("institute_id", session.instituteId)
         .order("updated_at", { ascending: false });
 
       throwIfSupabaseError(error, "questions", "list");
@@ -95,6 +103,7 @@ export class SupabaseQuestionRepository implements QuestionRepository {
 
   private async resolveExistingId(
     publicId: string,
+    instituteId: string,
   ): Promise<{ id: string; legacyId: string | null }> {
     if (isUuid(publicId)) {
       return { id: publicId, legacyId: null };
@@ -103,7 +112,7 @@ export class SupabaseQuestionRepository implements QuestionRepository {
     const { data } = await client
       .from("questions")
       .select("id, legacy_id")
-      .eq("institute_id", DEFAULT_INSTITUTE_ID)
+      .eq("institute_id", instituteId)
       .eq("legacy_id", publicId)
       .maybeSingle();
 
@@ -115,9 +124,11 @@ export class SupabaseQuestionRepository implements QuestionRepository {
 
   private async persistOne(question: BankQuestion): Promise<void> {
     try {
+      const session = getClientWorkspaceSession();
+      if (!session?.instituteId) return;
       const client = requireSupabaseClient("questions.upsert");
-      const { id, legacyId } = await this.resolveExistingId(question.id);
-      const row = bankQuestionToRow(question, id, legacyId);
+      const { id, legacyId } = await this.resolveExistingId(question.id, session.instituteId);
+      const row = bankQuestionToRow(question, id, legacyId, session.instituteId);
       const { error } = await client.from("questions").upsert(row, {
         onConflict: "id",
       });
@@ -130,11 +141,13 @@ export class SupabaseQuestionRepository implements QuestionRepository {
   private async persistAll(questions: BankQuestion[]): Promise<void> {
     if (questions.length === 0) {
       try {
+        const session = getClientWorkspaceSession();
+        if (!session?.instituteId) return;
         const client = requireSupabaseClient("questions.clear");
         const { error } = await client
           .from("questions")
           .delete()
-          .eq("institute_id", DEFAULT_INSTITUTE_ID);
+          .eq("institute_id", session.instituteId);
         throwIfSupabaseError(error, "questions", "deleteAll");
       } catch (error) {
         logRepositoryFailure("SupabaseQuestionRepository.persistAll", error);
@@ -147,6 +160,8 @@ export class SupabaseQuestionRepository implements QuestionRepository {
     }
 
     try {
+      const session = getClientWorkspaceSession();
+      if (!session?.instituteId) return;
       const client = requireSupabaseClient("questions.prune");
       const keepLegacyIds = questions
         .filter((q) => !isUuid(q.id))
@@ -156,7 +171,7 @@ export class SupabaseQuestionRepository implements QuestionRepository {
       const { data: remote } = await client
         .from("questions")
         .select("id, legacy_id")
-        .eq("institute_id", DEFAULT_INSTITUTE_ID);
+        .eq("institute_id", session.instituteId);
 
       if (!remote) return;
 
@@ -182,8 +197,10 @@ export class SupabaseQuestionRepository implements QuestionRepository {
 
   private async removeOne(publicId: string): Promise<void> {
     try {
+      const session = getClientWorkspaceSession();
+      if (!session?.instituteId) return;
       const client = requireSupabaseClient("questions.delete");
-      const { id } = await this.resolveExistingId(publicId);
+      const { id } = await this.resolveExistingId(publicId, session.instituteId);
       const { error } = await client
         .from("questions")
         .delete()

@@ -1,10 +1,11 @@
-import { JEE_MAIN_MOCK } from "@/data/mock-exams";
-import { examCatalogRepository } from "@/repositories/exam-catalog-repository";
 import { cbtTestToExamDefinition } from "@/lib/cbt/cbt-to-exam";
-import { getRepositories } from "@/lib/repositories/provider";
+import { getRepositoryMode, getRepositories } from "@/lib/repositories/provider";
+import { logRepositoryFailure, logValidationFailure } from "@/lib/logging/runtime-logger";
+import { rowsToExamDefinition } from "@/repositories/supabase/mappers/exam-mapper";
+import { requireSupabaseClient, throwIfSupabaseError } from "@/repositories/supabase/supabase-repo-utils";
+import type { ExamQuestionRow, ExamRow, ExamSectionRow } from "@/repositories/supabase/types";
 import type { ExamDefinition } from "@/types/exam";
 import { validateExamStructure } from "@/lib/validation/exam-integrity";
-import { logValidationFailure } from "@/lib/logging/runtime-logger";
 
 function filterValidExams(exams: ExamDefinition[]): ExamDefinition[] {
   return exams.filter((exam) => {
@@ -13,54 +14,95 @@ function filterValidExams(exams: ExamDefinition[]): ExamDefinition[] {
       logValidationFailure(`exam:${exam.id}`, check.errors.join("; "));
       return false;
     }
-    return true;
+  return true;
   });
 }
 
-/** Built-in demos + institute-created exams from local catalog. */
-export function listAllExams(): ExamDefinition[] {
-  const builtin = [JEE_MAIN_MOCK];
-  if (typeof window === "undefined") return builtin;
-
-  const custom = filterValidExams(examCatalogRepository.getAll());
-  const builtinIds = new Set(builtin.map((e) => e.id));
-  const merged = [
-    ...builtin,
-    ...custom.filter((e) => !builtinIds.has(e.id)),
-  ];
-  return merged.sort(
-    (a, b) =>
-      new Date(b.scheduledAt).getTime() - new Date(a.scheduledAt).getTime(),
-  );
-}
-
 export function getExamById(examId: string): ExamDefinition | undefined {
-  if (examId === JEE_MAIN_MOCK.id) return JEE_MAIN_MOCK;
-  if (typeof window !== "undefined") {
-    const cbt = getRepositories().cbtTests.getById(examId);
-    if (cbt) {
-      const def = cbtTestToExamDefinition(cbt);
-      if (!def) return undefined;
-      const check = validateExamStructure(def);
-      if (!check.valid) {
-        logValidationFailure(`cbt:${examId}`, check.errors.join("; "));
-        return undefined;
-      }
-      return def;
-    }
-    const custom = examCatalogRepository.getById(examId);
-    if (custom) {
-      const check = validateExamStructure(custom);
-      if (!check.valid) {
-        logValidationFailure(`exam:${examId}`, check.errors.join("; "));
-        return undefined;
-      }
-      return custom;
-    }
+  const persisted = getRepositories().exams.getById(examId);
+  if (persisted) {
+    const validPersisted = filterValidExams([persisted]);
+    if (validPersisted[0]) return validPersisted[0];
   }
-  return undefined;
+
+  if (typeof window === "undefined") return undefined;
+
+  const cbt = getRepositories().cbtTests.getById(examId);
+  if (!cbt) return undefined;
+  const definition = cbtTestToExamDefinition(cbt);
+  if (!definition) return undefined;
+  const valid = filterValidExams([definition]);
+  return valid[0];
 }
 
-export function isBuiltinExam(examId: string): boolean {
-  return examId === JEE_MAIN_MOCK.id;
+export async function getExamByIdServer(examId: string): Promise<ExamDefinition | undefined> {
+  const fromRepo = getRepositories().exams.getById(examId);
+  if (fromRepo) {
+    const valid = filterValidExams([fromRepo]);
+    if (valid[0]) return valid[0];
+  }
+
+  if (getRepositoryMode() !== "supabase") return undefined;
+
+  try {
+    const client = requireSupabaseClient("exam-catalog.getExamByIdServer");
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(examId);
+    
+    let query = client.from("exams").select("*");
+    if (isUuid) {
+      query = query.or(`legacy_id.eq.${examId},id.eq.${examId}`);
+    } else {
+      query = query.eq("legacy_id", examId);
+    }
+    
+    const { data: examRow, error: examError } = await query.maybeSingle();
+    throwIfSupabaseError(examError, "exams", "getByIdServer");
+    if (!examRow) return undefined;
+
+    const typedExamRow = examRow as ExamRow;
+    const examUuid = typedExamRow.id;
+
+    const { data: sections, error: secError } = await client
+      .from("exam_sections")
+      .select("*")
+      .eq("exam_id", examUuid)
+      .order("sort_order", { ascending: true });
+    throwIfSupabaseError(secError, "exam_sections", "getByIdServer");
+
+    const { data: questions, error: questionError } = await client
+      .from("exam_questions")
+      .select("*")
+      .eq("exam_id", examUuid)
+      .order("sort_order", { ascending: true });
+    throwIfSupabaseError(questionError, "exam_questions", "getByIdServer");
+
+    const questionRows = (questions ?? []) as ExamQuestionRow[];
+    const bankQuestionIds = questionRows.map(q => q.bank_question_id).filter(Boolean) as string[];
+    
+    let bankQuestionsMap: Record<string, any> = {};
+    if (bankQuestionIds.length > 0) {
+      const { data: bankData, error: bankErr } = await client
+        .from("questions")
+        .select("id, metadata, options")
+        .in("id", bankQuestionIds);
+      
+      if (bankData && !bankErr) {
+        bankData.forEach(bq => {
+           bankQuestionsMap[bq.id] = bq;
+        });
+      }
+    }
+
+    const definition = rowsToExamDefinition(
+      typedExamRow,
+      (sections ?? []) as ExamSectionRow[],
+      questionRows,
+      bankQuestionsMap
+    );
+    const valid = filterValidExams([definition]);
+    return valid[0];
+  } catch (error) {
+    logRepositoryFailure("exam-catalog.getExamByIdServer", error);
+    return undefined;
+  }
 }

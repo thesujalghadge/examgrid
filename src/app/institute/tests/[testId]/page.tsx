@@ -13,32 +13,56 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { TestAnalyticsPanel } from "@/components/institute/test-analytics-panel";
+import { ExamSolutionProgress } from "@/components/institute/ExamSolutionProgress";
 import { getRepositories } from "@/lib/repositories/provider";
 import { useWorkspaceAuthStore } from "@/stores/workspace-auth-store";
 import type { InstituteStudent } from "@/types/institute-ops";
+import type { TestResultBreakdown } from "@/types/test-session";
+
+type SubmissionRow = {
+  sessionId: string;
+  studentId: string;
+  score: number;
+  maxScore: number;
+  submittedAt: number;
+  flagged: boolean;
+  resultBreakdown: TestResultBreakdown;
+};
 
 export default function InstituteTestDetailPage() {
   const params = useParams();
   const testId = params.testId as string;
   const router = useRouter();
-  const hydrate = useWorkspaceAuthStore((s) => s.hydrate);
+  const hydrateSession = useWorkspaceAuthStore((s) => s.hydrateSession);
   const instituteId = useWorkspaceAuthStore((s) => s.session?.instituteId);
   const [students, setStudents] = useState<InstituteStudent[]>([]);
+  const [serverSubmissions, setServerSubmissions] = useState<SubmissionRow[]>([]);
 
   useEffect(() => {
-    hydrate();
-  }, [hydrate]);
+    void hydrateSession();
+  }, [hydrateSession]);
 
   useEffect(() => {
     setStudents(getRepositories().students.list());
-  }, [testId, hydrate]);
+  }, [testId, instituteId]);
 
-  const test = useMemo(() => getRepositories().cbtTests.getById(testId), [testId, students]);
+  const test = useMemo(() => getRepositories().cbtTests.getById(testId), [testId]);
 
   const attempts = useMemo(
     () => (test ? getRepositories().cbtAttempts.listByTestId(test.id) : []),
-    [test, students],
+    [test],
   );
+
+  useEffect(() => {
+    if (!test || !instituteId) return;
+    fetch(`/api/institute/submissions/test/${encodeURIComponent(test.id)}`, {
+      credentials: "include",
+      cache: "no-store",
+    })
+      .then((res) => (res.ok ? res.json() : { submissions: [] }))
+      .then((data) => setServerSubmissions(data.submissions ?? []))
+      .catch(() => setServerSubmissions([]));
+  }, [test, instituteId]);
 
   const nameByRoll = useMemo(() => {
     const m = new Map<string, string>();
@@ -66,7 +90,9 @@ export default function InstituteTestDetailPage() {
   }
 
   const avg =
-    attempts.length === 0
+    serverSubmissions.length > 0
+      ? serverSubmissions.reduce((a, x) => a + x.score, 0) / serverSubmissions.length
+      : attempts.length === 0
       ? null
       : attempts.reduce((a, x) => a + (x.attempt.score ?? 0), 0) / attempts.length;
 
@@ -82,6 +108,7 @@ export default function InstituteTestDetailPage() {
           {test.totalMarks}
           {avg != null && ` · cohort avg ${avg.toFixed(2)}`}
         </p>
+        <ExamSolutionProgress testId={testId} totalQuestions={test.questions.length} />
       </div>
 
       {instituteId && (
@@ -106,15 +133,38 @@ export default function InstituteTestDetailPage() {
                   <th className="py-2 pr-4">Roll</th>
                   <th className="py-2 pr-4">Score</th>
                   <th className="py-2">Correct / total Q</th>
+                  <th className="py-2">Integrity</th>
                 </tr>
               </thead>
               <tbody>
-                {attempts.length === 0 ? (
+                {serverSubmissions.length === 0 && attempts.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="py-4 text-gray-500">
+                    <td colSpan={5} className="py-4 text-gray-500">
                       No submissions yet.
                     </td>
                   </tr>
+                ) : serverSubmissions.length > 0 ? (
+                  serverSubmissions.map((r) => (
+                    <tr key={r.sessionId} className="border-t border-gray-100">
+                      <td className="py-2 pr-4">
+                        {nameByRoll.get(r.studentId) ?? "—"}
+                      </td>
+                      <td className="py-2 pr-4">{r.studentId}</td>
+                      <td className="py-2 pr-4">
+                        {r.score}/{r.maxScore}
+                      </td>
+                      <td className="py-2">
+                        {r.resultBreakdown.correct}/{r.resultBreakdown.perQuestion.length}
+                      </td>
+                      <td className="py-2">
+                        {r.flagged ? (
+                          <span className="font-medium text-amber-700">Flagged</span>
+                        ) : (
+                          "Clear"
+                        )}
+                      </td>
+                    </tr>
+                  ))
                 ) : (
                   attempts.map((r) => {
                     const correct = r.responses.filter((x) => x.isCorrect).length;
@@ -128,6 +178,7 @@ export default function InstituteTestDetailPage() {
                         <td className="py-2">
                           {correct}/{r.responses.length}
                         </td>
+                        <td className="py-2">Local</td>
                       </tr>
                     );
                   })

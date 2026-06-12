@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import { buildShuffledExamView } from "@/lib/cbt/shuffled-exam";
 import { detectRapidNavigation } from "@/lib/cbt/integrity-engine";
+import { buildShuffledExamView } from "@/lib/cbt/shuffled-exam";
 import { getExamById } from "@/lib/exam-catalog";
+import { logCbtGuard, logCbtWarning } from "@/lib/logging/runtime-logger";
 import { getRepositories } from "@/lib/repositories/provider";
 import {
   applySignedAnswerKey,
@@ -17,6 +18,7 @@ import {
   syncTestSessionFromServerEndsAt,
 } from "@/services/test-session-engine";
 import { useQuestionStore } from "@/stores/question-store";
+
 import { useTimerStore } from "@/stores/timer-store";
 import type { TestSession, TestSessionIntegrityEventType } from "@/types/test-session";
 
@@ -24,7 +26,8 @@ const AUTOSAVE_DEBOUNCE_MS = 400;
 const AUTOSAVE_INTERVAL_MS = 15_000;
 
 export function useTestSessionEngine(params: {
-  enabled: boolean;
+  enabled?: boolean;
+  integrityState?: "ACTIVE" | "SUSPENDED_BY_SYSTEM" | "DISABLED";
   testId: string;
   studentId: string;
   instituteId: string;
@@ -32,6 +35,17 @@ export function useTestSessionEngine(params: {
   onExpired?: () => void;
   onSubmitted?: (session: TestSession) => void;
 }) {
+  const {
+    enabled,
+    testId,
+    studentId,
+    instituteId,
+    durationMinutes,
+    onExpired,
+    onSubmitted,
+    integrityState = "ACTIVE",
+  } = params;
+
   const sessionRef = useRef<TestSession | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -41,14 +55,15 @@ export function useTestSessionEngine(params: {
   const flushSave = useCallback(() => {
     const session = sessionRef.current;
     if (!session || session.status !== "in_progress") return;
-    const q = useQuestionStore.getState();
+    const questionState = useQuestionStore.getState();
     saveAnswer(session.id, {
-      answers: q.answers,
-      currentQuestionId: q.currentQuestionId ?? undefined,
-      currentSectionId: q.currentSectionId ?? undefined,
-      markedForReview: q.markedForReview,
-      visited: q.visited,
+      answers: questionState.answers,
+      currentQuestionId: questionState.currentQuestionId ?? undefined,
+      currentSectionId: questionState.currentSectionId ?? undefined,
+      markedForReview: questionState.markedForReview,
+      visited: questionState.visited,
     });
+    console.log(`[flushSave] flushed ${Object.keys(questionState.answers).length} answers from question store`);
   }, []);
 
   const scheduleSave = useCallback(() => {
@@ -60,59 +75,79 @@ export function useTestSessionEngine(params: {
 
   const syncServerTimer = useCallback(async () => {
     try {
-      const res = await fetch(
-        `/api/cbt/test-session/timer?testId=${encodeURIComponent(params.testId)}`,
+      const response = await fetch(
+        `/api/cbt/test-session/timer?testId=${encodeURIComponent(testId)}`,
         { credentials: "include", cache: "no-store" },
       );
-      if (!res.ok) return null;
-      const data = (await res.json()) as {
+      if (!response.ok) {
+        logCbtWarning("timer sync failed", {
+          testId,
+          studentId,
+          status: response.status,
+        });
+        return null;
+      }
+
+      const data = (await response.json()) as {
         endsAt: number;
         remainingSeconds: number;
         expired: boolean;
       };
+
       const session = sessionRef.current;
       if (session) {
         sessionRef.current = syncTestSessionFromServerEndsAt(session, data.endsAt);
         useTimerStore.getState().restore(data.endsAt);
       }
-      if (data.expired) {
-        params.onExpired?.();
-      }
+      if (data.expired) onExpired?.();
+
+      logCbtGuard("timer sync completed", {
+        testId,
+        studentId,
+        remainingSeconds: data.remainingSeconds,
+        expired: data.expired,
+      });
       return data;
     } catch {
+      logCbtWarning("timer sync request failed", { testId, studentId });
       return null;
     }
-  }, [params]);
+  }, [onExpired, studentId, testId]);
 
-  const applyShuffledExam = useCallback((session: TestSession) => {
-    const base = getExamById(params.testId);
-    if (!base) return;
-    const shuffled = buildShuffledExamView(base, session);
-    const q = useQuestionStore.getState();
-    useQuestionStore.getState().restoreState({
-      exam: shuffled,
-      answers: session.answers ?? q.answers,
-      visited: session.visited ?? {},
-      markedForReview: session.markedForReview ?? {},
-      currentQuestionId:
-        session.currentQuestionId ?? shuffled.sections[0]?.questionIds[0],
-      currentSectionId:
-        session.currentSectionId ?? shuffled.sections[0]?.id,
-    });
-  }, [params.testId]);
+  const applyShuffledExam = useCallback(
+    (session: TestSession) => {
+      const baseExam = getExamById(testId);
+      if (!baseExam) return;
+      const shuffled = buildShuffledExamView(baseExam, session);
+      const questionState = useQuestionStore.getState();
+      useQuestionStore.getState().restoreState({
+        exam: shuffled,
+        answers: session.answers ?? questionState.answers,
+        visited: session.visited ?? {},
+        markedForReview: session.markedForReview ?? {},
+        currentQuestionId:
+          session.currentQuestionId ?? shuffled.sections[0]?.questionIds[0],
+        currentSectionId:
+          session.currentSectionId ?? shuffled.sections[0]?.id,
+      });
+    },
+    [testId],
+  );
 
   const postServerSubmit = useCallback(
     async (session: TestSession, mode: "submitted" | "auto_submitted") => {
-      if (!session.signedAnswerKey || !session.answerKey) return null;
+      if (!session.signedAnswerKey || !session.answerKey) {
+        throw new Error("Cannot submit to server: missing answer key or signature.");
+      }
       try {
-        const res = await fetch("/api/cbt/test-session/submit", {
+        const response = await fetch("/api/cbt/test-session/submit", {
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            testId: params.testId,
+            testId,
             sessionId: session.id,
-            instituteId: params.instituteId,
+            instituteId,
             answers: session.answers ?? {},
             signedAnswerKey: session.signedAnswerKey,
             integrityEvents: session.integrityEvents,
@@ -120,39 +155,43 @@ export function useTestSessionEngine(params: {
             submittedAt: Date.now(),
           }),
         });
-        if (!res.ok) return null;
-        return (await res.json()) as {
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({}));
+          throw new Error(`server submit rejected: ${body.error || response.status}`);
+        }
+        return (await response.json()) as {
           score: number;
           resultBreakdown: TestSession["resultBreakdown"];
           integrityScore: number;
           flagged: boolean;
         };
-      } catch {
-        return null;
+      } catch (error) {
+        throw error;
       }
     },
-    [params.instituteId, params.testId],
+    [instituteId, studentId, testId],
   );
 
   const beginSession = useCallback(async () => {
     autoSubmitExpiredTests();
     let session = startTest({
-      testId: params.testId,
-      studentId: params.studentId,
-      instituteId: params.instituteId,
-      durationMinutes: params.durationMinutes,
+      testId,
+      studentId,
+      instituteId,
+      durationMinutes,
     });
+
     if (!session) {
       const prior = getRepositories()
         .testSessions.list()
         .find(
-          (s) =>
-            s.testId === params.testId &&
-            s.studentId === params.studentId &&
-            s.status !== "in_progress",
+          (row) =>
+            row.testId === testId &&
+            row.studentId === studentId &&
+            row.status !== "in_progress",
         );
       if (prior) {
-        params.onSubmitted?.(hydrateSessionAnswers(prior));
+        onSubmitted?.(hydrateSessionAnswers(prior));
         return null;
       }
       return null;
@@ -161,27 +200,36 @@ export function useTestSessionEngine(params: {
     session = hydrateSessionAnswers(session);
 
     try {
-      const res = await fetch("/api/cbt/test-session/start", {
+      const response = await fetch("/api/cbt/test-session/start", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          testId: params.testId,
-          durationMinutes: params.durationMinutes,
+          testId,
+          durationMinutes,
           sessionId: session.id,
-          instituteId: params.instituteId,
+          instituteId,
           answerKey: session.answerKey,
         }),
       });
-      if (res.ok) {
-        const data = (await res.json()) as { signedAnswerKey?: string; endsAt?: number };
+      if (response.ok) {
+        const data = (await response.json()) as {
+          signedAnswerKey?: string;
+          endsAt?: number;
+        };
         if (data.signedAnswerKey) {
           session = applySignedAnswerKey(session.id, data.signedAnswerKey) ?? session;
           session.signedAnswerKey = data.signedAnswerKey;
         }
+      } else {
+        logCbtWarning("server start rejected", {
+          testId,
+          studentId,
+          status: response.status,
+        });
       }
     } catch {
-      /* local session still usable */
+      logCbtWarning("server start request failed", { testId, studentId });
     }
 
     const timer = await syncServerTimer();
@@ -192,54 +240,73 @@ export function useTestSessionEngine(params: {
     sessionRef.current = session;
     useTimerStore.getState().restore(session.endsAt);
     applyShuffledExam(session);
-
     return session;
-  }, [applyShuffledExam, params, syncServerTimer]);
+  }, [
+    applyShuffledExam,
+    durationMinutes,
+    instituteId,
+    onSubmitted,
+    studentId,
+    syncServerTimer,
+    testId,
+  ]);
 
   const lockSubmit = useCallback(
     async (mode: "submitted" | "auto_submitted" = "submitted") => {
       flushSave();
       const session = sessionRef.current;
       if (!session) return null;
+
       const fresh = hydrateSessionAnswers(
         getRepositories().testSessions.getById(session.id) ?? session,
       );
-      sessionRef.current = fresh;
+      
+      const submitStartMs = performance.now();
+      console.log(`[CBT] Starting server submission...`);
+      console.log(`[lockSubmit] hydrated fresh session with ${Object.keys(fresh.answers ?? {}).length} answers`);
+      const responsePayload = await postServerSubmit(fresh, mode);
+      console.log(`[CBT] Server submission complete in ${Math.round(performance.now() - submitStartMs)}ms`);
+
       const locked = submitTest(fresh.id, mode);
       if (!locked) return null;
+
+      if (responsePayload && responsePayload.resultBreakdown) {
+         locked.resultBreakdown = responsePayload.resultBreakdown;
+         locked.score = responsePayload.score;
+         locked.integrityScore = responsePayload.integrityScore;
+         locked.flagged = responsePayload.flagged;
+         getRepositories().testSessions.save(locked);
+      }
+
       sessionRef.current = locked;
-      await postServerSubmit(locked, mode);
-      params.onSubmitted?.(locked);
+      onSubmitted?.(locked);
       return locked;
     },
-    [flushSave, params, postServerSubmit],
+    [flushSave, onSubmitted, postServerSubmit],
   );
 
-  const logIntegrity = useCallback(
-    (type: TestSessionIntegrityEventType) => {
-      const s = sessionRef.current;
-      if (s) logIntegrityEvent(s.id, type);
-    },
-    [],
-  );
+  const logIntegrity = useCallback((type: TestSessionIntegrityEventType) => {
+    const session = sessionRef.current;
+    if (session) logIntegrityEvent(session.id, type);
+  }, []);
 
   useEffect(() => {
-    if (!params.enabled) return;
+    if (!enabled) return;
 
     let prevAnswers = useQuestionStore.getState().answers;
-    const unsubQ = useQuestionStore.subscribe((state) => {
+    const unsubscribeQuestionStore = useQuestionStore.subscribe((state) => {
       if (state.answers !== prevAnswers) {
         prevAnswers = state.answers;
         scheduleSave();
       }
-      const qid = state.currentQuestionId;
-      if (qid && qid !== prevQuestionRef.current) {
+      const questionId = state.currentQuestionId;
+      if (questionId && questionId !== prevQuestionRef.current) {
         const now = Date.now();
         if (detectRapidNavigation(navTimestampsRef.current, now)) {
           logIntegrity("rapid_navigation");
         }
         navTimestampsRef.current = [...navTimestampsRef.current, now].slice(-8);
-        prevQuestionRef.current = qid;
+        prevQuestionRef.current = questionId;
       }
     });
 
@@ -249,7 +316,7 @@ export function useTestSessionEngine(params: {
       const session = sessionRef.current;
       if (session && getRemainingSeconds(session) <= 0) {
         void lockSubmit("auto_submitted");
-        params.onExpired?.();
+        onExpired?.();
       }
     }, AUTOSAVE_INTERVAL_MS);
 
@@ -262,20 +329,24 @@ export function useTestSessionEngine(params: {
     const onBlur = () => {
       if (sessionRef.current) logIntegrity("window_blur");
     };
-    const onCopy = (e: ClipboardEvent) => {
+    const onCopy = (event: ClipboardEvent) => {
       if (sessionRef.current) {
-        e.preventDefault();
+        event.preventDefault();
         logIntegrity("copy_attempt");
       }
     };
-    const onPaste = (e: ClipboardEvent) => {
+    const onPaste = (event: ClipboardEvent) => {
       if (sessionRef.current) {
-        e.preventDefault();
+        event.preventDefault();
         logIntegrity("paste_attempt");
       }
     };
     const onFullscreen = () => {
-      if (!document.fullscreenElement && sessionRef.current) {
+      if (integrityState !== "ACTIVE") return;
+      if (
+        !document.fullscreenElement &&
+        sessionRef.current?.status === "in_progress"
+      ) {
         logIntegrity("fullscreen_exit");
       }
     };
@@ -287,7 +358,7 @@ export function useTestSessionEngine(params: {
     document.addEventListener("fullscreenchange", onFullscreen);
 
     return () => {
-      unsubQ();
+      unsubscribeQuestionStore();
       if (debounceRef.current) clearTimeout(debounceRef.current);
       if (intervalRef.current) clearInterval(intervalRef.current);
       document.removeEventListener("visibilitychange", onVisibility);
@@ -297,13 +368,13 @@ export function useTestSessionEngine(params: {
       document.removeEventListener("fullscreenchange", onFullscreen);
     };
   }, [
-    params.enabled,
+    enabled,
     flushSave,
     lockSubmit,
-    params,
+    logIntegrity,
+    onExpired,
     scheduleSave,
     syncServerTimer,
-    logIntegrity,
   ]);
 
   return {

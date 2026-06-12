@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  distDir: ".next-build",
+  allowedDevOrigins: ["127.0.0.1"],
+  typedRoutes: false,
 };
 
 export default nextConfig;

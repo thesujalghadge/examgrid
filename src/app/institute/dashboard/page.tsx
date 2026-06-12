@@ -1,5 +1,5 @@
-import AdminOverviewPage from "@/app/admin/page";
+import { redirect } from "next/navigation";
 
 export default function InstituteDashboardPage() {
-  return <AdminOverviewPage />;
+  redirect("/institute");
 }

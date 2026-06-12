@@ -3,41 +3,45 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { DEMO_INSTITUTE } from "@/config/demo";
+import { getInstituteDisplayName } from "@/lib/platform-institute-registry";
 import { WorkspaceShell } from "@/components/shells/workspace-shell";
 import { useAuthStore } from "@/stores/auth-store";
 import { useWorkspaceAuthStore } from "@/stores/workspace-auth-store";
 
 const NAV = [
-  { href: "/student/dashboard", label: "Dashboard" },
-  { href: "/student/tests", label: "Tests" },
-  { href: "/student/practice", label: "Practice" },
-  { href: "/student/analytics", label: "Analytics" },
-  { href: "/student/revision", label: "Revision" },
-  { href: "/student/question-bank", label: "Question Bank" },
-  { href: "/student/profile", label: "Profile" },
+  { href: "/student/tests", label: "Upcoming Tests" },
+  { href: "/student/attempted", label: "Attempted Tests" },
+  { href: "/student/reports", label: "Reports" },
+  { href: "/student/analysis", label: "Analysis" },
+  { href: "/student/pyq", label: "PYQ Practice" },
 ];
 
 export function StudentShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const hydrate = useAuthStore((s) => s.hydrate);
-  const hydrateWorkspace = useWorkspaceAuthStore((s) => s.hydrateSession);
   const isHydrated = useAuthStore((s) => s.isHydrated);
   const candidate = useAuthStore((s) => s.candidate);
-  const workspaceSession = useWorkspaceAuthStore((s) => s.session);
+  const instituteId = useWorkspaceAuthStore((s) => s.session?.instituteId);
   const workspaceLogout = useWorkspaceAuthStore((s) => s.logout);
   const logout = useAuthStore((s) => s.logout);
 
-  useEffect(() => {
-    hydrate();
-    void hydrateWorkspace();
-  }, [hydrate, hydrateWorkspace]);
+  const wsHydrated = useWorkspaceAuthStore((s) => s.isHydrated);
+  const sessionRole = useWorkspaceAuthStore((s) => s.session?.role);
 
   useEffect(() => {
     if (!isHydrated || pathname === "/student/login") return;
-    if (!candidate) router.replace("/student/login");
-  }, [candidate, isHydrated, pathname, router]);
+    
+    if (wsHydrated && sessionRole && sessionRole !== "student") {
+      logout();
+      void workspaceLogout();
+      router.replace("/student/login");
+      return;
+    }
+
+    if (!candidate) {
+      router.replace("/student/login");
+    }
+  }, [candidate, isHydrated, wsHydrated, sessionRole, pathname, router, logout, workspaceLogout]);
 
   if (pathname === "/student/login") return <>{children}</>;
   if (!isHydrated || !candidate) return null;
@@ -49,27 +53,23 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
 
   return (
     <WorkspaceShell
-      title="Student Experience"
-      subtitle={DEMO_INSTITUTE.name}
-      identity={`${candidate.name} · ${candidate.rollNumber}`}
-      role={workspaceSession?.role ?? "student"}
-      instituteId={workspaceSession?.instituteId}
+      title="Student Access"
+      subtitle={getInstituteDisplayName(instituteId)}
+      identity={`${candidate.name} | ${candidate.rollNumber}`}
       nav={NAV}
       footer={
-        <div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full"
-            onClick={() => {
-              logout();
-              workspaceLogout();
-              router.push("/student/login");
-            }}
-          >
-            Logout
-          </Button>
-        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full bg-white"
+          onClick={() => {
+            logout();
+            void workspaceLogout();
+            router.push("/student/login");
+          }}
+        >
+          Logout
+        </Button>
       }
     >
       {children}

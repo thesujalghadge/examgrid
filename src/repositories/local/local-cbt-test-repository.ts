@@ -8,9 +8,14 @@ const cbtTestSchema = z.object({
   id: z.string(),
   title: z.string(),
   instituteId: z.string(),
+  examType: z.enum(["JEE_MAIN", "NEET", "CET"]).optional(),
   durationMinutes: z.number().int().positive(),
   totalMarks: z.number().nonnegative(),
   createdBy: z.string(),
+  instructions: z.array(z.string()).optional(),
+  sourceFileName: z.string().optional(),
+  sourceFileType: z.enum(["pdf", "doc", "docx", "csv", "xlsx", "txt"]).optional(),
+  sourceImportedAt: z.number().optional(),
   sections: z.array(
     z.object({
       id: z.string(),

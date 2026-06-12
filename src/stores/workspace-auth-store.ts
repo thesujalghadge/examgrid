@@ -6,6 +6,7 @@ import {
   hydrateSessionFromServer,
   persistWorkspaceSessionRemote,
 } from "@/lib/workspace-session";
+import { isInstituteScopedRole } from "@/lib/access-control";
 import { createSessionExpiry, isSessionExpired } from "@/lib/session-crypto";
 import { logSessionEvent, logSessionWarning } from "@/lib/logging/runtime-logger";
 import type { WorkspaceSession } from "@/types/access-control";
@@ -85,13 +86,14 @@ export const useWorkspaceAuthStore = create<WorkspaceAuthState>((set, get) => ({
   },
 
   login: async ({ userId, role, password, instituteId }) => {
-    if (!userId.trim() || password.length < 4) return false;
-    if (role !== "super_admin" && !instituteId?.trim()) return false;
+    void password;
+    if (!userId.trim()) return false;
+    if (isInstituteScopedRole(role) && !instituteId?.trim()) return false;
 
     const ok = await persistWorkspaceSessionRemote({
       userId: userId.trim(),
       role,
-      instituteId: role === "super_admin" ? undefined : (instituteId ?? "").trim(),
+      instituteId: instituteId?.trim() || undefined,
       expiresAt: createSessionExpiry(),
     });
     if (!ok) return false;

@@ -12,7 +12,7 @@ export const bankQuestionInputSchema = z.object({
   topic: z.string().min(1),
   difficulty: z.enum(["easy", "medium", "hard"]),
   questionType: z.enum(["MCQ_SINGLE", "NUMERICAL"]),
-  questionText: z.string().min(1),
+  questionText: z.string(),
   options: z.array(bankOptionSchema),
   correctAnswer: z.string().min(1),
   solution: z.string(),

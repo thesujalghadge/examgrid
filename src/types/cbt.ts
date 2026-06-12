@@ -1,13 +1,18 @@
-import type { QuestionType } from "@/types/exam";
+import type { ExamDefinition, QuestionType } from "@/types/exam";
 
 /** Institute-authored CBT test (tenant-scoped). */
 export interface CBTTest {
   id: string;
   title: string;
   instituteId: string;
+  examType?: ExamDefinition["examType"];
   durationMinutes: number;
   totalMarks: number;
   createdBy: string;
+  instructions?: string[];
+  sourceFileName?: string;
+  sourceFileType?: "pdf" | "doc" | "docx" | "csv" | "xlsx" | "txt";
+  sourceImportedAt?: number;
   sections: CBTTestSection[];
   questions: CBTTestQuestion[];
   /** Target batches (used with schedules). */

@@ -1,5 +1,5 @@
-import AdminQuestionsPage from "@/app/admin/questions/page";
+import { redirect } from "next/navigation";
 
 export default function InstituteQuestionBankPage() {
-  return <AdminQuestionsPage />;
+  redirect("/institute/tests");
 }

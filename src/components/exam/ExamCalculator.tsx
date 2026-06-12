@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Calculator } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { evaluateCalculatorExpression } from "@/lib/calculator-engine";
@@ -13,7 +13,11 @@ export function ExamCalculator() {
   const [open, setOpen] = useState(false);
   const [display, setDisplay] = useState("0");
   const [memory, setMemory] = useState(0);
-  const [position, setPosition] = useState({ x: 80, y: 100 });
+  const [position, setPosition] = useState({ x: 300, y: 100 });
+
+  useEffect(() => {
+    setPosition({ x: Math.max(0, window.innerWidth - 600), y: 100 });
+  }, []);
   const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -73,7 +77,7 @@ export function ExamCalculator() {
         type="button"
         size="sm"
         variant="outline"
-        className="fixed bottom-4 left-4 z-50 h-10 gap-2 border-[#1a3c6e] bg-white px-4 font-semibold text-[#1a3c6e] shadow-lg hover:bg-blue-50"
+        className="fixed top-[76px] right-[320px] max-md:right-2 z-40 h-8 gap-2 border-gray-400 bg-white px-3 text-xs font-semibold text-[#1a3c6e] shadow hover:bg-gray-50"
         onClick={() => setOpen((o) => !o)}
       >
         <Calculator className="h-4 w-4" />

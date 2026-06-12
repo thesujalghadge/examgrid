@@ -1,0 +1,31 @@
+
+==================================================
+EXTRACTION AUDIT REPORT
+==================================================
+Total Regions Audited: 156
+
+1. PDF Text Layer (Standard): 62 (39.7%)
+2. Math OCR Required:         81 (51.9%)
+3. Image OCR Required:        13 (8.3%)
+
+Sample Math Heavy Regions:
+stem_2 -> Formula Heavy. Sample: Q1. Let   be a G.P. of increasing positive terms. 
+stem_3 -> Formula Heavy. Sample: Q2. Let   be the solution of the differential equa
+stem_4 -> Formula Heavy. Sample: Q3. Two balls are selected at random one by one wi
+stem_6 -> Formula Heavy. Sample: Q4. The product of all solutions of the equation  
+stem_7 -> Formula Heavy. Sample: Q5. Let the triangle PQR be the image of the trian
+stem_9 -> Formula Heavy. Sample: Q6. Let for   and  . Then  is equal to : (1) (2) f
+stem_10 -> Formula Heavy. Sample: (3) (4) 2π π
+stem_11 -> Formula Heavy. Sample: Q7. Let the parabola  , meet the coordinate axes a
+stem_13 -> Formula Heavy. Sample: Q8. Let   and   be two lines. Then which of the fo
+stem_14 -> Formula Heavy. Sample: Q9. Let   be a real differentiable function such t
+stem_16 -> Formula Heavy. Sample: Q10.From all the English alphabets, five letters a
+stem_4 -> Formula Heavy. Sample: Q11.Using the principal values of the inverse trig
+stem_5 -> Formula Heavy. Sample: Q12.Let   be a twice differentiable function such 
+stem_6 -> Formula Heavy. Sample: Q13.The area of the region, inside the circle   an
+stem_7 -> Formula Heavy. Sample: (3) (4) 3π −8 6π −8
+stem_8 -> Formula Heavy. Sample: Q14.Let the foci of a hyperbola be   and  . If it 
+stem_9 -> Formula Heavy. Sample: Q15.If  , then   is equal to : (1) (2) (3) (4) ∑n 
+stem_10 -> Formula Heavy. Sample: Q16.A coin is tossed three times. Let   denote the
+stem_12 -> Formula Heavy. Sample: Q17.The number of non-empty equivalence relations 
+stem_14 -> Formula Heavy. Sample: Q18.A circle  of radius 2 lies in the second quadr

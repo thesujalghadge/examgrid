@@ -31,6 +31,9 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+.codex-dev.err
+.codex-dev.out
+.codex-dev2.out
 
 # TypeScript
 *.tsbuildinfo

@@ -17,15 +17,16 @@ const integrityEventSchema = z.object({
     "copy_attempt",
     "paste_attempt",
     "rapid_navigation",
+    "browser_back",
   ]),
   at: z.number(),
-  meta: z.record(z.string(), z.union([z.string(), z.number()])).optional(),
+  meta: z.record(z.string(), z.unknown()).nullish(),
 });
 
 const answerKeyEntrySchema = z.object({
   type: z.enum(["MCQ_SINGLE", "NUMERICAL"]),
-  correctOptionId: z.string().optional(),
-  correctNumericalAnswer: z.string().optional(),
+  correctOptionId: z.string().nullish(),
+  correctNumericalAnswer: z.string().nullish(),
   marks: z.number(),
   negativeMarks: z.number(),
 });
@@ -59,26 +60,37 @@ const sessionSchema = z.object({
   status: z.enum(["in_progress", "submitted", "auto_submitted"]),
   startedAt: z.number(),
   endsAt: z.number(),
-  answers: z.record(z.string(), z.string().nullable()).optional(),
+  answers: z.record(z.string(), z.string().nullable()).nullish(),
   lastSavedAt: z.number(),
-  currentQuestionId: z.string().optional(),
-  currentSectionId: z.string().optional(),
-  markedForReview: z.record(z.string(), z.boolean()).optional(),
-  visited: z.record(z.string(), z.boolean()).optional(),
+  currentQuestionId: z.string().nullish(),
+  currentSectionId: z.string().nullish(),
+  markedForReview: z.record(z.string(), z.boolean()).nullish(),
+  visited: z.record(z.string(), z.boolean()).nullish(),
   questionOrder: z.array(z.string()).default([]),
   optionOrderMap: z.record(z.string(), z.array(z.number())).default({}),
-  integrityEvents: z.array(integrityEventSchema).optional(),
-  integrityScore: z.number().optional(),
-  flagged: z.boolean().optional(),
-  score: z.number().optional(),
-  resultBreakdown: resultBreakdownSchema.optional(),
-  answerKey: z.record(z.string(), answerKeyEntrySchema).optional(),
-  signedAnswerKey: z.string().optional(),
+  integrityEvents: z.array(integrityEventSchema).nullish(),
+  integrityScore: z.number().nullish(),
+  flagged: z.boolean().nullish(),
+  score: z.number().nullish(),
+  resultBreakdown: resultBreakdownSchema.nullish(),
+  answerKey: z.record(z.string(), answerKeyEntrySchema).nullish(),
+  signedAnswerKey: z.string().nullish(),
 });
 
 function parseList(raw: unknown): TestSession[] {
-  const res = z.array(sessionSchema).safeParse(raw);
-  return res.success ? (res.data as TestSession[]) : [];
+  if (!Array.isArray(raw)) return [];
+  const valid: TestSession[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object" || !item.id) continue;
+    const res = sessionSchema.safeParse(item);
+    if (res.success) {
+      valid.push(res.data as TestSession);
+    } else {
+      console.warn("[LocalTestSessionRepository] schema mismatch, recovering raw session", item.id);
+      valid.push(item as TestSession);
+    }
+  }
+  return valid;
 }
 
 function stripAnswers(session: TestSession): TestSession {
@@ -132,7 +144,11 @@ export class LocalTestSessionRepository implements TestSessionRepository {
     }
     const lean = stripAnswers(withDefaults);
     const parsed = sessionSchema.safeParse(lean);
-    if (!parsed.success) return;
+    if (!parsed.success) {
+      console.warn("[LocalTestSessionRepository] save validation mismatch, saving raw", parsed.error);
+    }
+    const sessionToSave = parsed.success ? parsed.data : lean;
+
     const all = parseList(
       readStorageJson({
         storage: "local",
@@ -140,8 +156,8 @@ export class LocalTestSessionRepository implements TestSessionRepository {
         fallback: [],
         validate: (data) => ({ ok: true, value: data }),
       }),
-    ).filter((s) => s.id !== parsed.data.id);
-    all.push(parsed.data as TestSession);
+    ).filter((s) => s.id !== sessionToSave.id);
+    all.push(sessionToSave as TestSession);
     writeStorageJson("local", STORAGE_KEYS.testSessions, all);
   }
 

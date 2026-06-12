@@ -1,8 +1,8 @@
-import { DEFAULT_INSTITUTE_ID } from "@/config/institute";
 import { getRepositoryMode } from "@/lib/repositories/provider";
 import { getRepositories } from "@/lib/repositories/provider";
 import { hydrateSupabaseRepositories } from "@/lib/supabase/hydrate-repositories";
 import { getClientEnvConfig } from "@/lib/supabase/env-config";
+import { getClientWorkspaceSession } from "@/lib/workspace-session";
 import {
   requireSupabaseClient,
   throwIfSupabaseError,
@@ -43,6 +43,10 @@ async function probeTable(
   instituteFilter = true,
 ): Promise<TableAccessResult> {
   try {
+    const session = getClientWorkspaceSession();
+    if (instituteFilter && table !== "institutes" && !session?.instituteId) {
+      return { table, ok: true, rowCount: 0 };
+    }
     const client = requireSupabaseClient(`verify.${table}`);
     const column =
       table === "exam_schedule_batches"
@@ -52,7 +56,7 @@ async function probeTable(
           : "*";
     let query = client.from(table).select(column, { count: "exact", head: true });
     if (instituteFilter && table !== "institutes") {
-      query = query.eq("institute_id", DEFAULT_INSTITUTE_ID);
+      query = query.eq("institute_id", session!.instituteId);
     }
     const { count, error } = await query;
     throwIfSupabaseError(error, table, "select");
@@ -95,11 +99,19 @@ export async function runSupabaseSmokeTest(): Promise<SmokeTestResult> {
   let insertedId: string | null = null;
 
   try {
+    const session = getClientWorkspaceSession();
+    if (!session?.instituteId) {
+      return {
+        ok: false,
+        steps: [{ step: "session", ok: false, detail: "No institute session loaded" }],
+        durationMs: Math.round(performance.now() - t0),
+      };
+    }
     const client = requireSupabaseClient("smoke.insert");
     const row = {
       id: crypto.randomUUID(),
       legacy_id: legacyId,
-      institute_id: DEFAULT_INSTITUTE_ID,
+      institute_id: session.instituteId,
       subject: "Physics",
       chapter: "Smoke",
       topic: "Verification",
@@ -174,6 +186,14 @@ export async function verifyExamPersistence(): Promise<ExamPersistenceVerifyResu
   let examUuid: string | null = null;
 
   try {
+    const session = getClientWorkspaceSession();
+    if (!session?.instituteId) {
+      return {
+        ok: false,
+        steps: [{ step: "session", ok: false, detail: "No institute session loaded" }],
+        durationMs: Math.round(performance.now() - t0),
+      };
+    }
     const client = requireSupabaseClient("exam-verify.insert");
     examUuid = crypto.randomUUID();
     const sectionId = "smoke-sec-1";
@@ -182,7 +202,7 @@ export async function verifyExamPersistence(): Promise<ExamPersistenceVerifyResu
     const { error: examErr } = await client.from("exams").insert({
       id: examUuid,
       legacy_id: legacyId,
-      institute_id: DEFAULT_INSTITUTE_ID,
+      institute_id: session.instituteId,
       title: "Smoke Test Exam",
       subtitle: "Delete me",
       exam_type: "JEE_MAIN",
@@ -198,7 +218,7 @@ export async function verifyExamPersistence(): Promise<ExamPersistenceVerifyResu
     const { error: secErr } = await client.from("exam_sections").insert({
       id: sectionId,
       exam_id: examUuid,
-      institute_id: DEFAULT_INSTITUTE_ID,
+      institute_id: session.instituteId,
       name: "Section A",
       sort_order: 0,
     });
@@ -209,7 +229,7 @@ export async function verifyExamPersistence(): Promise<ExamPersistenceVerifyResu
       id: questionId,
       exam_id: examUuid,
       section_id: sectionId,
-      institute_id: DEFAULT_INSTITUTE_ID,
+      institute_id: session.instituteId,
       question_number: 1,
       question_type: "MCQ_SINGLE",
       question_text: "Smoke exam question",

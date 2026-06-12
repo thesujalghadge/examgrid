@@ -1,0 +1,605 @@
+{
+  "job_id": "vision_job_fbbd93a742ef50f6",
+  "questions": [
+    {
+      "id": "Q1",
+      "q_num": 1,
+      "q_type": "MCQ",
+      "page": 1,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q1_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q1_crop.jpg"
+    },
+    {
+      "id": "Q2",
+      "q_num": 2,
+      "q_type": "MCQ",
+      "page": 1,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q2_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q2_crop.jpg"
+    },
+    {
+      "id": "Q3",
+      "q_num": 3,
+      "q_type": "MCQ",
+      "page": 1,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q3_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q3_crop.jpg"
+    },
+    {
+      "id": "Q4",
+      "q_num": 4,
+      "q_type": "MCQ",
+      "page": 1,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q4_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q4_crop.jpg"
+    },
+    {
+      "id": "Q5",
+      "q_num": 5,
+      "q_type": "MCQ",
+      "page": 1,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q5_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q5_crop.jpg"
+    },
+    {
+      "id": "Q6",
+      "q_num": 6,
+      "q_type": "MCQ",
+      "page": 1,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q6_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q6_crop.jpg"
+    },
+    {
+      "id": "Q7",
+      "q_num": 7,
+      "q_type": "MCQ",
+      "page": 1,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q7_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q7_crop.jpg"
+    },
+    {
+      "id": "Q8",
+      "q_num": 8,
+      "q_type": "MCQ",
+      "page": 1,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q8_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q8_crop.jpg"
+    },
+    {
+      "id": "Q9",
+      "q_num": 9,
+      "q_type": "MCQ",
+      "page": 1,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q9_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q9_crop.jpg"
+    },
+    {
+      "id": "Q10",
+      "q_num": 10,
+      "q_type": "MCQ",
+      "page": 1,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q10_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q10_crop.jpg"
+    },
+    {
+      "id": "Q11",
+      "q_num": 11,
+      "q_type": "MCQ",
+      "page": 2,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q11_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q11_crop.jpg"
+    },
+    {
+      "id": "Q12",
+      "q_num": 12,
+      "q_type": "MCQ",
+      "page": 2,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q12_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q12_crop.jpg"
+    },
+    {
+      "id": "Q13",
+      "q_num": 13,
+      "q_type": "MCQ",
+      "page": 2,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q13_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q13_crop.jpg"
+    },
+    {
+      "id": "Q14",
+      "q_num": 14,
+      "q_type": "MCQ",
+      "page": 2,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q14_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q14_crop.jpg"
+    },
+    {
+      "id": "Q15",
+      "q_num": 15,
+      "q_type": "MCQ",
+      "page": 2,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q15_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q15_crop.jpg"
+    },
+    {
+      "id": "Q16",
+      "q_num": 16,
+      "q_type": "MCQ",
+      "page": 2,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q16_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q16_crop.jpg"
+    },
+    {
+      "id": "Q17",
+      "q_num": 17,
+      "q_type": "MCQ",
+      "page": 2,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q17_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q17_crop.jpg"
+    },
+    {
+      "id": "Q18",
+      "q_num": 18,
+      "q_type": "MCQ",
+      "page": 2,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q18_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q18_crop.jpg"
+    },
+    {
+      "id": "Q19",
+      "q_num": 19,
+      "q_type": "MCQ",
+      "page": 2,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q19_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q19_crop.jpg"
+    },
+    {
+      "id": "Q20",
+      "q_num": 20,
+      "q_type": "MCQ",
+      "page": 3,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q20_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q20_crop.jpg"
+    },
+    {
+      "id": "Q21",
+      "q_num": 21,
+      "q_type": "NAT",
+      "page": 3,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q21_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q21_crop.jpg"
+    },
+    {
+      "id": "Q22",
+      "q_num": 22,
+      "q_type": "NAT",
+      "page": 3,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q22_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q22_crop.jpg"
+    },
+    {
+      "id": "Q23",
+      "q_num": 23,
+      "q_type": "NAT",
+      "page": 3,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q23_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q23_crop.jpg"
+    },
+    {
+      "id": "Q24",
+      "q_num": 24,
+      "q_type": "NAT",
+      "page": 3,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q24_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q24_crop.jpg"
+    },
+    {
+      "id": "Q25",
+      "q_num": 25,
+      "q_type": "NAT",
+      "page": 3,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q25_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q25_crop.jpg"
+    },
+    {
+      "id": "Q26",
+      "q_num": 26,
+      "q_type": "MCQ",
+      "page": 3,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q26_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q26_crop.jpg"
+    },
+    {
+      "id": "Q27",
+      "q_num": 27,
+      "q_type": "MCQ",
+      "page": 3,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q27_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q27_crop.jpg"
+    },
+    {
+      "id": "Q28",
+      "q_num": 28,
+      "q_type": "MCQ",
+      "page": 3,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q28_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q28_crop.jpg"
+    },
+    {
+      "id": "Q29",
+      "q_num": 29,
+      "q_type": "MCQ",
+      "page": 4,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q29_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q29_crop.jpg"
+    },
+    {
+      "id": "Q30",
+      "q_num": 30,
+      "q_type": "MCQ",
+      "page": 4,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q30_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q30_crop.jpg"
+    },
+    {
+      "id": "Q31",
+      "q_num": 31,
+      "q_type": "MCQ",
+      "page": 4,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q31_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q31_crop.jpg"
+    },
+    {
+      "id": "Q32",
+      "q_num": 32,
+      "q_type": "MCQ",
+      "page": 4,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q32_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q32_crop.jpg"
+    },
+    {
+      "id": "Q33",
+      "q_num": 33,
+      "q_type": "MCQ",
+      "page": 5,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q33_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q33_crop.jpg"
+    },
+    {
+      "id": "Q34",
+      "q_num": 34,
+      "q_type": "MCQ",
+      "page": 5,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q34_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q34_crop.jpg"
+    },
+    {
+      "id": "Q35",
+      "q_num": 35,
+      "q_type": "MCQ",
+      "page": 6,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q35_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q35_crop.jpg"
+    },
+    {
+      "id": "Q36",
+      "q_num": 36,
+      "q_type": "MCQ",
+      "page": 6,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q36_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q36_crop.jpg"
+    },
+    {
+      "id": "Q37",
+      "q_num": 37,
+      "q_type": "MCQ",
+      "page": 6,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q37_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q37_crop.jpg"
+    },
+    {
+      "id": "Q38",
+      "q_num": 38,
+      "q_type": "MCQ",
+      "page": 6,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q38_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q38_crop.jpg"
+    },
+    {
+      "id": "Q39",
+      "q_num": 39,
+      "q_type": "MCQ",
+      "page": 6,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q39_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q39_crop.jpg"
+    },
+    {
+      "id": "Q40",
+      "q_num": 40,
+      "q_type": "MCQ",
+      "page": 7,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q40_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q40_crop.jpg"
+    },
+    {
+      "id": "Q41",
+      "q_num": 41,
+      "q_type": "MCQ",
+      "page": 7,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q41_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q41_crop.jpg"
+    },
+    {
+      "id": "Q42",
+      "q_num": 42,
+      "q_type": "MCQ",
+      "page": 7,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q42_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q42_crop.jpg"
+    },
+    {
+      "id": "Q43",
+      "q_num": 43,
+      "q_type": "MCQ",
+      "page": 7,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q43_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q43_crop.jpg"
+    },
+    {
+      "id": "Q44",
+      "q_num": 44,
+      "q_type": "MCQ",
+      "page": 7,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q44_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q44_crop.jpg"
+    },
+    {
+      "id": "Q45",
+      "q_num": 45,
+      "q_type": "MCQ",
+      "page": 8,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q45_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q45_crop.jpg"
+    },
+    {
+      "id": "Q46",
+      "q_num": 46,
+      "q_type": "NAT",
+      "page": 8,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q46_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q46_crop.jpg"
+    },
+    {
+      "id": "Q47",
+      "q_num": 47,
+      "q_type": "NAT",
+      "page": 8,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q47_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q47_crop.jpg"
+    },
+    {
+      "id": "Q48",
+      "q_num": 48,
+      "q_type": "NAT",
+      "page": 8,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q48_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q48_crop.jpg"
+    },
+    {
+      "id": "Q49",
+      "q_num": 49,
+      "q_type": "NAT",
+      "page": 8,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q49_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q49_crop.jpg"
+    },
+    {
+      "id": "Q50",
+      "q_num": 50,
+      "q_type": "NAT",
+      "page": 9,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q50_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q50_crop.jpg"
+    },
+    {
+      "id": "Q51",
+      "q_num": 51,
+      "q_type": "MCQ",
+      "page": 9,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q51_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q51_crop.jpg"
+    },
+    {
+      "id": "Q52",
+      "q_num": 52,
+      "q_type": "MCQ",
+      "page": 9,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q52_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q52_crop.jpg"
+    },
+    {
+      "id": "Q53",
+      "q_num": 53,
+      "q_type": "MCQ",
+      "page": 9,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q53_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q53_crop.jpg"
+    },
+    {
+      "id": "Q54",
+      "q_num": 54,
+      "q_type": "MCQ",
+      "page": 9,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q54_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q54_crop.jpg"
+    },
+    {
+      "id": "Q55",
+      "q_num": 55,
+      "q_type": "MCQ",
+      "page": 9,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q55_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q55_crop.jpg"
+    },
+    {
+      "id": "Q56",
+      "q_num": 56,
+      "q_type": "MCQ",
+      "page": 9,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q56_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q56_crop.jpg"
+    },
+    {
+      "id": "Q57",
+      "q_num": 57,
+      "q_type": "MCQ",
+      "page": 10,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q57_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q57_crop.jpg"
+    },
+    {
+      "id": "Q58",
+      "q_num": 58,
+      "q_type": "MCQ",
+      "page": 10,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q58_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q58_crop.jpg"
+    },
+    {
+      "id": "Q59",
+      "q_num": 59,
+      "q_type": "MCQ",
+      "page": 10,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q59_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q59_crop.jpg"
+    },
+    {
+      "id": "Q60",
+      "q_num": 60,
+      "q_type": "MCQ",
+      "page": 10,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q60_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q60_crop.jpg"
+    },
+    {
+      "id": "Q61",
+      "q_num": 61,
+      "q_type": "MCQ",
+      "page": 10,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q61_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q61_crop.jpg"
+    },
+    {
+      "id": "Q62",
+      "q_num": 62,
+      "q_type": "MCQ",
+      "page": 11,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q62_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q62_crop.jpg"
+    },
+    {
+      "id": "Q63",
+      "q_num": 63,
+      "q_type": "MCQ",
+      "page": 11,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q63_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q63_crop.jpg"
+    },
+    {
+      "id": "Q64",
+      "q_num": 64,
+      "q_type": "MCQ",
+      "page": 11,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q64_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q64_crop.jpg"
+    },
+    {
+      "id": "Q65",
+      "q_num": 65,
+      "q_type": "MCQ",
+      "page": 11,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q65_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q65_crop.jpg"
+    },
+    {
+      "id": "Q66",
+      "q_num": 66,
+      "q_type": "MCQ",
+      "page": 11,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q66_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q66_crop.jpg"
+    },
+    {
+      "id": "Q67",
+      "q_num": 67,
+      "q_type": "MCQ",
+      "page": 12,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q67_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q67_crop.jpg"
+    },
+    {
+      "id": "Q68",
+      "q_num": 68,
+      "q_type": "MCQ",
+      "page": 12,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q68_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q68_crop.jpg"
+    },
+    {
+      "id": "Q69",
+      "q_num": 69,
+      "q_type": "MCQ",
+      "page": 12,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q69_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q69_crop.jpg"
+    },
+    {
+      "id": "Q70",
+      "q_num": 70,
+      "q_type": "MCQ",
+      "page": 12,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q70_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q70_crop.jpg"
+    },
+    {
+      "id": "Q71",
+      "q_num": 71,
+      "q_type": "NAT",
+      "page": 12,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q71_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q71_crop.jpg"
+    },
+    {
+      "id": "Q72",
+      "q_num": 72,
+      "q_type": "NAT",
+      "page": 12,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q72_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q72_crop.jpg"
+    },
+    {
+      "id": "Q73",
+      "q_num": 73,
+      "q_type": "NAT",
+      "page": 12,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q73_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q73_crop.jpg"
+    },
+    {
+      "id": "Q74",
+      "q_num": 74,
+      "q_type": "NAT",
+      "page": 12,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q74_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q74_crop.jpg"
+    },
+    {
+      "id": "Q75",
+      "q_num": 75,
+      "q_type": "MCQ",
+      "page": 13,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_fbbd93a742ef50f6\\vision_crops\\Q75_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_fbbd93a742ef50f6/vision_crops/Q75_crop.jpg"
+    }
+  ]
+}

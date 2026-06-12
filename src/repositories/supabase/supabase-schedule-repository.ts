@@ -1,5 +1,5 @@
-import { DEFAULT_INSTITUTE_ID } from "@/config/institute";
 import { logRepositoryFailure } from "@/lib/logging/runtime-logger";
+import { getClientWorkspaceSession } from "@/lib/workspace-session";
 import { assertExamSchedule } from "@/lib/validation/institute-ops-schema";
 import type { ScheduleRepository } from "@/repositories/interfaces/schedule-repository";
 import {
@@ -78,12 +78,19 @@ export class SupabaseScheduleRepository implements ScheduleRepository {
   }
 
   private async doRefresh(): Promise<void> {
+    const session = getClientWorkspaceSession();
+    if (!session?.instituteId) {
+      this.cache = [];
+      this.hydrated = true;
+      return;
+    }
+
     try {
       const client = requireSupabaseClient("exam_schedules.list");
       const { data: schedules, error: scheduleError } = await client
         .from("exam_schedules")
         .select("*")
-        .eq("institute_id", DEFAULT_INSTITUTE_ID)
+        .eq("institute_id", session.instituteId)
         .order("start_at", { ascending: false });
       throwIfSupabaseError(scheduleError, "exam_schedules", "list");
 
@@ -144,7 +151,7 @@ export class SupabaseScheduleRepository implements ScheduleRepository {
           schedule.batchIds.map((batchId) => ({
             schedule_id: schedule.id,
             batch_id: batchId,
-            institute_id: DEFAULT_INSTITUTE_ID,
+            institute_id: schedule.instituteId,
           })),
         );
       throwIfSupabaseError(linkError, "exam_schedule_batches", "insert");

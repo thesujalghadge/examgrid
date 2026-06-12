@@ -6,7 +6,8 @@ export type TestSessionIntegrityEventType =
   | "window_blur"
   | "copy_attempt"
   | "paste_attempt"
-  | "rapid_navigation";
+  | "rapid_navigation"
+  | "browser_back";
 
 export interface TestSessionIntegrityEvent {
   type: TestSessionIntegrityEventType;

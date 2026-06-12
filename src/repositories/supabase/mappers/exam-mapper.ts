@@ -1,4 +1,4 @@
-import { DEFAULT_INSTITUTE_ID, isUuid } from "@/config/institute";
+import { isUuid } from "@/config/institute";
 import type {
   ExamDefinition,
   ExamQuestion,
@@ -11,7 +11,7 @@ import type {
 } from "@/repositories/supabase/types";
 import { parseExamDefinition } from "@/lib/validation/exam-schema";
 
-export function examDefinitionToRows(exam: ExamDefinition, examUuid: string): {
+export function examDefinitionToRows(exam: ExamDefinition, examUuid: string, instituteId: string): {
   examRow: Omit<ExamRow, "created_at" | "updated_at">;
   sections: Omit<ExamSectionRow, "created_at" | "updated_at">[];
   questions: Omit<ExamQuestionRow, "created_at" | "updated_at">[];
@@ -21,7 +21,7 @@ export function examDefinitionToRows(exam: ExamDefinition, examUuid: string): {
   const examRow = {
     id: examUuid,
     legacy_id: legacyId,
-    institute_id: DEFAULT_INSTITUTE_ID,
+    institute_id: instituteId,
     title: exam.title,
     subtitle: exam.subtitle,
     exam_type: exam.examType,
@@ -36,7 +36,7 @@ export function examDefinitionToRows(exam: ExamDefinition, examUuid: string): {
     exam.sections.map((sec, idx) => ({
       id: sec.id,
       exam_id: examUuid,
-      institute_id: DEFAULT_INSTITUTE_ID,
+      institute_id: instituteId,
       name: sec.name,
       sort_order: idx,
     }));
@@ -46,7 +46,7 @@ export function examDefinitionToRows(exam: ExamDefinition, examUuid: string): {
     sec.questionIds.forEach((qid, idx) => {
       const q = exam.questions[qid];
       if (!q) return;
-      questions.push(examQuestionToRow(q, examUuid, sec.id, idx));
+      questions.push(examQuestionToRow(q, examUuid, sec.id, idx, instituteId));
     });
   }
 
@@ -58,16 +58,27 @@ function examQuestionToRow(
   examUuid: string,
   sectionId: string,
   sortOrder: number,
+  instituteId: string,
 ): Omit<ExamQuestionRow, "created_at" | "updated_at"> {
+  const metadataOption = {
+    id: "__metadata__",
+    label: "__metadata__",
+    text: JSON.stringify({
+      stemImage: q.stemImage,
+      hasImage: q.hasImage,
+      images: q.images,
+    }),
+  };
+
   return {
     id: q.id,
     exam_id: examUuid,
     section_id: sectionId,
-    institute_id: DEFAULT_INSTITUTE_ID,
+    institute_id: instituteId,
     question_number: q.number,
     question_type: q.type,
     question_text: q.text,
-    options: q.options,
+    options: [...q.options, metadataOption],
     correct_option_id: q.correctOptionId ?? null,
     correct_numerical_answer: q.correctNumericalAnswer ?? null,
     marks: q.marks,
@@ -87,6 +98,7 @@ export function rowsToExamDefinition(
   examRow: ExamRow,
   sectionRows: ExamSectionRow[],
   questionRows: ExamQuestionRow[],
+  bankQuestionsMap?: Record<string, any>,
 ): ExamDefinition {
   const publicExamId = examRow.legacy_id ?? examRow.id;
   const sections: ExamSection[] = [...sectionRows]
@@ -102,7 +114,8 @@ export function rowsToExamDefinition(
 
   const questions: Record<string, ExamQuestion> = {};
   for (const row of questionRows) {
-    questions[row.id] = rowToExamQuestion(row);
+    const bankData = row.bank_question_id && bankQuestionsMap ? bankQuestionsMap[row.bank_question_id] : null;
+    questions[row.id] = rowToExamQuestion(row, bankData);
   }
 
   return {
@@ -119,18 +132,47 @@ export function rowsToExamDefinition(
   };
 }
 
-function rowToExamQuestion(row: ExamQuestionRow): ExamQuestion {
+function rowToExamQuestion(row: ExamQuestionRow, bankData?: any): ExamQuestion {
+  let stemImage;
+  let images: string[] = [];
+  let hasImage = false;
+
+  if (bankData) {
+    const meta = bankData.metadata || {};
+    stemImage = meta.stemImage;
+    images = Array.isArray(bankData.options) && bankData.options.some((o: any) => o.image) ? [] : []; 
+    hasImage = meta.hasImage === true || !!stemImage;
+    if (Array.isArray(meta.images)) images = meta.images;
+  }
+
+  let cleanOptions = Array.isArray(row.options) ? [...row.options] : [];
+  const metaOptionIndex = cleanOptions.findIndex((o: any) => o.id === "__metadata__");
+  
+  if (metaOptionIndex !== -1) {
+    const metaStr = cleanOptions[metaOptionIndex].text;
+    try {
+      const parsed = JSON.parse(metaStr);
+      if (parsed.stemImage !== undefined) stemImage = parsed.stemImage;
+      if (parsed.hasImage !== undefined) hasImage = parsed.hasImage;
+      if (parsed.images !== undefined) images = parsed.images;
+    } catch (e) {}
+    cleanOptions.splice(metaOptionIndex, 1);
+  }
+
   return {
     id: row.id,
     sectionId: row.section_id,
     number: row.question_number,
     type: row.question_type,
     text: row.question_text,
-    options: Array.isArray(row.options) ? row.options : [],
+    options: cleanOptions as any,
     correctOptionId: row.correct_option_id ?? undefined,
     correctNumericalAnswer: row.correct_numerical_answer ?? undefined,
     marks: Number(row.marks),
     negativeMarks: Number(row.negative_marks),
+    stemImage,
+    images,
+    hasImage,
   };
 }
 

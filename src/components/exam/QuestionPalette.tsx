@@ -3,7 +3,6 @@
 import { cn } from "@/lib/utils";
 import { getPaletteButtonClass, PALETTE_LEGEND } from "@/lib/palette-styles";
 import { useQuestionStore } from "@/stores/question-store";
-
 interface QuestionPaletteProps {
   collapsed?: boolean;
   onToggleCollapse?: () => void;
@@ -35,7 +34,14 @@ export function QuestionPalette({
   const section = exam.sections.find((s) => s.id === currentSectionId);
 
   return (
-    <aside className="flex w-[280px] shrink-0 flex-col border-l-2 border-[#1a3c6e]/30 bg-[#f4f6f9] shadow-inner">
+    <>
+      <button
+        type="button"
+        aria-label="Hide question palette"
+        className="absolute inset-0 z-10 bg-black/20 md:hidden"
+        onClick={onToggleCollapse}
+      />
+      <aside className="absolute inset-y-0 right-0 z-20 flex w-[min(280px,86vw)] shrink-0 flex-col bg-blue-50/30 md:static md:w-[300px]">
       <div className="flex items-center justify-between border-b border-gray-300 bg-[#1a3c6e] px-3 py-2 text-white">
         <h2 className="text-sm font-semibold tracking-wide">Question Palette</h2>
         <button
@@ -50,8 +56,8 @@ export function QuestionPalette({
       <div className="border-b border-gray-300 bg-white px-3 py-2 text-[11px]">
         <p className="mb-1.5 font-semibold text-gray-800">Legend</p>
         <ul className="space-y-1">
-          {PALETTE_LEGEND.map((item) => (
-            <li key={item.status} className="flex items-center gap-2">
+          {PALETTE_LEGEND.map((item, index) => (
+            <li key={`legend-${item.status ?? "nat"}-${index}`} className="flex items-center gap-2">
               <span
                 className={cn(
                   "inline-block h-4 w-4 shrink-0 rounded-sm",
@@ -74,13 +80,14 @@ export function QuestionPalette({
               {sec.questionIds.map((qId, idx) => {
                 const status = questionStatuses[qId] ?? "not-visited";
                 const isActive = qId === currentQuestionId;
+                const isNumerical = exam.questions[qId]?.type === "NUMERICAL";
                 return (
                   <button
                     key={qId}
                     type="button"
                     onClick={() => goToQuestion(qId)}
                     className={cn(
-                      "flex h-8 w-8 items-center justify-center rounded-sm text-xs font-bold",
+                      "relative flex h-8 w-8 items-center justify-center rounded-sm text-xs font-bold",
                       getPaletteButtonClass(status),
                       isActive &&
                         "ring-2 ring-[#1a3c6e] ring-offset-1 ring-offset-white",
@@ -89,6 +96,9 @@ export function QuestionPalette({
                     aria-current={isActive ? "true" : undefined}
                   >
                     {idx + 1}
+                    {isNumerical && (
+                      <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-orange-400" />
+                    )}
                   </button>
                 );
               })}
@@ -104,6 +114,7 @@ export function QuestionPalette({
           </p>
         </div>
       )}
-    </aside>
+      </aside>
+    </>
   );
 }

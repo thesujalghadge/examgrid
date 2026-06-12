@@ -1,5 +1,5 @@
 import { questionImportPayloadSchema } from "@/lib/validation/question-schema";
-import type { BankQuestion, QuestionImportPayload } from "@/types/question-bank";
+import type { BankQuestion } from "@/types/question-bank";
 import type { QuestionType } from "@/types/exam";
 
 export interface ImportValidationError {

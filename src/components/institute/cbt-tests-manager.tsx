@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { cbtTestToExamDefinition } from "@/lib/cbt/cbt-to-exam";
 import { awaitRepositoryPersist } from "@/lib/repositories/await-persist";
 import { getRepositories } from "@/lib/repositories/provider";
 import { makeCbtId } from "@/lib/cbt/cbt-ids";
@@ -23,7 +24,6 @@ import {
 import { useWorkspaceAuthStore } from "@/stores/workspace-auth-store";
 import type { Batch, InstituteStudent } from "@/types/institute-ops";
 import type { CBTTest, CBTTestQuestion, CBTTestSection } from "@/types/cbt";
-import type { BankQuestion } from "@/types/question-bank";
 
 type SectionDraft = {
   localId: string;
@@ -57,13 +57,13 @@ function emptySection(): SectionDraft {
 
 export function CbtTestsManager() {
   const session = useWorkspaceAuthStore((s) => s.session);
-  const hydrate = useWorkspaceAuthStore((s) => s.hydrate);
+  const hydrateSession = useWorkspaceAuthStore((s) => s.hydrateSession);
   const [tests, setTests] = useState<CBTTest[]>([]);
 
   useEffect(() => {
-    hydrate();
-    setTests(getRepositories().cbtTests.list());
-  }, [hydrate]);
+    void hydrateSession();
+  }, [hydrateSession]);
+
   const [batches] = useState<Batch[]>(() =>
     typeof window === "undefined" ? [] : getRepositories().batches.list(),
   );
@@ -81,9 +81,12 @@ export function CbtTestsManager() {
   const [selectedTestId, setSelectedTestId] = useState<string | null>(null);
 
   const refresh = useCallback(() => {
-    hydrate();
     setTests(getRepositories().cbtTests.list());
-  }, [hydrate]);
+  }, []);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   const instituteId = session?.instituteId ?? "";
   const createdBy = session?.userId ?? "unknown";
@@ -91,101 +94,110 @@ export function CbtTestsManager() {
   const results = useMemo(() => {
     if (!selectedTestId) return [];
     return getRepositories().cbtAttempts.listByTestId(selectedTestId);
-  }, [selectedTestId, tests]);
+  }, [selectedTestId]);
 
   const studentNameByRoll = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const s of students) {
-      m.set(s.rollNumber, s.fullName);
+    const map = new Map<string, string>();
+    for (const student of students) {
+      map.set(student.rollNumber, student.fullName);
     }
-    return m;
+    return map;
   }, [students]);
 
   const buildTestFromDraft = (): CBTTest | null => {
     if (!title.trim() || !instituteId) return null;
+
     const testId = makeCbtId("cbt");
     const now = Date.now();
-    const dur = Math.max(1, parseInt(duration, 10) || 60);
+    const durationMinutes = Math.max(1, parseInt(duration, 10) || 60);
 
-    const cbtSections: CBTTestSection[] = [];
-    const questions: CBTTestQuestion[] = [];
+    const builtSections: CBTTestSection[] = [];
+    const builtQuestions: CBTTestQuestion[] = [];
+    const sectionIdByName = new Map<string, string>();
     let totalMarks = 0;
     let order = 0;
-    const sectionIdByName = new Map<string, string>();
 
-    for (const sd of sections) {
-      if (!sd.name.trim()) continue;
-      const name = sd.name.trim();
-      let sectionId = sectionIdByName.get(name);
+    for (const draft of sections) {
+      if (!draft.name.trim()) continue;
+
+      const sectionName = draft.name.trim();
+      let sectionId = sectionIdByName.get(sectionName);
       if (!sectionId) {
         sectionId = makeCbtId("cbt-sec");
-        sectionIdByName.set(name, sectionId);
-        cbtSections.push({
+        sectionIdByName.set(sectionName, sectionId);
+        builtSections.push({
           id: sectionId,
           testId,
-          name,
+          name: sectionName,
           order: order++,
         });
       }
 
-      if (sd.bankPickId) {
-        const bq = bank.find((q) => q.id === sd.bankPickId);
-        if (!bq) continue;
-        const marks = parseFloat(sd.marks) || bq.marks;
-        const neg = parseFloat(sd.negativeMarks);
-        const negativeMarks = Number.isFinite(neg) ? neg : bq.negativeMarks;
+      if (draft.bankPickId) {
+        const bankQuestion = bank.find((question) => question.id === draft.bankPickId);
+        if (!bankQuestion) continue;
+
+        const marks = parseFloat(draft.marks) || bankQuestion.marks;
+        const negative = parseFloat(draft.negativeMarks);
+        const negativeMarks = Number.isFinite(negative)
+          ? negative
+          : bankQuestion.negativeMarks;
+
         totalMarks += marks;
-        questions.push({
+        builtQuestions.push({
           id: makeCbtId("tq"),
           testId,
           sectionId,
           questionId: makeCbtId("examq"),
           source: "bank",
-          bankQuestionId: bq.id,
-          questionType: bq.questionType,
+          bankQuestionId: bankQuestion.id,
+          questionType: bankQuestion.questionType,
           marks,
           negativeMarks,
         });
-      } else if (sd.manualStem.trim()) {
-        const marks = parseFloat(sd.marks) || 4;
-        const neg = parseFloat(sd.negativeMarks);
-        const negativeMarks = Number.isFinite(neg) ? neg : 1;
-        totalMarks += marks;
-        const opts = [
-          { label: "A", text: sd.manualOptA || "—" },
-          { label: "B", text: sd.manualOptB || "—" },
-          { label: "C", text: sd.manualOptC || "—" },
-          { label: "D", text: sd.manualOptD || "—" },
-        ];
-        questions.push({
-          id: makeCbtId("tq"),
-          testId,
-          sectionId,
-          questionId: makeCbtId("examq"),
-          source: "manual",
-          questionType: "MCQ_SINGLE",
-          manual: {
-            text: sd.manualStem.trim(),
-            options: opts,
-            correctLabel: sd.manualCorrect || "A",
-          },
-          marks,
-          negativeMarks,
-        });
+        continue;
       }
+
+      if (!draft.manualStem.trim()) continue;
+
+      const marks = parseFloat(draft.marks) || 4;
+      const negative = parseFloat(draft.negativeMarks);
+      const negativeMarks = Number.isFinite(negative) ? negative : 1;
+      totalMarks += marks;
+
+      builtQuestions.push({
+        id: makeCbtId("tq"),
+        testId,
+        sectionId,
+        questionId: makeCbtId("examq"),
+        source: "manual",
+        questionType: "MCQ_SINGLE",
+        manual: {
+          text: draft.manualStem.trim(),
+          options: [
+            { label: "A", text: draft.manualOptA || "-" },
+            { label: "B", text: draft.manualOptB || "-" },
+            { label: "C", text: draft.manualOptC || "-" },
+            { label: "D", text: draft.manualOptD || "-" },
+          ],
+          correctLabel: draft.manualCorrect || "A",
+        },
+        marks,
+        negativeMarks,
+      });
     }
 
-    if (cbtSections.length === 0 || questions.length === 0) return null;
+    if (builtSections.length === 0 || builtQuestions.length === 0) return null;
 
     return {
       id: testId,
       title: title.trim(),
       instituteId,
-      durationMinutes: dur,
+      durationMinutes,
       totalMarks,
       createdBy,
-      sections: cbtSections,
-      questions,
+      sections: builtSections,
+      questions: builtQuestions,
       batchIds: selectedBatchIds,
       createdAt: now,
       updatedAt: now,
@@ -195,17 +207,18 @@ export function CbtTestsManager() {
   const saveTest = async () => {
     const test = buildTestFromDraft();
     if (!test) {
-      alert("Add at least one section with a name and a question (bank or manual).");
+      alert("Add at least one named section with a question from the bank or a manual MCQ.");
       return;
     }
-    getRepositories().cbtTests.save(test);
 
-    if (
-      selectedBatchIds.length > 0 &&
-      scheduleStart &&
-      scheduleEnd
-    ) {
-      const sched = createScheduleInput({
+    getRepositories().cbtTests.save(test);
+    const examDefinition = cbtTestToExamDefinition(test);
+    if (examDefinition) {
+      getRepositories().exams.save(examDefinition);
+    }
+
+    if (selectedBatchIds.length > 0 && scheduleStart && scheduleEnd) {
+      const schedule = createScheduleInput({
         examId: test.id,
         batchIds: selectedBatchIds,
         startAt: scheduleStart,
@@ -214,7 +227,7 @@ export function CbtTestsManager() {
         visibilityRule: "assigned_batches",
         active: true,
       });
-      getRepositories().schedules.save(sched);
+      getRepositories().schedules.save(schedule);
     }
 
     await awaitRepositoryPersist();
@@ -227,16 +240,17 @@ export function CbtTestsManager() {
     refresh();
   };
 
-  const summaryForTest = (t: CBTTest) => {
-    const attempts = getRepositories().cbtAttempts.listByTestId(t.id);
-    const avg =
+  const summaryForTest = (test: CBTTest) => {
+    const attempts = getRepositories().cbtAttempts.listByTestId(test.id);
+    const average =
       attempts.length === 0
-        ? "—"
+        ? "-"
         : (
-            attempts.reduce((a, x) => a + (x.attempt.score ?? 0), 0) /
+            attempts.reduce((sum, attempt) => sum + (attempt.attempt.score ?? 0), 0) /
             attempts.length
           ).toFixed(1);
-    return { count: attempts.length, avg };
+
+    return { count: attempts.length, average };
   };
 
   const scheduleForTest = (testId: string) =>
@@ -244,95 +258,88 @@ export function CbtTestsManager() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">CBT Tests</h1>
-        <p className="text-sm text-gray-600">
-          Build institute tests, attach questions, assign batches, and schedule.
-        </p>
-      </div>
-
-      <Card>
+      <Card className="border-[#d8d2c7]">
         <CardHeader>
-          <CardTitle className="text-base">Create test</CardTitle>
+          <CardTitle className="text-base text-[#14213d]">Build the test</CardTitle>
           <CardDescription>
-            Sections accumulate questions. Pick from the bank or enter a quick MCQ.
+            Use question-bank entries or add quick manual MCQs, then assign batches and a live
+            window.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <Label>Title</Label>
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+              <Label>Test title</Label>
+              <Input value={title} onChange={(event) => setTitle(event.target.value)} />
             </div>
             <div>
               <Label>Duration (minutes)</Label>
-              <Input
-                value={duration}
-                onChange={(e) => setDuration(e.target.value)}
-              />
+              <Input value={duration} onChange={(event) => setDuration(event.target.value)} />
             </div>
           </div>
 
-          {sections.map((sec, idx) => (
-            <Card key={sec.localId} className="border-dashed">
+          {sections.map((section, index) => (
+            <Card key={section.localId} className="border-dashed border-[#d8d2c7]">
               <CardHeader className="py-3">
-                <CardTitle className="text-sm">Section {idx + 1}</CardTitle>
+                <CardTitle className="text-sm text-[#14213d]">Section {index + 1}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
                 <div>
                   <Label>Section name</Label>
                   <Input
                     placeholder="Physics"
-                    value={sec.name}
-                    onChange={(e) => {
+                    value={section.name}
+                    onChange={(event) => {
                       const next = [...sections];
-                      next[idx] = { ...sec, name: e.target.value };
+                      next[index] = { ...section, name: event.target.value };
                       setSections(next);
                     }}
                   />
                 </div>
                 <div>
-                  <Label>From question bank</Label>
+                  <Label>Pick from question bank</Label>
                   <select
                     className="h-10 w-full rounded-md border border-gray-300 bg-white px-2 text-sm"
-                    value={sec.bankPickId}
-                    onChange={(e) => {
+                    value={section.bankPickId}
+                    onChange={(event) => {
                       const next = [...sections];
-                      next[idx] = { ...sec, bankPickId: e.target.value };
+                      next[index] = { ...section, bankPickId: event.target.value };
                       setSections(next);
                     }}
                   >
-                    <option value="">— none —</option>
-                    {bank.map((q) => (
-                      <option key={q.id} value={q.id}>
-                        {q.subject}: {q.questionText.slice(0, 60)}…
+                    <option value="">- none -</option>
+                    {bank.map((question) => (
+                      <option key={question.id} value={question.id}>
+                        {question.subject}: {question.questionText.slice(0, 60)}...
                       </option>
                     ))}
                   </select>
                 </div>
-                <p className="text-xs text-gray-500">Or manual MCQ (if bank empty)</p>
+                <p className="text-xs text-gray-500">
+                  Or add one quick manual MCQ if the bank entry is not ready.
+                </p>
                 <div>
                   <Label>Manual stem</Label>
                   <textarea
                     className="min-h-16 w-full rounded border border-gray-300 p-2 text-sm"
-                    value={sec.manualStem}
-                    onChange={(e) => {
+                    value={section.manualStem}
+                    onChange={(event) => {
                       const next = [...sections];
-                      next[idx] = { ...sec, manualStem: e.target.value };
+                      next[index] = { ...section, manualStem: event.target.value };
                       setSections(next);
                     }}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                   {(["manualOptA", "manualOptB", "manualOptC", "manualOptD"] as const).map(
-                    (k, j) => (
-                      <div key={k}>
-                        <Label>Option {String.fromCharCode(65 + j)}</Label>
+                    (key, optionIndex) => (
+                      <div key={key}>
+                        <Label>Option {String.fromCharCode(65 + optionIndex)}</Label>
                         <Input
-                          value={sec[k]}
-                          onChange={(e) => {
+                          value={section[key]}
+                          onChange={(event) => {
                             const next = [...sections];
-                            next[idx] = { ...sec, [k]: e.target.value };
+                            next[index] = { ...section, [key]: event.target.value };
                             setSections(next);
                           }}
                         />
@@ -342,12 +349,12 @@ export function CbtTestsManager() {
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   <div>
-                    <Label>Correct label</Label>
+                    <Label>Correct option</Label>
                     <Input
-                      value={sec.manualCorrect}
-                      onChange={(e) => {
+                      value={section.manualCorrect}
+                      onChange={(event) => {
                         const next = [...sections];
-                        next[idx] = { ...sec, manualCorrect: e.target.value };
+                        next[index] = { ...section, manualCorrect: event.target.value };
                         setSections(next);
                       }}
                     />
@@ -355,21 +362,21 @@ export function CbtTestsManager() {
                   <div>
                     <Label>Marks</Label>
                     <Input
-                      value={sec.marks}
-                      onChange={(e) => {
+                      value={section.marks}
+                      onChange={(event) => {
                         const next = [...sections];
-                        next[idx] = { ...sec, marks: e.target.value };
+                        next[index] = { ...section, marks: event.target.value };
                         setSections(next);
                       }}
                     />
                   </div>
                   <div>
-                    <Label>Negative</Label>
+                    <Label>Negative marks</Label>
                     <Input
-                      value={sec.negativeMarks}
-                      onChange={(e) => {
+                      value={section.negativeMarks}
+                      onChange={(event) => {
                         const next = [...sections];
-                        next[idx] = { ...sec, negativeMarks: e.target.value };
+                        next[index] = { ...section, negativeMarks: event.target.value };
                         setSections(next);
                       }}
                     />
@@ -382,7 +389,8 @@ export function CbtTestsManager() {
           <Button
             type="button"
             variant="outline"
-            onClick={() => setSections((s) => [...s, emptySection()])}
+            className="bg-white"
+            onClick={() => setSections((current) => [...current, emptySection()])}
           >
             Add section
           </Button>
@@ -390,20 +398,20 @@ export function CbtTestsManager() {
           <div>
             <Label>Assign batches</Label>
             <div className="mt-1 flex flex-wrap gap-2">
-              {batches.map((b) => (
-                <label key={b.id} className="flex items-center gap-1 text-sm">
+              {batches.map((batch) => (
+                <label key={batch.id} className="flex items-center gap-1 text-sm">
                   <input
                     type="checkbox"
-                    checked={selectedBatchIds.includes(b.id)}
+                    checked={selectedBatchIds.includes(batch.id)}
                     onChange={() => {
-                      setSelectedBatchIds((ids) =>
-                        ids.includes(b.id)
-                          ? ids.filter((x) => x !== b.id)
-                          : [...ids, b.id],
+                      setSelectedBatchIds((current) =>
+                        current.includes(batch.id)
+                          ? current.filter((value) => value !== batch.id)
+                          : [...current, batch.id],
                       );
                     }}
                   />
-                  {b.name}
+                  {batch.name}
                 </label>
               ))}
             </div>
@@ -411,61 +419,57 @@ export function CbtTestsManager() {
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <Label>Schedule start (local)</Label>
+              <Label>Schedule start</Label>
               <Input
                 type="datetime-local"
                 value={scheduleStart}
-                onChange={(e) => setScheduleStart(e.target.value)}
+                onChange={(event) => setScheduleStart(event.target.value)}
               />
             </div>
             <div>
-              <Label>Schedule end (local)</Label>
+              <Label>Schedule end</Label>
               <Input
                 type="datetime-local"
                 value={scheduleEnd}
-                onChange={(e) => setScheduleEnd(e.target.value)}
+                onChange={(event) => setScheduleEnd(event.target.value)}
               />
             </div>
           </div>
 
           <Button
-            className="bg-[#1a3c6e] hover:bg-[#152d52]"
+            className="bg-[#14213d] hover:bg-[#0f1a31]"
             type="button"
             onClick={() => void saveTest()}
           >
-            Save test & schedule
+            Save test and schedule
           </Button>
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="border-[#d8d2c7]">
         <CardHeader>
-          <CardTitle className="text-base">Published tests</CardTitle>
+          <CardTitle className="text-base text-[#14213d]">Published tests</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
           {tests.length === 0 ? (
             <p className="text-sm text-gray-500">No CBT tests yet.</p>
           ) : (
-            <ul className="divide-y rounded border bg-white text-sm">
-              {tests.map((t) => {
-                const { count, avg } = summaryForTest(t);
-                const schedule = scheduleForTest(t.id);
+            <ul className="divide-y rounded border border-[#ece6da] bg-white text-sm">
+              {tests.map((test) => {
+                const { count, average } = summaryForTest(test);
+                const schedule = scheduleForTest(test.id);
                 const scheduleStatus = schedule ? getScheduleStatus(schedule) : null;
                 return (
                   <li
-                    key={t.id}
-                    className="flex flex-wrap items-center justify-between gap-2 px-3 py-2"
+                    key={test.id}
+                    className="flex flex-wrap items-center justify-between gap-2 px-3 py-3"
                   >
                     <div>
-                      <p className="font-medium">{t.title}</p>
+                      <p className="font-medium text-[#14213d]">{test.title}</p>
                       <p className="text-xs text-gray-500">
-                        {t.durationMinutes} min · {t.questions.length} Q · attempts{" "}
-                        {count} · avg {avg}
-                        {scheduleStatus ? (
-                          <span> Â· {scheduleStatus}</span>
-                        ) : (
-                          <span> Â· unscheduled</span>
-                        )}
+                        {test.durationMinutes} min | {test.questions.length} questions | attempts{" "}
+                        {count} | avg {average}
+                        {scheduleStatus ? ` | ${scheduleStatus}` : " | unscheduled"}
                       </p>
                     </div>
                     <div className="flex gap-2">
@@ -473,16 +477,15 @@ export function CbtTestsManager() {
                         size="sm"
                         variant="outline"
                         type="button"
+                        className="bg-white"
                         onClick={() =>
-                          setSelectedTestId((id) =>
-                            id === t.id ? null : t.id,
-                          )
+                          setSelectedTestId((current) => (current === test.id ? null : test.id))
                         }
                       >
                         Results
                       </Button>
                       <Link
-                        href={`/institute/tests/${t.id}`}
+                        href={`/institute/tests/${test.id}`}
                         className="inline-flex h-9 items-center rounded-md border border-gray-300 bg-white px-3 text-sm"
                       >
                         Open
@@ -494,10 +497,10 @@ export function CbtTestsManager() {
             </ul>
           )}
 
-          {selectedTestId && (
-            <div className="mt-4 overflow-auto rounded border">
+          {selectedTestId ? (
+            <div className="mt-4 overflow-auto rounded border border-[#ece6da]">
               <table className="w-full text-left text-xs">
-                <thead className="bg-gray-50">
+                <thead className="bg-[#fbf9f4]">
                   <tr>
                     <th className="p-2">Student</th>
                     <th className="p-2">Roll</th>
@@ -506,17 +509,17 @@ export function CbtTestsManager() {
                   </tr>
                 </thead>
                 <tbody>
-                  {results.map((r) => {
-                    const correct = r.responses.filter((x) => x.isCorrect).length;
+                  {results.map((result) => {
+                    const correct = result.responses.filter((response) => response.isCorrect).length;
                     return (
-                      <tr key={r.attempt.id} className="border-t">
+                      <tr key={result.attempt.id} className="border-t border-[#ece6da]">
                         <td className="p-2">
-                          {studentNameByRoll.get(r.attempt.studentId) ?? "—"}
+                          {studentNameByRoll.get(result.attempt.studentId) ?? "-"}
                         </td>
-                        <td className="p-2">{r.attempt.studentId}</td>
-                        <td className="p-2">{r.attempt.score ?? "—"}</td>
+                        <td className="p-2">{result.attempt.studentId}</td>
+                        <td className="p-2">{result.attempt.score ?? "-"}</td>
                         <td className="p-2">
-                          {correct}/{r.responses.length}
+                          {correct}/{result.responses.length}
                         </td>
                       </tr>
                     );
@@ -524,7 +527,7 @@ export function CbtTestsManager() {
                 </tbody>
               </table>
             </div>
-          )}
+          ) : null}
         </CardContent>
       </Card>
     </div>

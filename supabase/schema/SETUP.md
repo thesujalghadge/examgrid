@@ -43,6 +43,7 @@ The files in this folder mirror migrations. Prefer `npm run db:bootstrap` instea
 | `exam_sections.sql` | Sections |
 | `exam_questions.sql` | Assembled questions |
 | `exam_schedules.sql` | Exam windows and batch assignments |
+| `cbt_attempt_results.sql` | Server-authoritative CBT attempts, answers, and results |
 | `audit_logs.sql` | Operational audit trail |
 | `rls-dev.sql` | Dev RLS policies |
 

@@ -4,7 +4,11 @@ export type LogCategory =
   | "recovery"
   | "validation"
   | "cbt"
-  | "session";
+  | "session"
+  | "upload"
+  | "parsing"
+  | "security"
+  | "auth";
 
 const PREFIX = "[ExamGrid]";
 
@@ -14,7 +18,7 @@ function emit(
   message: string,
   detail?: unknown,
 ): void {
-  const line = `${PREFIX}:${category} ${message}`;
+  const line = `${new Date().toISOString()} ${PREFIX}:${category} ${message}`;
   if (level === "info") {
     if (detail !== undefined) console.info(line, detail);
     else console.info(line);
@@ -72,6 +76,18 @@ export function logValidationFailure(
   emit("warn", "validation", `${context}: ${error}`);
 }
 
+export function logUploadEvent(event: string, detail?: unknown): void {
+  emit("info", "upload", event, detail);
+}
+
+export function logParsingEvent(event: string, detail?: unknown): void {
+  emit("info", "parsing", event, detail);
+}
+
+export function logParsingWarning(event: string, detail?: unknown): void {
+  emit("warn", "parsing", event, detail);
+}
+
 export function logCbtGuard(event: string, detail?: unknown): void {
   emit("info", "cbt", event, detail);
 }
@@ -86,4 +102,12 @@ export function logSessionEvent(event: string, detail?: unknown): void {
 
 export function logSessionWarning(event: string, detail?: unknown): void {
   emit("warn", "session", event, detail);
+}
+
+export function logSecurityEvent(event: string, detail?: unknown): void {
+  emit("warn", "security", event, detail);
+}
+
+export function logAuthEvent(event: string, detail?: unknown): void {
+  emit("info", "auth", event, detail);
 }

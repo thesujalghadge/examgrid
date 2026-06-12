@@ -12,14 +12,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { getExamById } from "@/data/mock-exams";
+import { getExamById } from "@/lib/exam-catalog";
 import { loadExamAttempt } from "@/lib/persistence";
-import { TestLeaderboardPanel } from "@/components/student/test-leaderboard-panel";
 import { getRepositories } from "@/lib/repositories/provider";
-import { listTestSessionsForTest } from "@/services/test-session-engine";
 import { useAuthStore } from "@/stores/auth-store";
 import { useWorkspaceAuthStore } from "@/stores/workspace-auth-store";
-import type { ExamResult } from "@/types/exam";
+import type { ExamResult, SectionScore } from "@/types/exam";
+import type { TestQuestionResult, TestResultBreakdown } from "@/types/test-session";
 
 function formatDuration(seconds: number): string {
   const h = Math.floor(seconds / 3600);
@@ -36,8 +35,8 @@ export default function StudentCbtResultPage() {
   const router = useRouter();
   const candidate = useAuthStore((s) => s.candidate);
   const hydrateWs = useWorkspaceAuthStore((s) => s.hydrate);
-  const wsSession = useWorkspaceAuthStore((s) => s.session);
   const [result, setResult] = useState<ExamResult | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [integrityScore, setIntegrityScore] = useState<number | null>(null);
   const [flagged, setFlagged] = useState(false);
 
@@ -54,33 +53,109 @@ export default function StudentCbtResultPage() {
     }
     const test = getRepositories().cbtTests.getById(testId);
     const ws = useWorkspaceAuthStore.getState().session;
-    if (!test || (ws?.instituteId && test.instituteId !== ws.instituteId)) {
+    if (
+      !test ||
+      !exam ||
+      (ws?.instituteId && test.instituteId !== ws.instituteId)
+    ) {
       router.replace("/student/tests");
       return;
     }
-    const attempt = loadExamAttempt(testId, candidate.rollNumber);
-    if (attempt?.result) {
-      setResult(attempt.result);
-    } else {
-      router.replace(`/student/tests/${testId}`);
-    }
+
     if (ws?.instituteId) {
-      const session = listTestSessionsForTest(testId, ws.instituteId).find(
-        (s) =>
-          s.studentId === candidate.rollNumber &&
-          (s.status === "submitted" || s.status === "auto_submitted"),
-      );
-      if (session) {
-        setIntegrityScore(session.integrityScore ?? null);
-        setFlagged(session.flagged ?? false);
+      // Institute CBT: fetch from server
+      fetch(`/api/cbt/test-session/result?testId=${encodeURIComponent(testId)}`)
+        .then((res) => {
+          if (!res.ok) throw new Error("Not found");
+          return res.json();
+        })
+        .then((data) => {
+          setIntegrityScore(data.integrityScore ?? null);
+          setFlagged(data.flagged ?? false);
+          
+          // Map backend breakdown to ExamResult format
+          const bd = data.resultBreakdown as TestResultBreakdown | undefined;
+          if (bd) {
+            const sectionScores: SectionScore[] = exam.sections.map((section) => {
+              const rows = bd.perQuestion.filter((row: TestQuestionResult) =>
+                section.questionIds.includes(row.questionId),
+              );
+              return {
+                sectionId: section.id,
+                sectionName: section.name,
+                total: section.questionIds.length,
+                attempted: rows.filter((row) => row.selected != null).length,
+                correct: rows.filter((row) => row.correct).length,
+                incorrect: rows.filter(
+                  (row) => row.selected != null && !row.correct,
+                ).length,
+                unattempted:
+                  section.questionIds.length -
+                  rows.filter((row) => row.selected != null).length,
+                score: rows.reduce(
+                  (sum, row) => sum + row.marksAwarded,
+                  0,
+                ),
+              };
+            });
+            setResult({
+              examId: testId,
+              examTitle: test.title,
+              totalQuestions: bd.correct + bd.incorrect + bd.unattempted,
+              candidateName: candidate.name,
+              rollNumber: candidate.rollNumber,
+              totalScore: bd.finalScore,
+              maxScore: bd.maxScore,
+              correct: bd.correct,
+              incorrect: bd.incorrect,
+              unattempted: bd.unattempted,
+              attempted: bd.attempted,
+              durationUsedSeconds: bd.durationSeconds,
+              submittedAt: data.submittedAt,
+              sectionScores,
+            });
+          }
+        })
+        .catch(() => {
+          setFetchError("Fetch failed");
+        });
+    } else {
+      // Standalone/Mock fallback
+      const attempt = loadExamAttempt(testId, candidate.rollNumber);
+      if (attempt?.result) {
+        setResult(attempt.result);
+      } else {
+        router.replace(`/student/tests/${testId}`);
       }
     }
-  }, [candidate, router, testId]);
+  }, [candidate, exam, router, testId]);
+
+  if (fetchError) {
+    return (
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <div className="text-red-600 bg-red-50 p-6 rounded border border-red-200">
+          <h2 className="font-bold text-lg mb-2">Pipeline Divergence Detected</h2>
+          <pre className="text-sm whitespace-pre-wrap">{fetchError}</pre>
+        </div>
+      </div>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <div className="text-red-600 bg-red-50 p-6 rounded border border-red-200">
+          <h2 className="font-bold text-lg mb-2">Pipeline Divergence Detected</h2>
+          <pre className="text-sm whitespace-pre-wrap">{fetchError}</pre>
+        </div>
+      </div>
+    );
+  }
 
   if (!candidate || !result || !exam) {
     return (
       <div className="flex min-h-screen items-center justify-center text-sm text-gray-500">
-        Loading result…
+        Loading result...
       </div>
     );
   }
@@ -88,30 +163,38 @@ export default function StudentCbtResultPage() {
   return (
     <div className="min-h-screen bg-gray-100">
       <header className="bg-[#1a3c6e] px-6 py-4 text-center text-white">
-        <h1 className="text-xl font-bold">Test Submitted</h1>
+        <h1 className="text-xl font-bold">Test submitted</h1>
         <p className="text-sm text-blue-100">{exam.title}</p>
       </header>
 
       <main className="mx-auto max-w-3xl space-y-6 p-6">
         <Card>
           <CardHeader>
-            <CardTitle className="text-[#1a3c6e]">Score Summary</CardTitle>
+            <CardTitle className="text-[#1a3c6e]">Score summary</CardTitle>
             <CardDescription>
-              {result.candidateName} · Roll {result.rollNumber}
+              {result.candidateName} | Roll {result.rollNumber}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-5">
               <Stat label="Total" value={`${result.totalScore} / ${result.maxScore}`} />
+              <Stat
+                label="Accuracy"
+                value={
+                  result.attempted > 0
+                    ? `${Math.round((result.correct / result.attempted) * 100)}%`
+                    : "0%"
+                }
+              />
               <Stat label="Correct" value={String(result.correct)} green />
               <Stat label="Incorrect" value={String(result.incorrect)} red />
               <Stat label="Unattempted" value={String(result.unattempted)} />
             </div>
             <p className="text-sm text-gray-600">
-              Time used: {formatDuration(result.durationUsedSeconds)} · Submitted:{" "}
+              Time used: {formatDuration(result.durationUsedSeconds)} | Submitted:{" "}
               {new Date(result.submittedAt).toLocaleString("en-IN")}
             </p>
-            {integrityScore != null && (
+            {integrityScore != null ? (
               <p className="mt-2 text-sm text-gray-600">
                 Integrity score: {integrityScore}/100
                 {flagged ? (
@@ -120,17 +203,9 @@ export default function StudentCbtResultPage() {
                   </span>
                 ) : null}
               </p>
-            )}
+            ) : null}
           </CardContent>
         </Card>
-
-        {wsSession?.instituteId && (
-          <TestLeaderboardPanel
-            testId={testId}
-            instituteId={wsSession.instituteId}
-            studentId={candidate.rollNumber}
-          />
-        )}
 
         <Card>
           <CardHeader>
@@ -148,15 +223,15 @@ export default function StudentCbtResultPage() {
                 </tr>
               </thead>
               <tbody>
-                {result.sectionScores.map((s) => (
-                  <tr key={s.sectionId} className="border-b border-gray-100">
-                    <td className="py-2 font-medium">{s.sectionName}</td>
+                {result.sectionScores.map((section) => (
+                  <tr key={section.sectionId} className="border-b border-gray-100">
+                    <td className="py-2 font-medium">{section.sectionName}</td>
                     <td className="py-2">
-                      {s.attempted}/{s.total}
+                      {section.attempted}/{section.total}
                     </td>
-                    <td className="py-2 text-green-700">{s.correct}</td>
-                    <td className="py-2 text-red-700">{s.incorrect}</td>
-                    <td className="py-2 font-semibold">{s.score}</td>
+                    <td className="py-2 text-green-700">{section.correct}</td>
+                    <td className="py-2 text-red-700">{section.incorrect}</td>
+                    <td className="py-2 font-semibold">{section.score}</td>
                   </tr>
                 ))}
               </tbody>
@@ -165,14 +240,14 @@ export default function StudentCbtResultPage() {
         </Card>
 
         <div className="flex flex-wrap justify-center gap-3">
-          <Link
-            href="/student/tests"
-            className={cn(buttonVariants({ variant: "outline" }))}
-          >
+          <Link href="/student/tests" className={cn(buttonVariants({ variant: "outline" }))}>
             Back to tests
           </Link>
-          <Button className="bg-[#1a3c6e]" onClick={() => router.push("/student/dashboard")}>
-            Dashboard
+          <Link href={`/student/tests/${testId}/solutions`} className={cn(buttonVariants({ variant: "default" }), "bg-[#1a3c6e]")}>
+            View Solutions
+          </Link>
+          <Button variant="ghost" onClick={() => router.push("/student/reports")}>
+            View analysis
           </Button>
         </div>
       </main>

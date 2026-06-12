@@ -35,10 +35,24 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts",
-    ".next-build/types/**/*.ts",
-    ".next-build/dev/types/**/*.ts"
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "check_*.ts",
+    "patch_*.ts",
+    "dump_*.ts",
+    "scratch*.ts",
+    "test_*.ts",
+    "test-*.ts",
+    "update_*.ts",
+    "prep_*.ts",
+    "get_*.ts",
+    "fix*.ts",
+    "clear_*.ts",
+    "verify_*.ts",
+    "audit.ts",
+    "proxy.ts"
   ]
 }
