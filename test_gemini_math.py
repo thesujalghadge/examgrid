@@ -4,7 +4,13 @@ from google import genai
 
 img_path = r"C:\AI\examgrid\public\uploads\cbt_assets\benchmark_inst\job_benchmark_002\regions\stem_2.webp"
 
-client = genai.Client(api_key="AIzaSyASKA2mogruul73DCV0WyxfP3vTRDh6PtQ")
+import os
+
+api_key = os.environ.get("GEMINI_API_KEY")
+if not api_key:
+    raise RuntimeError("GEMINI_API_KEY environment variable is required")
+
+client = genai.Client(api_key=api_key)
 prompt = "Transcribe the text and mathematical formulas in this image exactly. Use LaTeX for math."
 
 try:

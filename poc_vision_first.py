@@ -9,7 +9,9 @@ from google.genai import types
 
 # Setup
 pdf_path = r"C:\Users\SOURAV\Documents\examgrid data demo\JEE Main 2025 (22 Jan Shift 1) Previous Year Paper with Answer Keys - MathonGo.pdf"
-api_key = "AIzaSyASKA2mogruul73DCV0WyxfP3vTRDh6PtQ"
+api_key = os.environ.get("GEMINI_API_KEY")
+if not api_key:
+    raise RuntimeError("GEMINI_API_KEY environment variable is required")
 
 # We want Q1, Q2, Q20, Q50, Q75
 # To find boundaries, we need the start of the target Q and the start of the NEXT Q
