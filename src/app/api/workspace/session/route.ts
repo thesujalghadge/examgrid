@@ -53,6 +53,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "instituteId required" }, { status: 400 });
   }
 
+  if (body.instituteId?.trim()) {
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    
+    const { data: institute, error } = await supabase
+      .from("institutes")
+      .select("id")
+      .eq("id", body.instituteId.trim())
+      .maybeSingle();
+      
+    if (error || !institute) {
+      return NextResponse.json({ error: "GHOST_INSTITUTE" }, { status: 403 });
+    }
+  }
+
   const session: WorkspaceSession = {
     userId: body.userId.trim(),
     role: body.role,

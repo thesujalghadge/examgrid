@@ -62,14 +62,25 @@ export default function InstituteLoginPage() {
                 return;
               }
               void (async () => {
-                const ok = await login({
-                  role: "institute",
-                  userId: userId.trim() || selected?.adminEmail || "institute-admin",
-                  password: "dev",
-                  instituteId,
-                });
-                if (ok) router.push("/institute");
-                else setError("Could not start session.");
+                try {
+                  const ok = await login({
+                    role: "institute",
+                    userId: userId.trim() || selected?.adminEmail || "institute-admin",
+                    password: "dev",
+                    instituteId,
+                  });
+                  if (ok) router.push("/institute");
+                  else setError("Could not start session.");
+                } catch (e: any) {
+                  if (e.message === "GHOST_INSTITUTE") {
+                    import("@/lib/platform-institute-registry").then((m) => {
+                      m.deletePlatformInstitute(instituteId);
+                    });
+                    setError("This institute no longer exists. Please refresh and select another.");
+                  } else {
+                    setError("An unexpected error occurred.");
+                  }
+                }
               })();
             }}
           >

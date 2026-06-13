@@ -91,6 +91,7 @@ function manualToExamQuestion(
 export function cbtTestToExamDefinition(
   test: CBTTest,
   bankQuestionsOverride?: BankQuestion[],
+  solutionsReleaseTime?: string,
 ): ExamDefinition | null {
   const bankById = new Map(
     (bankQuestionsOverride ?? getQuestionBank()).map((question) => [question.id, question]),
@@ -169,5 +170,7 @@ export function cbtTestToExamDefinition(
         ? test.instructions
         : ["Answer all questions within the time limit.", "Rough work is allowed."],
     scheduledAt: new Date(test.createdAt).toISOString(),
+    solutionsReleaseTime,
   };
 }
+

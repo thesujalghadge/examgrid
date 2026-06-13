@@ -127,7 +127,7 @@ export async function POST(request: Request) {
   });
   res.cookies.set(CBT_TEST_TIMER_COOKIE, token, {
     ...COOKIE_OPTS,
-    maxAge: Math.max(1, Math.floor((endsAt - Date.now()) / 1000)),
+    maxAge: Math.max(1, Math.floor((endsAt - Date.now()) / 1000)) + 86400, // +24h to survive auto-submit
   });
   logCbtGuard("cbt start issued timer", {
     testId: body.testId,

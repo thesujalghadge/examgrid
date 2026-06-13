@@ -447,7 +447,9 @@ export function InstitutePaperUploadFlow() {
 
     const repos = getRepositories();
     repos.cbtTests.save(test);
-    const examDef = cbtTestToExamDefinition(test);
+    const startMs = scheduleStart ? new Date(scheduleStart).getTime() : 0;
+    const endAt = scheduleEnd ? new Date(scheduleEnd).toISOString() : (scheduleStart ? new Date(startMs + test.durationMinutes * 60 * 1000).toISOString() : undefined);
+    const examDef = cbtTestToExamDefinition(test, undefined, endAt);
     if (examDef) repos.exams.save(examDef);
 
     if (selectedBatchIds.length > 0 && scheduleStart) {
