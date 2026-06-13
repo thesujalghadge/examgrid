@@ -398,7 +398,7 @@ export function ExamInterface({
           metadata: { startedAtUTC: new Date(startedAt).toISOString() },
         });
       }
-      void requestExamFullscreen();
+      
       setReady(true);
     };
 

@@ -39,6 +39,7 @@ export const examDefinitionInputSchema = z.object({
   questions: z.record(z.string(), examQuestionSchema),
   instructions: z.array(z.string()),
   scheduledAt: z.string().min(1),
+  solutionsReleaseTime: z.string().optional(),
 });
 
 export type ExamDefinitionInput = z.infer<typeof examDefinitionInputSchema>;

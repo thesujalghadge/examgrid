@@ -13,12 +13,27 @@ function slugify(name: string): string {
 
 export function listPlatformInstitutes(): PlatformInstitute[] {
   if (typeof window === "undefined") return [];
-  return readStorageJson({
+  const local = readStorageJson({
     storage: "local",
     key: STORAGE_KEYS.platformInstitutes,
     fallback: [],
     validate: (data) => ({ ok: true, value: data as PlatformInstitute[] }),
   });
+  
+  const defaultId = process.env.NEXT_PUBLIC_DEFAULT_INSTITUTE_ID;
+  if (defaultId && !local.find((i) => i.id === defaultId)) {
+    return [{
+      id: defaultId,
+      name: "ExamGrid Institute (Default)",
+      city: "Remote",
+      adminEmail: "admin@examgrid.com",
+      plan: "Pro",
+      status: "active",
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    }, ...local];
+  }
+  return local;
 }
 
 export function getPlatformInstitute(id: string): PlatformInstitute | undefined {

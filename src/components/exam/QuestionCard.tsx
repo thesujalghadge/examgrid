@@ -26,7 +26,7 @@ interface QuestionCardProps {
 export function QuestionCard({ review }: QuestionCardProps) {
   const exam = useQuestionStore((s) => s.exam);
   const currentQuestionId = useQuestionStore((s) => s.currentQuestionId);
-  const answers = useQuestionStore((s) => s.answers);
+  const draftAnswers = useQuestionStore((s) => s.draftAnswers);
   const selectOption = useQuestionStore((s) => s.selectOption);
   const setNumericalAnswer = useQuestionStore((s) => s.setNumericalAnswer);
   const question = exam && currentQuestionId ? exam.questions[currentQuestionId] : undefined;
@@ -44,7 +44,7 @@ export function QuestionCard({ review }: QuestionCardProps) {
   if (!question) return null;
 
   const section = exam.sections.find((s) => s.id === question.sectionId);
-  const selected = answers[currentQuestionId] ?? "";
+  const selected = draftAnswers[currentQuestionId] ?? "";
   const globalIndex = exam.sections.flatMap((s) => s.questionIds).indexOf(currentQuestionId) + 1;
   const isNumerical = question.type === "NUMERICAL";
   const options = question.options ?? [];

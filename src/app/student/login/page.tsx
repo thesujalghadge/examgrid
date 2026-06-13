@@ -45,12 +45,26 @@ export default function StudentLoginPage() {
       return;
     }
 
-    const workspaceOk = await workspaceLogin({
-      userId: roll,
-      role: "student",
-      password: "dev",
-      instituteId,
-    });
+    let workspaceOk = false;
+    try {
+      workspaceOk = await workspaceLogin({
+        userId: roll,
+        role: "student",
+        password: "dev",
+        instituteId,
+      });
+    } catch (e: any) {
+      if (e.message === "GHOST_INSTITUTE") {
+        import("@/lib/platform-institute-registry").then((m) => {
+          m.deletePlatformInstitute(instituteId);
+        });
+        setError("This institute no longer exists. Please refresh and select another.");
+        return;
+      }
+      setError("An unexpected error occurred during login.");
+      return;
+    }
+
     if (!workspaceOk) {
       setError("Could not start session.");
       return;

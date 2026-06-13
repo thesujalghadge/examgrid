@@ -109,7 +109,11 @@ export async function persistWorkspaceSessionRemote(
         instituteId: session.instituteId,
       }),
     });
-    if (!res.ok) return false;
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      if (errData.error === "GHOST_INSTITUTE") throw new Error("GHOST_INSTITUTE");
+      return false;
+    }
     const data = (await res.json()) as { session: WorkspaceSession };
     syncSessionToClientStorage(data.session);
     logSessionEvent("workspace session persisted via API", {
@@ -117,8 +121,9 @@ export async function persistWorkspaceSessionRemote(
       userId: data.session.userId,
     });
     return true;
-  } catch {
+  } catch (error) {
     logSessionWarning("persistWorkspaceSessionRemote failed");
+    if (error instanceof Error && error.message === "GHOST_INSTITUTE") throw error;
     return false;
   }
 }

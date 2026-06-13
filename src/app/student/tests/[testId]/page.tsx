@@ -79,7 +79,10 @@ export default function StudentCbtTestTakePage() {
     return (
       <ExamInstructions 
         exam={test} 
-        onProceed={() => setStarted(true)} 
+        onProceed={() => {
+          import("@/lib/fullscreen").then((m) => m.requestExamFullscreen().catch(() => {}));
+          setStarted(true);
+        }} 
       />
     );
   }

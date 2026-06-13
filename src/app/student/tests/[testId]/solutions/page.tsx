@@ -137,9 +137,15 @@ export default function StudentSolutionsPage() {
   const candidate = useAuthStore((s) => s.candidate);
   const ws = useWorkspaceAuthStore((s) => s.session);
   
-  const [attemptData, setAttemptData] = useState<AttemptResultPayload | null>(null);
+  const [attemptData, setAttemptData] = useState<AttemptResultPayload | null | undefined>(undefined);
   const [testData, setTestData] = useState<CBTTest | null>(null);
   const [error, setError] = useState("");
+  const [currentTime, setCurrentTime] = useState(Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     if (!candidate || !ws?.instituteId) {
@@ -157,11 +163,14 @@ export default function StudentSolutionsPage() {
       credentials: "include",
       cache: "no-store",
     })
-      .then((res) => {
-        if (!res.ok) throw new Error("Submit the test before viewing solutions.");
+      .then(async (res) => {
+        if (res.status === 404) {
+          return null; // Unattempted
+        }
+        if (!res.ok) throw new Error("Could not load submitted attempt.");
         return res.json();
       })
-      .then((data: AttemptResultPayload) => setAttemptData(data))
+      .then((data: AttemptResultPayload | null) => setAttemptData(data))
       .catch((err) => {
         setError(err instanceof Error ? err.message : "Could not load submitted attempt.");
       });
@@ -178,18 +187,47 @@ export default function StudentSolutionsPage() {
     );
   }
 
-  if (!attemptData || !testData || !ws?.instituteId || !candidate) {
+  // Allow attemptData to be strictly null (meaning unattempted), but undefined means loading
+  if (attemptData === undefined || !testData || !ws?.instituteId || !candidate) {
     return <div className="p-8 text-center text-gray-500">Loading...</div>;
   }
 
   const exam = getExamById(testId);
-  const breakdown = attemptData.resultBreakdown as TestResultBreakdown | undefined;
-  if (!exam || !breakdown) {
-    return <div className="p-8 text-center text-gray-500">Submitted result could not be loaded.</div>;
+  const breakdown = attemptData?.resultBreakdown as TestResultBreakdown | undefined;
+  if (!exam) {
+    return <div className="p-8 text-center text-gray-500">Exam data could not be loaded.</div>;
+  }
+
+  const releaseMs = exam.solutionsReleaseTime ? new Date(exam.solutionsReleaseTime).getTime() : 0;
+  const isReleased = releaseMs === 0 || currentTime >= releaseMs;
+
+  if (!isReleased) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#f5f1e8] p-6 text-center">
+        <Card className="max-w-md w-full border-[#ece6da]">
+          <CardContent className="pt-6">
+            <h2 className="text-xl font-bold text-[#14213d] mb-2">Solutions Not Yet Available</h2>
+            <p className="text-sm text-[#5e5a52] mb-4">
+              Solutions for this exam will be released at:
+              <br />
+              <span className="text-base font-semibold text-[#14213d] mt-2 block">
+                {new Date(releaseMs).toLocaleString("en-IN", {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                })}
+              </span>
+            </p>
+            <Button onClick={() => router.push(`/student/tests/${testId}/result`)}>
+              Back to Result
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   const resultByQuestion = new Map(
-    breakdown.perQuestion.map((row: TestQuestionResult) => [row.questionId, row]),
+    breakdown?.perQuestion?.map((row: TestQuestionResult) => [row.questionId, row]) ?? [],
   );
 
   const answerLabel = (question: ExamQuestion, answer: string | null | undefined) => {

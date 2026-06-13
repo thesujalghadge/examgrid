@@ -9,6 +9,7 @@ import type { ExamDefinition, QuestionPaletteStatus } from "@/types/exam";
 interface QuestionState {
   exam: ExamDefinition | null;
   answers: Record<string, string | null>;
+  draftAnswers: Record<string, string | null>;
   visited: Record<string, boolean>;
   markedForReview: Record<string, boolean>;
   currentQuestionId: string | null;
@@ -42,6 +43,7 @@ interface QuestionState {
 const initialState = {
   exam: null as ExamDefinition | null,
   answers: {} as Record<string, string | null>,
+  draftAnswers: {} as Record<string, string | null>,
   visited: {} as Record<string, boolean>,
   markedForReview: {} as Record<string, boolean>,
   currentQuestionId: null as string | null,
@@ -71,6 +73,7 @@ export const useQuestionStore = create<QuestionState>((set, get) => ({
         {
           exam,
           answers: {},
+          draftAnswers: {},
           visited: { [startQuestionId]: true },
           markedForReview: {},
           currentQuestionId: startQuestionId,
@@ -87,6 +90,7 @@ export const useQuestionStore = create<QuestionState>((set, get) => ({
         {
           exam: payload.exam,
           answers: payload.answers,
+          draftAnswers: { ...payload.answers },
           visited: payload.visited,
           markedForReview: payload.markedForReview,
           currentQuestionId: payload.currentQuestionId,
@@ -103,7 +107,7 @@ export const useQuestionStore = create<QuestionState>((set, get) => ({
     set((state) =>
       withDerived(
         {
-          answers: { ...state.answers, [questionId]: optionId },
+          draftAnswers: { ...state.draftAnswers, [questionId]: optionId },
           visited: { ...state.visited, [questionId]: true },
         },
         state,
@@ -115,7 +119,7 @@ export const useQuestionStore = create<QuestionState>((set, get) => ({
     set((state) =>
       withDerived(
         {
-          answers: { ...state.answers, [questionId]: value },
+          draftAnswers: { ...state.draftAnswers, [questionId]: value },
           visited: { ...state.visited, [questionId]: true },
         },
         state,
@@ -128,6 +132,7 @@ export const useQuestionStore = create<QuestionState>((set, get) => ({
       withDerived(
         {
           answers: { ...state.answers, [questionId]: null },
+          draftAnswers: { ...state.draftAnswers, [questionId]: null },
           visited: { ...state.visited, [questionId]: true },
         },
         state,
@@ -148,39 +153,50 @@ export const useQuestionStore = create<QuestionState>((set, get) => ({
   },
 
   goToQuestion: (questionId) => {
-    const { exam } = get();
+    const { exam, currentQuestionId } = get();
     if (!exam) return;
     const section = exam.sections.find((s) =>
       s.questionIds.includes(questionId),
     );
-    set((state) =>
-      withDerived(
+    set((state) => {
+      // Rollback draft of the question we're leaving
+      const rollbackDrafts = currentQuestionId 
+        ? { ...state.draftAnswers, [currentQuestionId]: state.answers[currentQuestionId] ?? null }
+        : state.draftAnswers;
+
+      return withDerived(
         {
           currentQuestionId: questionId,
           currentSectionId: section?.id ?? state.currentSectionId,
           visited: { ...state.visited, [questionId]: true },
+          draftAnswers: rollbackDrafts,
         },
         state,
-      ),
-    );
+      );
+    });
   },
 
   switchSection: (sectionId) => {
-    const { exam } = get();
+    const { exam, currentQuestionId } = get();
     if (!exam) return;
     const section = exam.sections.find((s) => s.id === sectionId);
     if (!section || section.questionIds.length === 0) return;
     const firstQ = section.questionIds[0];
-    set((state) =>
-      withDerived(
+    set((state) => {
+      const rollbackDrafts = currentQuestionId 
+        ? { ...state.draftAnswers, [currentQuestionId]: state.answers[currentQuestionId] ?? null }
+        : state.draftAnswers;
+
+      return withDerived(
         {
           currentSectionId: sectionId,
           currentQuestionId: firstQ,
           visited: { ...state.visited, [firstQ]: true },
+          draftAnswers: rollbackDrafts,
         },
         state,
-      ),
-    );
+      );
+    });
   },
 
   goNext: () => {
@@ -204,22 +220,38 @@ export const useQuestionStore = create<QuestionState>((set, get) => ({
   },
 
   saveAndNext: () => {
-    const { currentQuestionId, visited } = get();
+    const { currentQuestionId } = get();
     if (currentQuestionId) {
-      set((state) =>
-        withDerived(
-          { visited: { ...visited, [currentQuestionId]: true } },
+      set((state) => {
+        const drafted = state.draftAnswers[currentQuestionId];
+        return withDerived(
+          {
+            answers: { ...state.answers, [currentQuestionId]: drafted ?? null },
+            markedForReview: { ...state.markedForReview, [currentQuestionId]: false },
+            visited: { ...state.visited, [currentQuestionId]: true },
+          },
           state,
-        ),
-      );
+        );
+      });
     }
+    // goNext internally calls goToQuestion which will handle rollback, but since we committed to answers, rollback does nothing.
     get().goNext();
   },
 
   markForReviewAndNext: () => {
     const { currentQuestionId } = get();
     if (currentQuestionId) {
-      get().toggleMarkForReview(currentQuestionId, true);
+      set((state) => {
+        const drafted = state.draftAnswers[currentQuestionId];
+        return withDerived(
+          {
+            answers: { ...state.answers, [currentQuestionId]: drafted ?? null },
+            markedForReview: { ...state.markedForReview, [currentQuestionId]: true },
+            visited: { ...state.visited, [currentQuestionId]: true },
+          },
+          state,
+        );
+      });
     }
     get().goNext();
   },

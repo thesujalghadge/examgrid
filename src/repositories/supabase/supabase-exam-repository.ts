@@ -195,10 +195,11 @@ export class SupabaseExamRepository implements ExamRepository {
       if (!session?.instituteId) return;
       const client = requireSupabaseClient("exams.save");
       const examUuid = await this.resolveExamUuid(exam.id, session.instituteId);
+
       const { examRow, sections, questions } = examDefinitionToRows(
         exam,
         examUuid,
-        session.instituteId,
+        session.instituteId
       );
 
       const { error: examError } = await client.from("exams").upsert(
@@ -244,16 +245,14 @@ export class SupabaseExamRepository implements ExamRepository {
         throwIfSupabaseError(qErr, "exam_questions", "insert");
         
         // Enqueue solution generation at Priority 100
-        const bankQuestionIds = questions
-          .map((q) => q.bank_question_id)
-          .filter((id): id is string => Boolean(id));
+        const examQuestionIds = questions.map((q) => q.id);
 
-        if (bankQuestionIds.length > 0) {
+        if (examQuestionIds.length > 0) {
           fetch(`/api/institute/${session.instituteId}/solution`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              questionIds: bankQuestionIds,
+              questionIds: examQuestionIds,
               priority: 100,
             }),
           }).catch((err) => console.error("Failed to enqueue solution generation:", err));

@@ -61,6 +61,7 @@ export interface ExamDefinition {
   questions: Record<string, ExamQuestion>;
   instructions: string[];
   scheduledAt: string;
+  solutionsReleaseTime?: string;
 }
 
 export interface Candidate {

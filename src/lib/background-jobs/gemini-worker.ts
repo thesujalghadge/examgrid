@@ -25,6 +25,8 @@ function validateSolution(text: string, expectedAnswer: string) {
   return { passed: true };
 }
 
+import { decrypt } from "@/lib/ai/encryption";
+
 export async function runGeminiWorker() {
   // 1. Fetch and Lock 1 queue item atomically using SKIP LOCKED RPC
   const { data: leasedJobs, error: queueError } = await supabase.rpc("lease_solution_generation_job_v2");
@@ -39,42 +41,91 @@ export async function runGeminiWorker() {
   }
 
   const job = leasedJobs[0] as any;
-  const assetId = job.test_question_asset_id;
 
-  // We need to fetch the asset details since the RPC only returns the ID
-  const { data: asset, error: assetError } = await supabase
-    .from("test_question_assets")
-    .select("exam_question_id, storage_path")
-    .eq("id", assetId)
+  // We need to fetch the question_id since the RPC only returns the ID and asset_id
+  const { data: queueItem, error: queueItemError } = await supabase
+    .from("solution_generation_queue")
+    .select("question_id, test_question_asset_id")
+    .eq("id", job.id)
     .single();
 
-  if (assetError || !asset) {
-    await supabase.from("solution_generation_queue").update({ status: "FAILED", last_error: "Asset fetch failed" }).eq("id", job.id);
-    return { success: false, reason: "Asset fetch error" };
+  if (queueItemError || !queueItem) {
+    await supabase.from("solution_generation_queue").update({ status: "FAILED", last_error: "Queue item fetch failed" }).eq("id", job.id);
+    return { success: false, reason: "Queue item fetch error" };
   }
 
-  const examQuestionId = asset.exam_question_id;
-  const storagePath = asset.storage_path;
+  const examQuestionId = queueItem.question_id;
+  const assetId = queueItem.test_question_asset_id;
+
+  let storagePath = null;
+  if (assetId) {
+    const { data: asset, error: assetError } = await supabase
+      .from("test_question_assets")
+      .select("storage_path")
+      .eq("id", assetId)
+      .single();
+
+    if (assetError || !asset) {
+      await supabase.from("solution_generation_queue").update({ status: "FAILED", last_error: "Asset fetch failed" }).eq("id", job.id);
+      return { success: false, reason: "Asset fetch error" };
+    }
+    storagePath = asset.storage_path;
+  }
+
+  let apiKey = "";
 
   try {
-    // 2. Idempotency Check
-    const { data: currentSolution } = await supabase
+    // 2. Strict Idempotency Check (Skip if active solution exists for question_id)
+    const { data: existingActiveSolution } = await supabase
       .from("question_solutions")
-      .select("generation_status, generation_attempts")
-      .eq("test_question_asset_id", assetId)
+      .select("id, generation_attempts")
+      .eq("question_id", examQuestionId)
+      .eq("is_active", true)
       .maybeSingle();
 
-    if (currentSolution?.generation_status === "COMPLETED") {
+    if (existingActiveSolution) {
       await supabase.from("solution_generation_queue").update({ status: "COMPLETED" }).eq("id", job.id);
-      return { success: true, processed: 1, reason: "Already COMPLETED" };
+      return { success: true, processed: 1, reason: "Active solution already exists" };
     }
 
-    const attempts = (currentSolution?.generation_attempts || 0) + 1;
+    const attempts = ((existingActiveSolution as any)?.generation_attempts || 0) + 1;
 
-    // 3. Fetch Authoritative Phase 1 Answer
+    // 3. Resolve Tenant Credentials
+    const { data: tenantSettings } = await supabase
+      .from("institute_ai_settings")
+      .select("*")
+      .eq("institute_id", job.institute_id)
+      .maybeSingle();
+
+    let generationSource = "";
+    let resolvedModelName = MODEL_NAME;
+
+    if (tenantSettings && tenantSettings.is_active && tenantSettings.encrypted_api_key) {
+      try {
+        const secret = process.env.AI_KEY_ENCRYPTION_SECRET;
+        if (!secret) throw new Error("AI_KEY_ENCRYPTION_SECRET is missing");
+        apiKey = decrypt(tenantSettings.encrypted_api_key, secret);
+        generationSource = "INSTITUTE_KEY";
+        resolvedModelName = tenantSettings.model_name || MODEL_NAME;
+      } catch (err) {
+        throw new Error("Failed to decrypt institute API key");
+      }
+    } else {
+      // Check platform fallback
+      const allowPlatformAi = tenantSettings ? tenantSettings.allow_platform_ai : true; // Default true as per schema
+      if (allowPlatformAi) {
+        apiKey = process.env.GEMINI_API_KEY || "";
+        if (!apiKey) throw new Error("GEMINI_API_KEY platform fallback is not configured");
+        generationSource = "PLATFORM_KEY";
+      } else {
+        throw new Error("Tenant AI quota exhausted / No credentials");
+      }
+    }
+
+    // 4. Fetch Authoritative Phase 1 Answer
     const { data: examQuestion } = await supabase
       .from("exam_questions")
-      .select("correct_option_id, correct_numerical_answer, type")
+      .select("correct_option_id, correct_numerical_answer, type, question_text, options")
       .eq("id", examQuestionId)
       .single();
 
@@ -91,20 +142,25 @@ export async function runGeminiWorker() {
       throw new Error("No authoritative answer key available from Phase 1 schema");
     }
 
-    // 4. Download Buffer from Storage (No URL reliance)
-    if (!storagePath) throw new Error("storage_path missing from test_question_assets");
-    
-    const { data: fileData, error: downloadError } = await supabase.storage
-      .from(BUCKET_NAME)
-      .download(storagePath);
+    let fileBuffer: Buffer | null = null;
+    let mimeType = "";
 
-    if (downloadError || !fileData) throw new Error(`Failed to download buffer from ${storagePath}`);
+    // 5. Download Buffer from Storage (if asset exists)
+    if (storagePath) {
+      const { data: fileData, error: downloadError } = await supabase.storage
+        .from(BUCKET_NAME)
+        .download(storagePath);
 
-    const fileBuffer = Buffer.from(await fileData.arrayBuffer());
-    const mimeType = storagePath.toLowerCase().endsWith("webp") ? "image/webp" : "image/jpeg";
+      if (downloadError || !fileData) throw new Error(`Failed to download buffer from ${storagePath}`);
 
-    // 5. Construct Prompt
-    const promptTemplate = `The exact correct answer to the question in this image is: "{ResolvedCorrectAnswer}".
+      fileBuffer = Buffer.from(await fileData.arrayBuffer());
+      mimeType = storagePath.toLowerCase().endsWith("webp") ? "image/webp" : "image/jpeg";
+    }
+
+    // 6. Construct Prompt
+    let promptTemplate = "";
+    if (fileBuffer) {
+      promptTemplate = `The exact correct answer to the question in this image is: "{ResolvedCorrectAnswer}".
 Your task is to provide the step-by-step logical reasoning to arrive at this specific answer.
 Do not conclude with any other answer.
 
@@ -114,52 +170,85 @@ Required Structure:
 
 **Final Answer:**
 {ResolvedCorrectAnswer}`;
+    } else {
+      const formattedOptions = (examQuestion.options || [])
+        .map((o: any) => `${o.label}: ${o.text || ""}`)
+        .join("\n");
+        
+      promptTemplate = `Question:
+${examQuestion.question_text || "Solve the following problem"}
+
+Options:
+${formattedOptions}
+
+The exact correct answer to this question is: "{ResolvedCorrectAnswer}".
+Your task is to provide the step-by-step logical reasoning to arrive at this specific answer.
+Do not conclude with any other answer.
+
+Required Structure:
+**Explanation:**
+[Step-by-step logical breakdown]
+
+**Final Answer:**
+{ResolvedCorrectAnswer}`;
+    }
 
     const promptText = promptTemplate.replaceAll("{ResolvedCorrectAnswer}", resolvedCorrectAnswer);
     
     // TEXT ONLY prompt snapshot
-    const promptSnapshot = `Model: ${MODEL_NAME}\nVersion: ${PROMPT_VERSION}\nAnswer Key: ${resolvedCorrectAnswer}\nInstruction: ${promptTemplate}`;
+    const promptSnapshot = `Model: ${resolvedModelName}\nVersion: ${PROMPT_VERSION}\nAnswer Key: ${resolvedCorrectAnswer}\nInstruction: ${promptTemplate}`;
 
-    // 6. Call Gemini
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) throw new Error("GEMINI_API_KEY not configured");
-
+    // 7. Call Gemini
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: MODEL_NAME });
+    const model = genAI.getGenerativeModel({ model: resolvedModelName });
 
     const startTime = Date.now();
-    const result = await model.generateContent([
-      { inlineData: { data: fileBuffer.toString("base64"), mimeType } },
-      promptText
-    ]);
+    let result;
+    if (fileBuffer) {
+      result = await model.generateContent([
+        { inlineData: { data: fileBuffer.toString("base64"), mimeType } },
+        promptText
+      ]);
+    } else {
+      result = await model.generateContent(promptText);
+    }
     const durationMs = Date.now() - startTime;
     const solutionText = result.response.text();
 
-    // 7. Validate Output
+    // 8. Validate Output
     const validation = validateSolution(solutionText, resolvedCorrectAnswer);
 
-    // 8. Store Solution
+    // 9. Store Solution
     const finalStatus = validation.passed ? "COMPLETED" : "VALIDATION_FAILED";
 
+    // but the schema is ready (version, superseded_at). For now we just insert version=1.
+    const payload: any = {
+      test_question_asset_id: assetId,
+      question_id: examQuestionId,
+      institute_id: job.institute_id,
+      content_markdown: solutionText,
+      is_active: true,
+      generation_status: finalStatus,
+      model_name: resolvedModelName,
+      generation_source: generationSource,
+      generated_model: resolvedModelName,
+      version: 1,
+      prompt_version: PROMPT_VERSION,
+      prompt_snapshot: promptSnapshot,
+      generation_duration_ms: durationMs,
+      generation_attempts: attempts,
+      validation_passed: validation.passed,
+      generated_at: new Date().toISOString()
+    };
+    
     await supabase
       .from("question_solutions")
-      .upsert({
-        test_question_asset_id: assetId,
-        question_id: examQuestionId,
-        institute_id: job.institute_id,
-        content_markdown: solutionText,
-        is_active: true,
-        generation_status: finalStatus,
-        model_name: MODEL_NAME,
-        prompt_version: PROMPT_VERSION,
-        prompt_snapshot: promptSnapshot,
-        generation_duration_ms: durationMs,
-        generation_attempts: attempts,
-        validation_passed: validation.passed,
-        generated_at: new Date().toISOString()
-      }, { onConflict: "test_question_asset_id" });
+      .upsert(payload, { onConflict: "test_question_asset_id" });
 
-    // 9. Update Queue
+    // 10. Clear Memory
+    apiKey = "";
+
+    // 11. Update Queue
     if (validation.passed) {
       await supabase.from("solution_generation_queue").update({ status: "COMPLETED", completed_at: new Date().toISOString() }).eq("id", job.id);
     } else {
@@ -176,6 +265,7 @@ Required Structure:
     };
 
   } catch (error: any) {
+    apiKey = ""; // Clear on failure
     console.error("Gemini worker failed:", error);
     const isRateLimit = error.status === 429 || error.message.includes("429");
     const isNetwork = error.status === 500 || error.message.includes("fetch");
@@ -198,7 +288,7 @@ Required Structure:
     }).eq("id", job.id);
 
     // Also track attempt natively on question_solutions if we can
-    await supabase.from("question_solutions").upsert({
+    const errorPayload: any = {
       test_question_asset_id: assetId,
       question_id: examQuestionId,
       institute_id: job.institute_id,
@@ -206,7 +296,8 @@ Required Structure:
       generation_status: nextStatus,
       generation_attempts: currentAttempts,
       last_error: error.message || String(error)
-    }, { onConflict: "test_question_asset_id" });
+    };
+    await supabase.from("question_solutions").upsert(errorPayload, { onConflict: "test_question_asset_id" });
 
     return { success: false, reason: error.message, nextStatus };
   }

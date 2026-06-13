@@ -39,13 +39,12 @@ export async function hydrateSupabaseRepositories(): Promise<HydrateResult> {
   const schedules = bundle.schedules as SupabaseScheduleRepository;
 
   try {
-    await Promise.all([
-      questions.refreshFromRemote(),
-      exams.refreshFromRemote(),
-      students.refreshFromRemote(),
-      batches.refreshFromRemote(),
-      schedules.refreshFromRemote(),
-    ]);
+    // Execute sequentially to avoid connection pool exhaustion / 'Failed to fetch' network errors
+    await questions.refreshFromRemote();
+    await exams.refreshFromRemote();
+    await students.refreshFromRemote();
+    await batches.refreshFromRemote();
+    await schedules.refreshFromRemote();
     const qCount = questions.list().length;
     const eCount = exams.list().length;
     const sCount = students.list().length;
