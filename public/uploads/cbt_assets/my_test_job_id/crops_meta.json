@@ -1,0 +1,90 @@
+{
+  "job_id": "my_test_job_id",
+  "questions": [
+    {
+      "id": "Q1",
+      "q_num": 1,
+      "q_type": "MCQ",
+      "page": 1,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\my_test_job_id\\vision_crops\\Q1_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/my_test_job_id/vision_crops/Q1_crop.jpg",
+      "question_text": "Two distinct numbers a and b are selected at random from 1,2,3,\u2026,50. The probability that \ntheir product ab is divisible by 3 is",
+      "options": [
+        "8/25",
+        "561/1225",
+        "664/1225",
+        "272/1225"
+      ]
+    },
+    {
+      "id": "Q2",
+      "q_num": 2,
+      "q_type": "MCQ",
+      "page": 1,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\my_test_job_id\\vision_crops\\Q2_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/my_test_job_id/vision_crops/Q2_crop.jpg",
+      "question_text": "If a random variable x has the probability distribution \n \nthen P(3<x\u22646) is equal to",
+      "options": [
+        "0.22",
+        "0.33",
+        "0.34",
+        "0.64"
+      ]
+    },
+    {
+      "id": "Q3",
+      "q_num": 3,
+      "q_type": "MCQ",
+      "page": 1,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\my_test_job_id\\vision_crops\\Q3_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/my_test_job_id/vision_crops/Q3_crop.jpg",
+      "question_text": "Find the correct combination of A, B, C and D inputs which can cause the LED to glow.",
+      "options": [
+        "0100",
+        "1000",
+        "0011",
+        "1101"
+      ]
+    },
+    {
+      "id": "Q4",
+      "q_num": 4,
+      "q_type": "NAT",
+      "page": 2,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\my_test_job_id\\vision_crops\\Q4_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/my_test_job_id/vision_crops/Q4_crop.jpg",
+      "question_text": "\uf0b7 \nQuestion 4: \nTwo loudspeakers (L1 and L2) are placed with a separation of 10m, as shown in the \nfigure. Both speakers are fed with an audio input signal of the same frequency with \nconstant volume. A voice recorder, initially at point A, at equidistance to both \nloudspeakers, is moved by 25m along the line AB while monitoring the audio \nsignal. The measured signal was found to undergo 10 cycles of minima and maxima \nduring the movement. The frequency of the input signal is _______ Hz. \n \n(Speed of sound in air is 324m/s and \u221a5=2.23)",
+      "options": []
+    },
+    {
+      "id": "Q5",
+      "q_num": 5,
+      "q_type": "MCQ",
+      "page": 2,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\my_test_job_id\\vision_crops\\Q5_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/my_test_job_id/vision_crops/Q5_crop.jpg",
+      "question_text": "Given below are two statements: \n \n \nStatement I: Benzene is nitrated to give nitrobenzene, which on further treatment \nwith CH3COCl/AlCl3 will give the product shown. \n \n \n\n \nStatement II: \u2212NO2 group is a meta-directing and deactivating group. \n \n \nIn the light of the above statements, choose the most appropriate answer from the \noptions given below.",
+      "options": [
+        "Statement I is correct but Statement II is incorrect",
+        "Both Statement I and Statement II are incorrect",
+        "Statement I is incorrect but Statement II is correct",
+        "Both Statement I and Statement II are correct"
+      ]
+    },
+    {
+      "id": "Q6",
+      "q_num": 6,
+      "q_type": "MCQ",
+      "page": 3,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\my_test_job_id\\vision_crops\\Q6_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/my_test_job_id/vision_crops/Q6_crop.jpg",
+      "question_text": "Match the LIST-I with LIST-II. \n \n \n \nChoose the correct answer from the options given below:",
+      "options": [
+        "A-III, B-II, C-IV, D-I",
+        "A-II, B-I, C-III, D-IV",
+        "A-I, B-II, C-III, D-IV",
+        "A-II, B-III, C-I, D-IV"
+      ]
+    }
+  ]
+}

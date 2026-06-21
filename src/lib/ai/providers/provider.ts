@@ -6,20 +6,23 @@ export interface SolutionGenerationInput {
   correctAnswer?: string;
   extractedSubject?: string;
   extractedChapter?: string;
+  imageUrl?: string;
+  questionType?: string;
 }
 
 export interface AiMetadata {
-  taxonomy: {
-    subject?: string;
-    topic?: string;
-    subtopic?: string;
-    concepts?: string[];
-  };
-  cognitiveLevel?: string;
-  difficulty?: number;
-  mistakePatterns?: string[];
-  learningObjective?: string;
-  confidenceScore?: number;
+  subject: string;
+  topic: string;
+  subtopic: string;
+  difficulty: string;
+  question_type: string;
+  primary_concept: string;
+  secondary_concept: string;
+  quick_approach: string;
+  essential_steps: string[];
+  final_answer: string;
+  prompt_version: string;
+  validation_status: string;
 }
 
 export interface TokenUsage {
@@ -30,7 +33,7 @@ export interface TokenUsage {
 
 export interface SolutionProviderResult {
   markdownSolution: string;
-  finalAnswer?: string;
+  finalAnswer: string;
   answerConfidence?: number;
   aiMetadata: AiMetadata;
   promptVersion: string;

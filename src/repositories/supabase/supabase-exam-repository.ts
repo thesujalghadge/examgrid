@@ -1,4 +1,4 @@
-import { isUuid } from "@/config/institute";
+import { isUuid, assertInstituteUuid } from "@/config/institute";
 import { logRepositoryFailure } from "@/lib/logging/runtime-logger";
 import { getClientWorkspaceSession } from "@/lib/workspace-session";
 import type { ExamRepository } from "@/repositories/interfaces/exam-repository";
@@ -60,6 +60,7 @@ export class SupabaseExamRepository implements ExamRepository {
   private enqueuePersist(task: () => Promise<void>): void {
     this.persistChain = this.persistChain.then(task).catch((error) => {
       logRepositoryFailure("SupabaseExamRepository.persistChain", error);
+      throw error;
     });
   }
 
@@ -83,6 +84,8 @@ export class SupabaseExamRepository implements ExamRepository {
     }
 
     try {
+      assertInstituteUuid(session.instituteId, "session.instituteId");
+
       const client = requireSupabaseClient("exams.list");
       const { data: exams, error: examErr } = await client
         .from("exams")
@@ -158,6 +161,8 @@ export class SupabaseExamRepository implements ExamRepository {
     const cached = this.idMap.get(publicId);
     if (cached) return cached;
 
+    assertInstituteUuid(instituteId, "instituteId");
+
     const client = requireSupabaseClient("exams.resolveId");
     if (isUuid(publicId)) {
       const { data } = await client
@@ -193,8 +198,20 @@ export class SupabaseExamRepository implements ExamRepository {
     try {
       const session = getClientWorkspaceSession();
       if (!session?.instituteId) return;
+      assertInstituteUuid(session.instituteId, "session.instituteId");
+
       const client = requireSupabaseClient("exams.save");
       const examUuid = await this.resolveExamUuid(exam.id, session.instituteId);
+
+      const { data: existingExam } = await client
+        .from("exams")
+        .select("status")
+        .eq("id", examUuid)
+        .maybeSingle();
+
+      if (existingExam?.status === "PUBLISHED") {
+        throw new Error("Exam has already been published. Published questions cannot be modified.");
+      }
 
       const { examRow, sections, questions } = examDefinitionToRows(
         exam,
@@ -209,18 +226,24 @@ export class SupabaseExamRepository implements ExamRepository {
         },
         { onConflict: "id" },
       );
+      if (examError) console.error(`[PERSISTENCE_LOG] table: exams, action: upsert, rows: 1, success: false, error: ${examError.message}`);
+      else console.log(`[PERSISTENCE_LOG] table: exams, action: upsert, rows: 1, success: true`);
       throwIfSupabaseError(examError, "exams", "upsert");
 
       const { error: delSec } = await client
         .from("exam_sections")
         .delete()
         .eq("exam_id", examUuid);
+      if (delSec) console.error(`[PERSISTENCE_LOG] table: exam_sections, action: delete, success: false, error: ${delSec.message}`);
+      else console.log(`[PERSISTENCE_LOG] table: exam_sections, action: delete, success: true`);
       throwIfSupabaseError(delSec, "exam_sections", "delete");
 
       const { error: delQ } = await client
         .from("exam_questions")
         .delete()
         .eq("exam_id", examUuid);
+      if (delQ) console.error(`[PERSISTENCE_LOG] table: exam_questions, action: delete, success: false, error: ${delQ.message}`);
+      else console.log(`[PERSISTENCE_LOG] table: exam_questions, action: delete, success: true`);
       throwIfSupabaseError(delQ, "exam_questions", "delete");
 
       if (sections.length > 0) {
@@ -231,6 +254,8 @@ export class SupabaseExamRepository implements ExamRepository {
             updated_at: new Date().toISOString(),
           })),
         );
+        if (secErr) console.error(`[PERSISTENCE_LOG] table: exam_sections, action: insert, rows: ${sections.length}, success: false, error: ${secErr.message}`);
+        else console.log(`[PERSISTENCE_LOG] table: exam_sections, action: insert, rows: ${sections.length}, success: true`);
         throwIfSupabaseError(secErr, "exam_sections", "insert");
       }
 
@@ -242,26 +267,16 @@ export class SupabaseExamRepository implements ExamRepository {
             updated_at: new Date().toISOString(),
           })),
         );
+        if (qErr) console.error(`[PERSISTENCE_LOG] table: exam_questions, action: insert, rows: ${questions.length}, success: false, error: ${qErr.message}`);
+        else console.log(`[PERSISTENCE_LOG] table: exam_questions, action: insert, rows: ${questions.length}, success: true`);
         throwIfSupabaseError(qErr, "exam_questions", "insert");
-        
-        // Enqueue solution generation at Priority 100
-        const examQuestionIds = questions.map((q) => q.id);
-
-        if (examQuestionIds.length > 0) {
-          fetch(`/api/institute/${session.instituteId}/solution`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              questionIds: examQuestionIds,
-              priority: 100,
-            }),
-          }).catch((err) => console.error("Failed to enqueue solution generation:", err));
-        }
+        // Solution generation queue insertion is now exclusively handled by the /publish API.
       }
 
       this.idMap.set(exam.id, examUuid);
     } catch (error) {
       logRepositoryFailure("SupabaseExamRepository.persistExam", error);
+      throw error;
     }
   }
 
@@ -269,13 +284,18 @@ export class SupabaseExamRepository implements ExamRepository {
     try {
       const session = getClientWorkspaceSession();
       if (!session?.instituteId) return;
+      assertInstituteUuid(session.instituteId, "session.instituteId");
+
       const client = requireSupabaseClient("exams.delete");
       const examUuid = await this.resolveExamUuid(publicId, session.instituteId);
       const { error } = await client.from("exams").delete().eq("id", examUuid);
+      if (error) console.error(`[PERSISTENCE_LOG] table: exams, action: delete, success: false, error: ${error.message}`);
+      else console.log(`[PERSISTENCE_LOG] table: exams, action: delete, success: true`);
       throwIfSupabaseError(error, "exams", "delete");
       this.idMap.delete(publicId);
     } catch (error) {
       logRepositoryFailure("SupabaseExamRepository.delete", error);
+      throw error;
     }
   }
 }

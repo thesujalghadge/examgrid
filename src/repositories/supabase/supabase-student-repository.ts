@@ -1,4 +1,5 @@
 import type { StudentRepository } from "@/repositories/interfaces/student-repository";
+import { assertInstituteUuid } from "@/config/institute";
 import { logRepositoryFailure } from "@/lib/logging/runtime-logger";
 import { assertInstituteStudent } from "@/lib/validation/institute-ops-schema";
 import { getClientWorkspaceSession } from "@/lib/workspace-session";
@@ -102,6 +103,8 @@ export class SupabaseStudentRepository implements StudentRepository {
     }
 
     try {
+      assertInstituteUuid(session.instituteId, "session.instituteId");
+
       const client = requireSupabaseClient("students.list");
       const { data, error } = await client
         .from("students")

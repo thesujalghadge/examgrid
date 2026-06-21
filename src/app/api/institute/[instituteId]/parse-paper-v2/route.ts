@@ -5,6 +5,7 @@ import fs from 'fs';
 import { spawn } from 'child_process';
 import { getInstituteGeminiKey } from "@/lib/institute/get-institute-api-key";
 import { readVerifiedWorkspaceSession } from "@/lib/workspace-session-server";
+import { assertInstituteUuid } from "@/config/institute";
 
 export async function POST(
   request: Request,
@@ -13,6 +14,11 @@ export async function POST(
   console.log("HELLO FROM PARSE PAPER API ROUTE");
   try {
     const { instituteId } = await context.params;
+    try {
+      assertInstituteUuid(instituteId, "instituteId");
+    } catch (e: any) {
+      return NextResponse.json({ error: "INVALID_INSTITUTE_ID" }, { status: 400 });
+    }
     const session = await readVerifiedWorkspaceSession();
     if (!session || (session.role !== "platform_admin" && (session.role !== "institute" || session.instituteId !== instituteId))) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

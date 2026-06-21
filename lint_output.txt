@@ -1,0 +1,312 @@
+
+> examgrid@0.1.0 lint
+> eslint src proxy.ts
+
+
+C:\AI\examgrid\src\app\api\cbt\test-session\start\route.ts
+  91:3  warning  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+C:\AI\examgrid\src\app\api\cbt\test-session\submit\route.ts
+   49:10  warning  'createSupabaseClientFromEnv' is defined but never used  @typescript-eslint/no-unused-vars
+   52:3   warning  A `require()` style import is forbidden                  @typescript-eslint/no-require-imports
+   55:5   warning  A `require()` style import is forbidden                  @typescript-eslint/no-require-imports
+   64:5   warning  A `require()` style import is forbidden                  @typescript-eslint/no-require-imports
+   71:5   warning  A `require()` style import is forbidden                  @typescript-eslint/no-require-imports
+   82:5   warning  A `require()` style import is forbidden                  @typescript-eslint/no-require-imports
+  105:5   warning  A `require()` style import is forbidden                  @typescript-eslint/no-require-imports
+  117:5   warning  A `require()` style import is forbidden                  @typescript-eslint/no-require-imports
+  124:5   warning  A `require()` style import is forbidden                  @typescript-eslint/no-require-imports
+  137:3   warning  A `require()` style import is forbidden                  @typescript-eslint/no-require-imports
+  178:5   warning  A `require()` style import is forbidden                  @typescript-eslint/no-require-imports
+  180:5   warning  A `require()` style import is forbidden                  @typescript-eslint/no-require-imports
+  181:5   warning  A `require()` style import is forbidden                  @typescript-eslint/no-require-imports
+  183:5   warning  A `require()` style import is forbidden                  @typescript-eslint/no-require-imports
+  184:5   warning  A `require()` style import is forbidden                  @typescript-eslint/no-require-imports
+  211:3   warning  A `require()` style import is forbidden                  @typescript-eslint/no-require-imports
+
+C:\AI\examgrid\src\app\api\debug\gemini-test\route.ts
+  30:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  69:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\AI\examgrid\src\app\api\debug\trigger-asset-import\route.ts
+  17:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\AI\examgrid\src\app\api\debug\trigger-cleanup\route.ts
+  13:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\AI\examgrid\src\app\api\debug\trigger-gemini-worker\route.ts
+  12:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\AI\examgrid\src\app\api\debug\vision-verification\route.ts
+   12:27   warning  'req' is defined but never used                    @typescript-eslint/no-unused-vars
+   22:66   warning  Unexpected any. Specify a different type           @typescript-eslint/no-explicit-any
+   27:17   warning  'e' is defined but never used                      @typescript-eslint/no-unused-vars
+   68:19   warning  Unexpected any. Specify a different type           @typescript-eslint/no-explicit-any
+   69:16   warning  Unexpected any. Specify a different type           @typescript-eslint/no-explicit-any
+   92:9    warning  'apiKey' is never reassigned. Use 'const' instead  prefer-const
+  108:21   warning  Unexpected any. Specify a different type           @typescript-eslint/no-explicit-any
+  108:63   warning  Unexpected any. Specify a different type           @typescript-eslint/no-explicit-any
+  108:110  warning  Unexpected any. Specify a different type           @typescript-eslint/no-explicit-any
+  116:19   warning  Unexpected any. Specify a different type           @typescript-eslint/no-explicit-any
+
+C:\AI\examgrid\src\app\api\institute\[instituteId]\api-key\route.ts
+  28:12  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+  89:12  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\AI\examgrid\src\app\api\institute\[instituteId]\api-key\status\route.ts
+  18:12  warning  'e' is defined but never used             @typescript-eslint/no-unused-vars
+  66:14  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\AI\examgrid\src\app\api\institute\[instituteId]\parse-paper-v2\route.ts
+  19:14  warning  'e' is defined but never used                    @typescript-eslint/no-unused-vars
+  19:17  warning  Unexpected any. Specify a different type         @typescript-eslint/no-explicit-any
+  87:11  warning  'stdoutData' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\AI\examgrid\src\app\api\institute\[instituteId]\solution\route.ts
+  24:12  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\AI\examgrid\src\app\api\institute\[instituteId]\tests\[testId]\publish\route.ts
+   21:14  warning  'e' is defined but never used             @typescript-eslint/no-unused-vars
+   86:50  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  122:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\AI\examgrid\src\app\api\institute\submissions\test\[testId]\route.ts
+  24:12  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\AI\examgrid\src\app\api\internal\process-solution-queue\route.ts
+  50:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\AI\examgrid\src\app\api\student\exams\[examId]\solutions\route.ts
+  34:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\AI\examgrid\src\app\api\teacher\exams\[examId]\solutions\route.ts
+  32:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\AI\examgrid\src\app\institute\actions\solution-overview.ts
+   4:10  warning  'getInstituteGeminiKey' is defined but never used  @typescript-eslint/no-unused-vars
+  30:34  warning  'queueErr' is assigned a value but never used      @typescript-eslint/no-unused-vars
+
+C:\AI\examgrid\src\app\institute\batches\page.tsx
+   3:56  warning  'useCallback' is defined but never used                                                                     @typescript-eslint/no-unused-vars
+  47:6   warning  React Hook useEffect has a missing dependency: 'refresh'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\AI\examgrid\src\app\institute\login\page.tsx
+  74:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\AI\examgrid\src\app\institute\solution-queue\page.tsx
+  12:38  warning  Unexpected any. Specify a different type                                                                     @typescript-eslint/no-explicit-any
+  25:6   warning  React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\AI\examgrid\src\app\student\login\page.tsx
+  56:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\AI\examgrid\src\app\student\tests\[testId]\page.tsx
+   7:3   warning  'Card' is defined but never used                                                                              @typescript-eslint/no-unused-vars
+   8:3   warning  'CardContent' is defined but never used                                                                       @typescript-eslint/no-unused-vars
+   9:3   warning  'CardDescription' is defined but never used                                                                   @typescript-eslint/no-unused-vars
+  10:3   warning  'CardHeader' is defined but never used                                                                        @typescript-eslint/no-unused-vars
+  11:3   warning  'CardTitle' is defined but never used                                                                         @typescript-eslint/no-unused-vars
+  19:10  warning  'getRepositories' is defined but never used                                                                   @typescript-eslint/no-unused-vars
+  55:6   warning  React Hook useEffect has a missing dependency: 'wsSession'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\AI\examgrid\src\app\student\tests\[testId]\solutions\page.tsx
+  127:16  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  202:45  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+
+C:\AI\examgrid\src\components\exam\ExamInstructions.tsx
+  39:305  warning  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  39:336  warning  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  42:40   warning  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  42:45   warning  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  42:229  warning  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  42:234  warning  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  43:41   warning  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  43:49   warning  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+
+C:\AI\examgrid\src\components\exam\ExamInterface.tsx
+    9:32  warning  'startExamAttempt' is defined but never used         @typescript-eslint/no-unused-vars
+   10:10  warning  'ExamInstructions' is defined but never used         @typescript-eslint/no-unused-vars
+   12:10  warning  'requestExamFullscreen' is defined but never used    @typescript-eslint/no-unused-vars
+   20:10  warning  'persistCbtFinalAttempt' is defined but never used   @typescript-eslint/no-unused-vars
+  113:9   warning  'lifecyclePhase' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  227:57  warning  Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+  229:48  warning  Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+
+C:\AI\examgrid\src\components\exam\QuestionCard.tsx
+  122:17  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  148:19  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  263:35  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\AI\examgrid\src\components\institute\ExamSolutionProgress.tsx
+  7:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\AI\examgrid\src\components\institute\SolutionHealthWidget.tsx
+  12:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\AI\examgrid\src\components\institute\institute-paper-upload-flow.tsx
+    23:3   warning  'inferQuestionTypeFromMeta' is defined but never used  @typescript-eslint/no-unused-vars
+    90:24  warning  'setProgressText' is assigned a value but never used   @typescript-eslint/no-unused-vars
+   362:13  warning  'keyType' is assigned a value but never used           @typescript-eslint/no-unused-vars
+  1219:16  warning  'checkGeminiKeyConfigured' is defined but never used   @typescript-eslint/no-unused-vars
+  1259:11  warning  Unexpected any. Specify a different type               @typescript-eslint/no-explicit-any
+  1270:7   warning  'answerMap' is never reassigned. Use 'const' instead   prefer-const
+  1272:39  warning  A `require()` style import is forbidden                @typescript-eslint/no-require-imports
+  1274:35  warning  Unexpected any. Specify a different type               @typescript-eslint/no-explicit-any
+  1313:10  warning  Unexpected any. Specify a different type               @typescript-eslint/no-explicit-any
+
+C:\AI\examgrid\src\hooks\use-test-session-engine.ts
+  172:5  warning  React Hook useCallback has an unnecessary dependency: 'studentId'. Either exclude it or remove the dependency array  react-hooks/exhaustive-deps
+  370:6  warning  React Hook useEffect has a missing dependency: 'integrityState'. Either include it or remove the dependency array    react-hooks/exhaustive-deps
+
+C:\AI\examgrid\src\hooks\useExamGuard.ts
+  107:6  warning  React Hook useEffect has a missing dependency: 'integrityState'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  125:6  warning  React Hook useEffect has a missing dependency: 'integrityState'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  152:6  warning  React Hook useEffect has a missing dependency: 'integrityState'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  176:6  warning  React Hook useEffect has a missing dependency: 'integrityState'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  182:6  warning  React Hook useEffect has a missing dependency: 'integrityState'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\AI\examgrid\src\instrumentation-node.ts
+  38:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\AI\examgrid\src\lib\ai\encryption.ts
+  5:7  warning  'AUTH_TAG_LENGTH' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\AI\examgrid\src\lib\ai\providers\gemini-provider.ts
+  167:112  error  Parsing error: Invalid character
+
+C:\AI\examgrid\src\lib\ai\providers\provider.ts
+  5:22  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\AI\examgrid\src\lib\background-jobs\asset-import-worker.ts
+  115:20  warning  Unexpected any. Specify a different type         @typescript-eslint/no-explicit-any
+  130:39  warning  Unexpected any. Specify a different type         @typescript-eslint/no-explicit-any
+  229:25  warning  Unexpected any. Specify a different type         @typescript-eslint/no-explicit-any
+  231:13  warning  'finalError' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  246:27  warning  Unexpected any. Specify a different type         @typescript-eslint/no-explicit-any
+  306:19  warning  Unexpected any. Specify a different type         @typescript-eslint/no-explicit-any
+
+C:\AI\examgrid\src\lib\background-jobs\cleanup-worker.ts
+  151:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  181:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  202:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\AI\examgrid\src\lib\background-jobs\gemini-worker.ts
+   12:10  warning  'validateSolution' is defined but never used                 @typescript-eslint/no-unused-vars
+   12:65  warning  'questionText' is assigned a value but never used            @typescript-eslint/no-unused-vars
+   16:10  warning  'decrypt' is defined but never used                          @typescript-eslint/no-unused-vars
+   17:10  warning  'decryptApiKey' is defined but never used                    @typescript-eslint/no-unused-vars
+   20:18  warning  Unexpected any. Specify a different type                     @typescript-eslint/no-explicit-any
+   44:32  warning  Unexpected any. Specify a different type                     @typescript-eslint/no-explicit-any
+   80:50  warning  Unexpected any. Specify a different type                     @typescript-eslint/no-explicit-any
+  106:19  warning  Unexpected any. Specify a different type                     @typescript-eslint/no-explicit-any
+  168:66  warning  Unexpected any. Specify a different type                     @typescript-eslint/no-explicit-any
+  195:20  warning  A `require()` style import is forbidden                      @typescript-eslint/no-require-imports
+  196:22  warning  A `require()` style import is forbidden                      @typescript-eslint/no-require-imports
+  247:9   warning  'formattedOptions' is never reassigned. Use 'const' instead  prefer-const
+  248:19  warning  Unexpected any. Specify a different type                     @typescript-eslint/no-explicit-any
+  249:16  warning  Unexpected any. Specify a different type                     @typescript-eslint/no-explicit-any
+  252:9   warning  'promptText' is never reassigned. Use 'const' instead        prefer-const
+  269:26  warning  Unexpected any. Specify a different type                     @typescript-eslint/no-explicit-any
+  280:16  warning  A `require()` style import is forbidden                      @typescript-eslint/no-require-imports
+  283:9   warning  'auditData' is never reassigned. Use 'const' instead         prefer-const
+  283:20  warning  Unexpected any. Specify a different type                     @typescript-eslint/no-explicit-any
+  289:38  warning  Unexpected any. Specify a different type                     @typescript-eslint/no-explicit-any
+  306:24  warning  Unexpected any. Specify a different type                     @typescript-eslint/no-explicit-any
+  316:14  warning  'e' is defined but never used                                @typescript-eslint/no-unused-vars
+  388:20  warning  Unexpected any. Specify a different type                     @typescript-eslint/no-explicit-any
+  454:19  warning  Unexpected any. Specify a different type                     @typescript-eslint/no-explicit-any
+
+C:\AI\examgrid\src\lib\cbt\cbt-to-exam.ts
+  28:24  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  29:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  30:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  31:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  57:22  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  58:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  59:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  60:8   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\AI\examgrid\src\lib\cbt\normalized-question.ts
+  76:8  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\AI\examgrid\src\lib\cbt\paper-processing.ts
+    2:3   warning  'logParsingEvent' is defined but never used                    @typescript-eslint/no-unused-vars
+    3:3   warning  'logParsingWarning' is defined but never used                  @typescript-eslint/no-unused-vars
+    4:3   warning  'logUploadEvent' is defined but never used                     @typescript-eslint/no-unused-vars
+    5:3   warning  'logValidationFailure' is defined but never used               @typescript-eslint/no-unused-vars
+   34:7   warning  'DEFAULT_DURATION_MINUTES' is assigned a value but never used  @typescript-eslint/no-unused-vars
+   63:11  warning  'ParsePaperInput' is defined but never used                    @typescript-eslint/no-unused-vars
+  119:10  warning  'makeLog' is defined but never used                            @typescript-eslint/no-unused-vars
+  601:10  warning  'buildSections' is defined but never used                      @typescript-eslint/no-unused-vars
+  620:10  warning  'buildRawTextPreview' is defined but never used                @typescript-eslint/no-unused-vars
+  877:39  warning  Unexpected any. Specify a different type                       @typescript-eslint/no-explicit-any
+  878:39  warning  Unexpected any. Specify a different type                       @typescript-eslint/no-explicit-any
+  971:31  warning  Unexpected any. Specify a different type                       @typescript-eslint/no-explicit-any
+  972:31  warning  Unexpected any. Specify a different type                       @typescript-eslint/no-explicit-any
+  973:10  warning  Unexpected any. Specify a different type                       @typescript-eslint/no-explicit-any
+  979:28  warning  Unexpected any. Specify a different type                       @typescript-eslint/no-explicit-any
+
+C:\AI\examgrid\src\lib\cbt\subject-mapping.ts
+  72:9  warning  'sectionName' is never reassigned. Use 'const' instead  prefer-const
+
+C:\AI\examgrid\src\lib\exam-bootstrap.ts
+  73:3  warning  'startedAt' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\AI\examgrid\src\lib\exam-catalog.ts
+  82:9   warning  'bankQuestionsMap' is never reassigned. Use 'const' instead  prefer-const
+  82:42  warning  Unexpected any. Specify a different type                     @typescript-eslint/no-explicit-any
+
+C:\AI\examgrid\src\lib\institute\get-institute-api-key.ts
+  126:14  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\AI\examgrid\src\lib\solutions\delivery.ts
+  108:42  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  117:43  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  123:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  155:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\AI\examgrid\src\lib\solutions\queue.ts
+  26:58  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  41:51  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  71:35  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\AI\examgrid\src\lib\solutions\solution-generator.ts
+   36:34  warning  'eqErr' is assigned a value but never used                @typescript-eslint/no-unused-vars
+   46:42  warning  Unexpected any. Specify a different type                  @typescript-eslint/no-explicit-any
+   53:19  warning  'e' is defined but never used                             @typescript-eslint/no-unused-vars
+  102:9   warning  'promptVersion' is never reassigned. Use 'const' instead  prefer-const
+  119:9   warning  'result' is never reassigned. Use 'const' instead         prefer-const
+  154:11  warning  'validation' is assigned a value but never used           @typescript-eslint/no-unused-vars
+  180:27  warning  'countErr' is assigned a value but never used             @typescript-eslint/no-unused-vars
+  215:19  warning  Unexpected any. Specify a different type                  @typescript-eslint/no-explicit-any
+
+C:\AI\examgrid\src\lib\supabase\env-config.ts
+  48:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\AI\examgrid\src\repositories\local\local-exam-repository.ts
+  38:22  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\AI\examgrid\src\repositories\supabase\mappers\exam-mapper.ts
+  102:37  warning  Unexpected any. Specify a different type                 @typescript-eslint/no-explicit-any
+  136:61  warning  Unexpected any. Specify a different type                 @typescript-eslint/no-explicit-any
+  144:75  warning  Unexpected any. Specify a different type                 @typescript-eslint/no-explicit-any
+  149:7   warning  'cleanOptions' is never reassigned. Use 'const' instead  prefer-const
+  150:54  warning  Unexpected any. Specify a different type                 @typescript-eslint/no-explicit-any
+  159:14  warning  'e' is defined but never used                            @typescript-eslint/no-unused-vars
+  169:30  warning  Unexpected any. Specify a different type                 @typescript-eslint/no-explicit-any
+
+C:\AI\examgrid\src\repositories\supabase\mappers\question-mapper.ts
+  42:52  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\AI\examgrid\src\repositories\supabase\supabase-exam-repository.ts
+  128:11  warning  'bankQuestionsMap' is never reassigned. Use 'const' instead  prefer-const
+  128:44  warning  Unexpected any. Specify a different type                     @typescript-eslint/no-explicit-any
+  136:33  warning  Unexpected any. Specify a different type                     @typescript-eslint/no-explicit-any
+
+C:\AI\examgrid\src\workers\solution-worker.ts
+  35:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+✖ 196 problems (1 error, 195 warnings)
+  0 errors and 11 warnings potentially fixable with the `--fix` option.
+

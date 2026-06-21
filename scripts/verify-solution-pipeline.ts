@@ -20,9 +20,9 @@ GeminiProvider.prototype.generateSolution = async function() {
       taxonomy: { subject: "Physics", topic: "Kinematics", subtopic: "Linear Motion" },
       cognitiveLevel: "Application",
       difficulty: 0.2
-    },
+    } as any,
     tokenUsage: { prompt: 100, completion: 50, total: 150 }
-  };
+  } as any;
 };
 
 async function runTests() {

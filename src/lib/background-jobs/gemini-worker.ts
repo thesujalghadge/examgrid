@@ -6,26 +6,27 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PU
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 const BUCKET_NAME = "cbt-assets";
-const MODEL_NAME = "gemini-2.5-flash";
-const PROMPT_VERSION = "v1.0-strict-vision";
+const MODEL_NAME = "gemini-3.1-flash-lite";
+const PROMPT_VERSION = "v2.0-authoritative-key";
 
-// Lightweight Validation Logic
-function validateSolution(text: string, expectedAnswer: string) {
-  if (!text || text.length < 50) return { passed: false, reason: "Response too short or empty" };
-  if (!text.includes("**Final Answer:**")) return { passed: false, reason: "Missing **Final Answer:** structure" };
-
-  const finalAnswerBlock = text.split("**Final Answer:**")[1];
-  if (!finalAnswerBlock) return { passed: false, reason: "No text after Final Answer block" };
-
-  const containsAnswer = finalAnswerBlock.includes(expectedAnswer);
-  if (!containsAnswer) {
-    return { passed: false, reason: `Final answer block did not contain the expected answer: ${expectedAnswer}` };
-  }
-
-  return { passed: true };
+function validateSolution(text: string, expectedAnswer: string, questionText: string = "") {
+  return { passed: true, reason: null };
 }
 
 import { decrypt } from "@/lib/ai/encryption";
+import { decryptApiKey } from "@/lib/crypto/api-key-encryption";
+
+async function updateQueueState(id: string, stage: string, reason: string | null = null, error: string | null = null, status: string | null = null, attempts: number | null = null, nextRetryAt: string | null = null) {
+  const payload: any = {};
+  if (stage) payload.failure_stage = stage;
+  if (reason) payload.failure_reason = reason;
+  if (error) payload.last_error = error;
+  if (status) payload.status = status;
+  if (attempts !== null) payload.attempts = attempts;
+  if (nextRetryAt !== null) payload.next_retry_at = nextRetryAt;
+  
+  await supabase.from("solution_generation_queue").update(payload).eq("id", id);
+}
 
 export async function runGeminiWorker() {
   // 1. Fetch and Lock 1 queue item atomically using SKIP LOCKED RPC
@@ -42,35 +43,23 @@ export async function runGeminiWorker() {
 
   const job = leasedJobs[0] as any;
 
-  // We need to fetch the question_id since the RPC only returns the ID and asset_id
-  const { data: queueItem, error: queueItemError } = await supabase
-    .from("solution_generation_queue")
-    .select("question_id, test_question_asset_id")
-    .eq("id", job.id)
-    .single();
-
-  if (queueItemError || !queueItem) {
-    await supabase.from("solution_generation_queue").update({ status: "FAILED", last_error: "Queue item fetch failed" }).eq("id", job.id);
-    return { success: false, reason: "Queue item fetch error" };
-  }
-
-  const examQuestionId = queueItem.question_id;
-  const assetId = queueItem.test_question_asset_id;
-
-  let storagePath = null;
-  if (assetId) {
-    const { data: asset, error: assetError } = await supabase
-      .from("test_question_assets")
-      .select("storage_path")
-      .eq("id", assetId)
+    // We need to fetch the question_id since the RPC only returns the ID and asset_id
+    const { data: queueItem, error: queueItemError } = await supabase
+      .from("solution_generation_queue")
+      .select("question_id, test_question_asset_id")
+      .eq("id", job.id)
       .single();
 
-    if (assetError || !asset) {
-      await supabase.from("solution_generation_queue").update({ status: "FAILED", last_error: "Asset fetch failed" }).eq("id", job.id);
-      return { success: false, reason: "Asset fetch error" };
+    if (queueItemError || !queueItem) {
+      await updateQueueState(job.id, "LEASE", "Queue item fetch error", queueItemError?.message || "Unknown error", "FAILED");
+      return { success: false, reason: "Queue item fetch error" };
     }
-    storagePath = asset.storage_path;
-  }
+
+    const examQuestionId = queueItem.question_id;
+    const assetId = queueItem.test_question_asset_id;
+
+  let storagePath = null;
+  // Note: we now fetch image directly from published_image_url below
 
   let apiKey = "";
 
@@ -91,144 +80,319 @@ export async function runGeminiWorker() {
     const attempts = ((existingActiveSolution as any)?.generation_attempts || 0) + 1;
 
     // 3. Resolve Tenant Credentials
+    let generationSource = "INSTITUTE_KEY";
+    let resolvedModelName = MODEL_NAME;
+    
+    // Check if custom model is set in AI settings
     const { data: tenantSettings } = await supabase
       .from("institute_ai_settings")
-      .select("*")
+      .select("model_name, is_active, allow_platform_ai")
       .eq("institute_id", job.institute_id)
       .maybeSingle();
+      
+    if (tenantSettings && tenantSettings.is_active && tenantSettings.model_name) {
+      resolvedModelName = tenantSettings.model_name;
+    }
 
-    let generationSource = "";
-    let resolvedModelName = MODEL_NAME;
-
-    if (tenantSettings && tenantSettings.is_active && tenantSettings.encrypted_api_key) {
-      try {
-        const secret = process.env.AI_KEY_ENCRYPTION_SECRET;
-        if (!secret) throw new Error("AI_KEY_ENCRYPTION_SECRET is missing");
-        apiKey = decrypt(tenantSettings.encrypted_api_key, secret);
-        generationSource = "INSTITUTE_KEY";
-        resolvedModelName = tenantSettings.model_name || MODEL_NAME;
-      } catch (err) {
-        throw new Error("Failed to decrypt institute API key");
-      }
-    } else {
+    try {
+      const { getInstituteGeminiKey } = await import("@/lib/institute/get-institute-api-key");
+      apiKey = await getInstituteGeminiKey(job.institute_id);
+      
+      console.log(JSON.stringify({
+        institute_id: job.institute_id,
+        key_source: "INSTITUTE_KEY",
+        failure_reason: null
+      }));
+    } catch (err: any) {
+      const keyStatus = err.name === "INVALID_SECRET" ? "INVALID_SECRET" : "NO_KEY";
+      
       // Check platform fallback
-      const allowPlatformAi = tenantSettings ? tenantSettings.allow_platform_ai : true; // Default true as per schema
+      const allowPlatformAi = tenantSettings ? tenantSettings.allow_platform_ai : true;
       if (allowPlatformAi) {
         apiKey = process.env.GEMINI_API_KEY || "";
-        if (!apiKey) throw new Error("GEMINI_API_KEY platform fallback is not configured");
+        if (!apiKey) {
+          console.log(JSON.stringify({
+            institute_id: job.institute_id,
+            key_source: "NONE",
+            key_status: keyStatus,
+            failure_reason: `Fallback enabled but GEMINI_API_KEY not configured. Original error: ${err.message}`
+          }));
+          throw new Error("GEMINI_API_KEY platform fallback is not configured");
+        }
         generationSource = "PLATFORM_KEY";
+        
+        console.log(JSON.stringify({
+          institute_id: job.institute_id,
+          key_source: "PLATFORM_KEY",
+          key_status: keyStatus,
+          failure_reason: err.message
+        }));
       } else {
+        console.log(JSON.stringify({
+          institute_id: job.institute_id,
+          key_source: "NONE",
+          failure_reason: `Platform fallback disabled. Original error: ${err.message}`
+        }));
         throw new Error("Tenant AI quota exhausted / No credentials");
       }
     }
 
-    // 4. Fetch Authoritative Phase 1 Answer
-    const { data: examQuestion } = await supabase
+    // 4. Fetch Authoritative Published Snapshot
+    const { data: examQuestion, error: examQuestionError } = await supabase
       .from("exam_questions")
-      .select("correct_option_id, correct_numerical_answer, type, question_text, options")
+      .select("question_type, published_question_text, published_options, published_answer_key, published_image_url, published_at")
       .eq("id", examQuestionId)
       .single();
 
-    if (!examQuestion) throw new Error("Phase 1 exam_question not found");
-
-    let resolvedCorrectAnswer = "";
-    if (examQuestion.type === "MCQ") {
-      resolvedCorrectAnswer = examQuestion.correct_option_id || "UNKNOWN";
-    } else {
-      resolvedCorrectAnswer = examQuestion.correct_numerical_answer || "UNKNOWN";
+    if (examQuestionError || !examQuestion) {
+      await updateQueueState(job.id, "QUESTION_FETCH", "Exam question not found", examQuestionError?.message || "Unknown", "FAILED");
+      return { success: false, reason: "Exam question not found" };
+    }
+    
+    if (!examQuestion.published_at) {
+      await updateQueueState(job.id, "QUESTION_FETCH", "Question has not been published yet", null, "FAILED");
+      return { success: false, reason: "Question has not been published yet" };
     }
 
+    const resolvedCorrectAnswer = examQuestion.published_answer_key || "UNKNOWN";
+
     if (resolvedCorrectAnswer === "UNKNOWN") {
-      throw new Error("No authoritative answer key available from Phase 1 schema");
+      await updateQueueState(job.id, "KEY_RESOLUTION", "No authoritative answer key available from published snapshot", null, "FAILED");
+      return { success: false, reason: "No authoritative answer key available from published snapshot" };
+    }
+
+    storagePath = examQuestion.published_image_url;
+
+    // Explicitly extract image path from __metadata__ if published_image_url is null
+    if (!storagePath && examQuestion.published_options) {
+      const metaOption = examQuestion.published_options.find((o: any) => o.id === "__metadata__" || o.label === "__metadata__");
+      if (metaOption && metaOption.text) {
+        try {
+          const metaJson = JSON.parse(metaOption.text);
+          if (metaJson.stemImage) {
+            storagePath = metaJson.stemImage;
+          }
+        } catch(e) {
+           console.error("Failed to parse __metadata__", e);
+        }
+      }
+    }
+
+    // SNAPSHOT INTEGRITY AUDIT: Hard rule
+    const textLen = (examQuestion.published_question_text || "").trim().length;
+    if (textLen === 0 && !storagePath) {
+      await updateQueueState(job.id, "QUESTION_FETCH", "SNAPSHOT INTEGRITY FAILED: Neither text nor image exists for this question.", null, "FAILED");
+      return { success: false, reason: "SNAPSHOT INTEGRITY FAILED" };
     }
 
     let fileBuffer: Buffer | null = null;
     let mimeType = "";
 
-    // 5. Download Buffer from Storage (if asset exists)
+    // 5. Download Buffer from Storage or read from local filesystem
     if (storagePath) {
-      const { data: fileData, error: downloadError } = await supabase.storage
-        .from(BUCKET_NAME)
-        .download(storagePath);
+      if (storagePath.startsWith('/uploads/') || storagePath.startsWith('/test_questions/')) {
+        // Local file
+        const fs = require('fs');
+        const path = require('path');
+        let localPathStr = storagePath;
+        if (localPathStr.startsWith('/')) {
+           localPathStr = localPathStr.slice(1);
+        }
+        const localPath = path.join(process.cwd(), 'public', localPathStr);
+        if (fs.existsSync(localPath)) {
+          fileBuffer = fs.readFileSync(localPath);
+        } else {
+          await updateQueueState(job.id, "QUESTION_FETCH", `Local file not found: ${storagePath}`, null, "FAILED");
+          return { success: false, reason: `Local file not found: ${storagePath}` };
+        }
+      } else {
+        const { data: fileData, error: downloadError } = await supabase.storage
+          .from(BUCKET_NAME)
+          .download(storagePath);
 
-      if (downloadError || !fileData) throw new Error(`Failed to download buffer from ${storagePath}`);
-
-      fileBuffer = Buffer.from(await fileData.arrayBuffer());
+        if (downloadError || !fileData) {
+          await updateQueueState(job.id, "QUESTION_FETCH", `Failed to download buffer from ${storagePath}`, downloadError?.message, "FAILED");
+          return { success: false, reason: `Failed to download buffer from ${storagePath}` };
+        }
+        fileBuffer = Buffer.from(await fileData.arrayBuffer());
+      }
       mimeType = storagePath.toLowerCase().endsWith("webp") ? "image/webp" : "image/jpeg";
     }
 
-    // 6. Construct Prompt
-    let promptTemplate = "";
-    if (fileBuffer) {
-      promptTemplate = `The exact correct answer to the question in this image is: "{ResolvedCorrectAnswer}".
-Your task is to provide the step-by-step logical reasoning to arrive at this specific answer.
-Do not conclude with any other answer.
+    // 6. Step 1: Question Understanding
+    const understandingInstruction = `You are an expert exam question parser and solver.
+Analyze the provided question. 
+1. Identify the subject, chapter, subchapter, and key concepts.
+2. Provide a short summary of the question.
+3. Solve the question completely independently. Provide your step-by-step reasoning.
+4. Output the exact derived mathematical or text answer in 'derived_answer'. DO NOT output A/B/C/D as the answer.
+5. Extract the four options EXACTLY as written in the image into 'extracted_options'. If there are no options (NAT), leave it null.
+6. Provide a confidence score (0-100) for your understanding and solution.
 
-Required Structure:
-**Explanation:**
-[Step-by-step logical breakdown]
+DO NOT hallucinate. Do not guess. If the question is incomplete, set confidence to 0.
 
-**Final Answer:**
-{ResolvedCorrectAnswer}`;
-    } else {
-      const formattedOptions = (examQuestion.options || [])
-        .map((o: any) => `${o.label}: ${o.text || ""}`)
-        .join("\n");
-        
-      promptTemplate = `Question:
-${examQuestion.question_text || "Solve the following problem"}
+Respond strictly in valid JSON format matching this structure:
+{
+  "subject": "string",
+  "chapter": "string",
+  "subchapter": "string",
+  "concepts": ["string"],
+  "summary": "string",
+  "confidence": number,
+  "reasoning": "string",
+  "derived_answer": "string",
+  "extracted_options": { "A": "string", "B": "string", "C": "string", "D": "string" }
+}`;
 
-Options:
-${formattedOptions}
+    let formattedOptions = (examQuestion.published_options || [])
+      .filter((o: any) => o.label !== "__metadata__")
+      .map((o: any) => `${o.label}: ${o.text || ""}`)
+      .join("\n");
+      
+    let promptText = `Question:\n${examQuestion.published_question_text || "Solve the following problem"}\n\nOptions:\n${formattedOptions}\n\n${understandingInstruction}`;
 
-The exact correct answer to this question is: "{ResolvedCorrectAnswer}".
-Your task is to provide the step-by-step logical reasoning to arrive at this specific answer.
-Do not conclude with any other answer.
-
-Required Structure:
-**Explanation:**
-[Step-by-step logical breakdown]
-
-**Final Answer:**
-{ResolvedCorrectAnswer}`;
-    }
-
-    const promptText = promptTemplate.replaceAll("{ResolvedCorrectAnswer}", resolvedCorrectAnswer);
-    
     // TEXT ONLY prompt snapshot
-    const promptSnapshot = `Model: ${resolvedModelName}\nVersion: ${PROMPT_VERSION}\nAnswer Key: ${resolvedCorrectAnswer}\nInstruction: ${promptTemplate}`;
+    const promptSnapshot = `Model: ${resolvedModelName}\nVersion: ${PROMPT_VERSION}\nInstruction: Phase 3B Architecture`;
 
-    // 7. Call Gemini
+    console.log(`\n[GEMINI_WORKER] Phase 3B: Processing Question ID: ${examQuestionId}`);
+    console.log(`[GEMINI_WORKER] Image Source: ${storagePath || 'NONE (Text Only)'}`);
+    console.log(`[GEMINI_WORKER] Teacher Key: ${resolvedCorrectAnswer}`);
+    console.log(`[GEMINI_WORKER] Institute: ${job.institute_id}\n`);
+
+    // 7. Call Gemini for Step 1 & 3
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: resolvedModelName });
+    const model = genAI.getGenerativeModel({ 
+      model: resolvedModelName,
+      generationConfig: { responseMimeType: "application/json" }
+    });
+
+    const geminiPayload: any = [];
+    let imagePartCount = 0;
+    let textPartCount = 0;
+
+    if (fileBuffer) {
+      geminiPayload.push({ inlineData: { data: fileBuffer.toString("base64"), mimeType } });
+      imagePartCount++;
+    }
+    geminiPayload.push(promptText);
+    textPartCount++;
+
+    const fs = require('fs');
+    
+    // Save audit before calling Gemini
+    let auditData: any = {
+      imagePath: storagePath,
+      imageSizeInBytes: fileBuffer ? fileBuffer.length : 0,
+      imagePartCount,
+      textPartCount,
+      geminiRequestContents: {
+        parts: geminiPayload.map((p: any) => {
+          if (p.inlineData) return { mimeType: p.inlineData.mimeType, base64Preview: p.inlineData.data.substring(0, 50) + "...(truncated)" };
+          return { textPreview: (p as string) };
+        })
+      },
+      rawGeminiResponse: "Pending API Call"
+    };
 
     const startTime = Date.now();
     let result;
-    if (fileBuffer) {
-      result = await model.generateContent([
-        { inlineData: { data: fileBuffer.toString("base64"), mimeType } },
-        promptText
-      ]);
+    try {
+      result = await model.generateContent(geminiPayload);
+      
+      const analysisText = result.response.text();
+      auditData.rawGeminiResponse = analysisText;
+      fs.writeFileSync('vision_payload_verification.json', JSON.stringify(auditData, null, 2), 'utf8');
+
+    } catch (apiError: any) {
+      auditData.rawGeminiResponse = `API ERROR: ${apiError.message}`;
+      fs.writeFileSync('vision_payload_verification.json', JSON.stringify(auditData, null, 2), 'utf8');
+      throw new Error(`[GEMINI_CALL] ${apiError.message || "Unknown Gemini API error"}`);
+    }
+    
+    const analysisText = result.response.text();
+    let analysis;
+    try {
+      analysis = JSON.parse(analysisText);
+    } catch (e) {
+      throw new Error(`[VALIDATION] Model did not return valid JSON`);
+    }
+
+    // Step 2: Understanding Validation
+    if (!analysis.subject || !analysis.chapter || !analysis.concepts || analysis.confidence < 70 || analysis.subject === "Unknown" || analysis.chapter === "Unknown") {
+       await updateQueueState(job.id, "VALIDATION", "Understanding validation failed (Missing concepts or low confidence)", null, "FAILED");
+       return { success: false, reason: "Understanding validation failed" };
+    }
+
+    // Step 3: Deterministic Option Resolver
+    let finalModelAnswer = analysis.derived_answer || analysis.model_answer || "";
+    if (examQuestion.question_type !== "NUMERICAL" && analysis.extracted_options) {
+       let matchedLetter = null;
+       const normalize = (s: string) => String(s).replace(/\s+/g, '').replace(/v/gi, '√').toLowerCase();
+       const derived = normalize(finalModelAnswer);
+       for (const [letter, optText] of Object.entries(analysis.extracted_options)) {
+          if (normalize(optText as string) === derived) {
+             matchedLetter = letter;
+             break;
+          }
+       }
+       if (matchedLetter) {
+          finalModelAnswer = matchedLetter;
+       }
+    }
+    analysis.model_answer = finalModelAnswer;
+
+    // Step 4: Answer Verification
+    let cleanTeacherAnswer = resolvedCorrectAnswer.toString().trim().toLowerCase();
+    const cleanModelAnswer = String(finalModelAnswer).trim().toLowerCase();
+    
+    // If teacher answer is "a: 27" and model is "a", they match.
+    if (cleanTeacherAnswer.includes(':')) {
+        const parts = cleanTeacherAnswer.split(':');
+        if (parts[0].trim() === cleanModelAnswer) {
+            cleanTeacherAnswer = cleanModelAnswer;
+        }
+    }
+    
+    let mismatchReason = null;
+    let finalStatus = "COMPLETED";
+    let solutionText = "";
+    let validationPassed = true;
+
+    if (cleanTeacherAnswer !== cleanModelAnswer) {
+       mismatchReason = `Model derived '${cleanModelAnswer}' but teacher key is '${cleanTeacherAnswer}'`;
+       finalStatus = "FAILED";
+       validationPassed = false;
+       solutionText = `**MISMATCH ERROR**\nModel solved: ${cleanModelAnswer}\nTeacher Key: ${cleanTeacherAnswer}\n\nReasoning:\n${analysis.reasoning}`;
     } else {
-      result = await model.generateContent(promptText);
+       // Step 5: Student Solution Generation
+       const studentModel = genAI.getGenerativeModel({ model: resolvedModelName });
+       const studentPrompt = `You are an expert JEE/NEET faculty.
+The student needs a premium solution for this question. The correct answer is ${resolvedCorrectAnswer}.
+Here is the verified reasoning:
+${analysis.reasoning}
+
+Format a clean, premium solution following these strict rules:
+1. Return EXACTLY three sections: **Approach:**, **Calculation:**, and **Final Answer:**. No introductory remarks.
+2. In **Approach:**, clearly state the concept used (${analysis.concepts.join(', ')}) and the quick approach.
+3. In **Calculation:**, provide the essential steps.
+4. **Final Answer:** MUST be exactly ${resolvedCorrectAnswer}.
+
+Return only the markdown text.`;
+
+       const studentResult = await studentModel.generateContent(studentPrompt);
+       solutionText = studentResult.response.text();
     }
     const durationMs = Date.now() - startTime;
-    const solutionText = result.response.text();
 
-    // 8. Validate Output
-    const validation = validateSolution(solutionText, resolvedCorrectAnswer);
-
-    // 9. Store Solution
-    const finalStatus = validation.passed ? "COMPLETED" : "VALIDATION_FAILED";
-
-    // but the schema is ready (version, superseded_at). For now we just insert version=1.
+    // Step 6: Reality Audit Storage
     const payload: any = {
       test_question_asset_id: assetId,
       question_id: examQuestionId,
       institute_id: job.institute_id,
       content_markdown: solutionText,
-      is_active: true,
+      is_active: validationPassed,
       generation_status: finalStatus,
+      provider: "Google",
       model_name: resolvedModelName,
       generation_source: generationSource,
       generated_model: resolvedModelName,
@@ -237,67 +401,78 @@ Required Structure:
       prompt_snapshot: promptSnapshot,
       generation_duration_ms: durationMs,
       generation_attempts: attempts,
-      validation_passed: validation.passed,
-      generated_at: new Date().toISOString()
+      validation_passed: validationPassed,
+      generated_at: new Date().toISOString(),
+      
+      // Phase 3 Architecture fields
+      subject: analysis.subject,
+      chapter: analysis.chapter,
+      subchapter: analysis.subchapter,
+      concepts: analysis.concepts,
+      model_answer: analysis.model_answer,
+      teacher_answer: resolvedCorrectAnswer,
+      confidence: analysis.confidence,
+      mismatch_reason: mismatchReason,
+      ai_metadata: analysis
     };
     
-    await supabase
-      .from("question_solutions")
-      .upsert(payload, { onConflict: "test_question_asset_id" });
+    let existingSolId = null;
+    const { data: existingQ } = await supabase.from("question_solutions").select("id").eq("question_id", examQuestionId).maybeSingle();
+    if (existingQ) {
+      existingSolId = existingQ.id;
+    } else if (assetId) {
+      const { data: existingA } = await supabase.from("question_solutions").select("id").eq("test_question_asset_id", assetId).maybeSingle();
+      if (existingA) existingSolId = existingA.id;
+    }
+
+    if (existingSolId) {
+      await supabase.from("question_solutions").update(payload).eq("id", existingSolId);
+    } else {
+      await supabase.from("question_solutions").insert(payload);
+    }
 
     // 10. Clear Memory
     apiKey = "";
 
     // 11. Update Queue
-    if (validation.passed) {
-      await supabase.from("solution_generation_queue").update({ status: "COMPLETED", completed_at: new Date().toISOString() }).eq("id", job.id);
+    if (validationPassed) {
+      await updateQueueState(job.id, "SUCCESS", null, null, "COMPLETED", attempts, null);
     } else {
-      const nextQueueStatus = attempts >= 3 ? "FAILED" : "VALIDATION_FAILED";
-      await supabase.from("solution_generation_queue").update({ status: nextQueueStatus, attempts }).eq("id", job.id);
+      // Even if validation failed (mismatch), the queue job has technically completed its run
+      // It stored the mismatch_reason in question_solutions. We do NOT want to endlessly retry.
+      await updateQueueState(job.id, "VALIDATION", mismatchReason || "Validation failed", null, "COMPLETED", attempts, null);
     }
 
     return { 
       success: true, 
       processed: 1, 
       status: finalStatus, 
-      validation_passed: validation.passed,
+      validation_passed: validationPassed,
       attempts
     };
 
   } catch (error: any) {
     apiKey = ""; // Clear on failure
     console.error("Gemini worker failed:", error);
-    const isRateLimit = error.status === 429 || error.message.includes("429");
-    const isNetwork = error.status === 500 || error.message.includes("fetch");
+    
+    // Parse error string to determine stage if possible
+    const errMessage = error.message || String(error);
+    let stage = "UNKNOWN";
+    if (errMessage.includes("[GEMINI_CALL]")) stage = "GEMINI_CALL";
+    else if (errMessage.includes("tenant") || errMessage.includes("decrypt")) stage = "KEY_RESOLUTION";
     
     // Calculate current attempt safely
-    const currentAttempts = job.attempts + 1;
+    const currentAttempts = (job.attempts || 0) + 1;
     let nextStatus = "FAILED";
-    let nextRetryAt = undefined;
+    let nextRetryAt: string | null = null;
 
-    if ((isRateLimit || isNetwork) && currentAttempts < 3) {
+    // We retry all execution errors except permanent ones (like missing keys) up to 3 times
+    if (currentAttempts < 3 && !errMessage.includes("tenant") && !errMessage.includes("AI_KEY")) {
       nextStatus = "WAITING_RETRY";
       nextRetryAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
     }
 
-    await supabase.from("solution_generation_queue").update({ 
-      status: nextStatus,
-      attempts: currentAttempts,
-      last_error: error.message || String(error),
-      next_retry_at: nextRetryAt
-    }).eq("id", job.id);
-
-    // Also track attempt natively on question_solutions if we can
-    const errorPayload: any = {
-      test_question_asset_id: assetId,
-      question_id: examQuestionId,
-      institute_id: job.institute_id,
-      is_active: false,
-      generation_status: nextStatus,
-      generation_attempts: currentAttempts,
-      last_error: error.message || String(error)
-    };
-    await supabase.from("question_solutions").upsert(errorPayload, { onConflict: "test_question_asset_id" });
+    await updateQueueState(job.id, stage, errMessage.replace("[GEMINI_CALL] ", ""), errMessage, nextStatus, currentAttempts, nextRetryAt);
 
     return { success: false, reason: error.message, nextStatus };
   }

@@ -471,6 +471,17 @@ export function InstitutePaperUploadFlow() {
     }
 
     await awaitRepositoryPersist();
+
+    // Call the authoritative /publish API directly
+    const res = await fetch(`/api/institute/${instituteId}/tests/${testId}/publish`, {
+      method: "POST",
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(`Publish failed: ${errorData.error || res.statusText}`);
+    }
+
     logUploadEvent("paper_processing_published", { instituteId, testId, totalQuestions: finalPkg.totalQuestions });
     setPublishedTestId(testId);
     setPublishedTitle(finalPkg.title);
@@ -1281,8 +1292,8 @@ function cropsMetaToProcessedPackage(
       difficulty: undefined,
       confidence: 1.0,
       questionType: q.q_type === "NAT" ? "NUMERICAL" : "MCQ_SINGLE",
-      detectionSource: "vision_crop",
-      questionText: "", // Blank because we rely on the image
+      detectionSource: q.question_text ? "hybrid" : "vision_crop",
+      questionText: q.question_text || "",
       stemImage: q.asset_path,
       hasEquation: false,
       hasImage: true,
@@ -1290,7 +1301,7 @@ function cropsMetaToProcessedPackage(
       solution: undefined,
       marks: 4,
       negativeMarks: 1,
-      optionLabels: [],
+      optionLabels: q.options && q.options.length > 0 ? q.options : [],
       optionImages: [],
       images: [],
       explanation: undefined,

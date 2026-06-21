@@ -542,7 +542,7 @@ export function ExamInterface({
       {!isTeacherReview ? (
         <button
           type="button"
-          className="fixed bottom-4 right-4 z-30 inline-flex h-12 w-12 items-center justify-center rounded-full bg-[#1a3c6e] text-2xl font-bold text-white shadow-lg md:hidden"
+          className="fixed bottom-4 right-4 z-30 inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary text-2xl font-bold text-primary-foreground shadow-lg md:hidden"
           aria-label="Open question palette"
           onClick={() => setMobilePaletteOpen(true)}
         >

@@ -6,11 +6,18 @@ import { readVerifiedWorkspaceSession } from "@/lib/workspace-session-server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+import { assertInstituteUuid } from "@/config/institute";
+
 export async function GET(
   _request: Request,
   context: { params: Promise<{ instituteId: string }> },
 ) {
   const { instituteId } = await context.params;
+  try {
+    assertInstituteUuid(instituteId, "instituteId");
+  } catch (e) {
+    return NextResponse.json({ error: "INVALID_INSTITUTE_ID" }, { status: 400 });
+  }
   const session = await readVerifiedWorkspaceSession();
   if (
     !session ||
@@ -47,18 +54,40 @@ export async function GET(
     return NextResponse.json({ hasKey: false, setAt: null });
   }
 
+  let validationStatus = "NO_KEY";
+  let hasKey = false;
+  let setAt = null;
+
+  try {
+    const { getInstituteGeminiKey } = await import("@/lib/institute/get-institute-api-key");
+    await getInstituteGeminiKey(instituteId);
+    validationStatus = "VALID";
+    hasKey = true;
+  } catch(e: any) {
+    if (e.name === "INVALID_SECRET") {
+      validationStatus = "INVALID_SECRET";
+      hasKey = true;
+    } else {
+      validationStatus = "NO_KEY";
+      hasKey = false;
+    }
+  }
+
   const { data, error } = await supabase
     .from("institutes")
     .select("gemini_api_key_set_at")
     .eq("id", instituteId)
     .single();
 
-  if (error) {
-    return NextResponse.json({ hasKey: false, setAt: null });
+  if (!error && data?.gemini_api_key_set_at) {
+    setAt = data.gemini_api_key_set_at;
+    // Edge case: if db says it has a key but decryption failed or was missing, hasKey should be true
+    hasKey = true;
   }
 
   return NextResponse.json({
-    hasKey: Boolean(data?.gemini_api_key_set_at),
-    setAt: data?.gemini_api_key_set_at ?? null,
+    hasKey,
+    setAt,
+    status: validationStatus,
   });
 }

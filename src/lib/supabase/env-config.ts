@@ -1,4 +1,4 @@
-import { DEFAULT_INSTITUTE_ID } from "@/config/institute";
+import { DEFAULT_INSTITUTE_ID, assertInstituteUuid } from "@/config/institute";
 import { getRepositoryModeFromEnv, type RepositoryMode } from "@/config/repository";
 
 export interface ClientEnvConfigReport {
@@ -39,6 +39,18 @@ export function getClientEnvConfig(): ClientEnvConfigReport {
     }
     if (!instituteIdLoaded) {
       issues.push("NEXT_PUBLIC_DEFAULT_INSTITUTE_ID is missing");
+    }
+
+    const envInstituteId = process.env.NEXT_PUBLIC_DEFAULT_INSTITUTE_ID?.trim();
+    if (envInstituteId) {
+      try {
+        assertInstituteUuid(envInstituteId, "NEXT_PUBLIC_DEFAULT_INSTITUTE_ID");
+      } catch (e: any) {
+        console.error(e.message);
+        if (typeof process !== "undefined" && process.exit) {
+          process.exit(1);
+        }
+      }
     }
   }
 

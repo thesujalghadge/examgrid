@@ -141,59 +141,50 @@ def main():
             stitched_img.paste(piece, (0, y_offset))
             y_offset += piece.height
             
-        # Extract text for MCQ/NAT classification within bounds
-        q_text = ""
+        # Extract text for MCQ/NAT classification and structured data within bounds
+        q_text_raw = ""
         for p in range(start_page_num, end_page_num + 1):
             page = doc.load_page(p)
-            text_dict = page.get_text("dict")
-            
             p_start_y = 0
             p_end_y = page.rect.height
-            
             if p == start_page_num:
                 p_start_y = start_y
             if p == end_page_num:
                 p_end_y = end_y
-                
-            for block in text_dict.get("blocks", []):
-                if "lines" not in block: continue
-                for line in block["lines"]:
-                    for span in line["spans"]:
-                        span_y = span["bbox"][1]
-                        if span_y >= p_start_y and span_y <= p_end_y:
-                            q_text += span["text"] + " "
-                            
-        # Improved classification based on option counting
-        def count_options(text, pattern_list):
-            count = 0
-            for pat in pattern_list:
-                if re.search(pat, text, re.IGNORECASE):
-                    count += 1
-            return count
+            rect = fitz.Rect(0, p_start_y, page.rect.width, p_end_y)
+            q_text_raw += page.get_text("text", clip=rect) + "\n"
             
-        num_opts = count_options(q_text, [
-            r'(?:^|\s)\(1\)(?:\s|$)', 
-            r'(?:^|\s)\(2\)(?:\s|$)', 
-            r'(?:^|\s)\(3\)(?:\s|$)', 
-            r'(?:^|\s)\(4\)(?:\s|$)'
-        ])
+        # Try to extract options cleanly
+        opt_A = re.search(r'\([A]\)\s*([^\n]+)', q_text_raw)
+        opt_B = re.search(r'\([B]\)\s*([^\n]+)', q_text_raw)
+        opt_C = re.search(r'\([C]\)\s*([^\n]+)', q_text_raw)
+        opt_D = re.search(r'\([D]\)\s*([^\n]+)', q_text_raw)
         
-        alpha_opts_1 = count_options(q_text, [
-            r'(?:^|\s)\(A\)(?:\s|$)', 
-            r'(?:^|\s)\(B\)(?:\s|$)', 
-            r'(?:^|\s)\(C\)(?:\s|$)', 
-            r'(?:^|\s)\(D\)(?:\s|$)'
-        ])
+        if not opt_A: opt_A = re.search(r'\([1]\)\s*([^\n]+)', q_text_raw)
+        if not opt_B: opt_B = re.search(r'\([2]\)\s*([^\n]+)', q_text_raw)
+        if not opt_C: opt_C = re.search(r'\([3]\)\s*([^\n]+)', q_text_raw)
+        if not opt_D: opt_D = re.search(r'\([4]\)\s*([^\n]+)', q_text_raw)
         
-        alpha_opts_2 = count_options(q_text, [
-            r'(?:^|\s)A\)(?:\s|$)', 
-            r'(?:^|\s)B\)(?:\s|$)', 
-            r'(?:^|\s)C\)(?:\s|$)', 
-            r'(?:^|\s)D\)(?:\s|$)'
-        ])
-        
-        is_mcq = (num_opts >= 3) or (alpha_opts_1 >= 3) or (alpha_opts_2 >= 3)
-        q_type = "MCQ" if is_mcq else "NAT"
+        extracted_options = []
+        for o in [opt_A, opt_B, opt_C, opt_D]:
+            if o and len(o.group(1).strip()) > 0:
+                # remove trailing bullet dots if any
+                clean_opt = o.group(1).strip()
+                if clean_opt.endswith(''): clean_opt = clean_opt[:-1].strip()
+                extracted_options.append(clean_opt)
+                
+        # The question text is everything before the first option
+        first_opt_match = re.search(r'(\n\s*)?\([A1]\)\s*', q_text_raw)
+        if first_opt_match:
+            question_stem_text = q_text_raw[:first_opt_match.start()].strip()
+        else:
+            question_stem_text = q_text_raw.strip()
+            
+        # Clean up question text (remove standard Question headers)
+        question_stem_text = re.sub(r'^Question\s*\d+\s*:\s*', '', question_stem_text, flags=re.IGNORECASE)
+        question_stem_text = re.sub(r'^Q\s*\d+\s*\.?\s*', '', question_stem_text, flags=re.IGNORECASE)
+            
+        q_type = "MCQ" if len(extracted_options) >= 3 else "NAT"
         
         crop_filename = f"Q{q_num}_crop.jpg"
         crop_path = os.path.join(crops_dir, crop_filename)
@@ -208,7 +199,9 @@ def main():
             "q_type": q_type,
             "page": start_page_num + 1,
             "crop_path": crop_path,
-            "asset_path": rel_path
+            "asset_path": rel_path,
+            "question_text": question_stem_text,
+            "options": extracted_options
         })
         
         if start_page_num != end_page_num:

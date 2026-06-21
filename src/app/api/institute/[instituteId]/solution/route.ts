@@ -12,11 +12,18 @@ const enqueueRequestSchema = z.object({
   priority: z.number().int().min(1).max(100).default(50),
 });
 
+import { assertInstituteUuid } from "@/config/institute";
+
 export async function POST(
   request: Request,
   context: { params: Promise<{ instituteId: string }> },
 ) {
   const { instituteId } = await context.params;
+  try {
+    assertInstituteUuid(instituteId, "instituteId");
+  } catch (e) {
+    return NextResponse.json({ error: "INVALID_INSTITUTE_ID" }, { status: 400 });
+  }
   const session = await readVerifiedWorkspaceSession();
   
   if (

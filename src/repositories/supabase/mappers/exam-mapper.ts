@@ -29,7 +29,8 @@ export function examDefinitionToRows(exam: ExamDefinition, examUuid: string, ins
     total_questions: exam.totalQuestions,
     instructions: exam.instructions,
     scheduled_at: exam.scheduledAt,
-    is_published: true,
+    solutions_release_time: exam.solutionsReleaseTime ?? null,
+    is_published: false,
   };
 
   const sections: Omit<ExamSectionRow, "created_at" | "updated_at">[] =
