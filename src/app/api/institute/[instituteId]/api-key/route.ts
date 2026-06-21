@@ -16,11 +16,18 @@ const bodySchema = z.object({
   apiKey: z.string().trim().min(10, "API key is too short"),
 });
 
+import { assertInstituteUuid } from "@/config/institute";
+
 export async function POST(
   request: Request,
   context: { params: Promise<{ instituteId: string }> },
 ) {
   const { instituteId } = await context.params;
+  try {
+    assertInstituteUuid(instituteId, "instituteId");
+  } catch (e) {
+    return NextResponse.json({ error: "INVALID_INSTITUTE_ID" }, { status: 400 });
+  }
   const session = await readVerifiedWorkspaceSession();
   if (
     !session ||
@@ -77,6 +84,11 @@ export async function DELETE(
   context: { params: Promise<{ instituteId: string }> },
 ) {
   const { instituteId } = await context.params;
+  try {
+    assertInstituteUuid(instituteId, "instituteId");
+  } catch (e) {
+    return NextResponse.json({ error: "INVALID_INSTITUTE_ID" }, { status: 400 });
+  }
   const session = await readVerifiedWorkspaceSession();
   if (
     !session ||

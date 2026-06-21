@@ -47,7 +47,7 @@ export async function POST(req: Request) {
     // Initialize Gemini directly
     console.log(`[DEBUG GEMINI-TEST] Initializing GoogleGenerativeAI client...`);
     const genAI = new GoogleGenerativeAI(geminiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash-lite" });
     
     console.log(`[DEBUG GEMINI-TEST] Sending prompt 'Reply with OK'...`);
     const result = await model.generateContent("Reply with OK");

@@ -21,15 +21,15 @@ export function ExamHeader({
   modeLabel,
 }: ExamHeaderProps) {
   return (
-    <header className="flex items-stretch border-b-[3px] border-[#1a3c6e] bg-white">
-      <div className="flex w-32 shrink-0 flex-col items-center justify-center bg-[#1a3c6e] px-2 py-3 text-center text-[11px] font-bold leading-tight text-white">
+    <header className="flex items-stretch border-b-[3px] border-primary bg-white">
+      <div className="flex w-32 shrink-0 flex-col items-center justify-center bg-primary px-2 py-3 text-center text-[11px] font-bold leading-tight text-primary-foreground">
         <span className="text-sm">NTA</span>
         <span className="mt-0.5 opacity-90">ExamGrid CBT</span>
       </div>
 
       <div className="grid min-w-0 flex-1 grid-cols-[1fr_auto] items-center gap-4 px-5 py-2">
         <div>
-          <h1 className="truncate text-base font-bold text-[#1a3c6e]">{examTitle}</h1>
+          <h1 className="truncate text-base font-bold text-primary">{examTitle}</h1>
           <p className="mt-0.5 text-xs text-gray-600">
             <span className="font-medium text-gray-800">{candidate.name}</span>
             {" | "}Roll No: {candidate.rollNumber}

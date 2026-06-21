@@ -1,0 +1,162 @@
+[
+  {
+    "id": "Q01",
+    "subject": "Mathematics",
+    "topic": "Limits",
+    "question_text": "Evaluate the limit: lim(x->0) (sin x - x) / x^3",
+    "options": ["-1/6", "1/6", "0", "1"],
+    "answer_key": "-1/6"
+  },
+  {
+    "id": "Q02",
+    "subject": "Mathematics",
+    "topic": "Integration",
+    "question_text": "Evaluate the definite integral from 0 to pi/2 of log(tan x) dx",
+    "options": ["pi/2", "pi", "0", "1"],
+    "answer_key": "0"
+  },
+  {
+    "id": "Q03",
+    "subject": "Mathematics",
+    "topic": "Coordinate Geometry",
+    "question_text": "Find the length of the latus rectum of the parabola y^2 = 12x.",
+    "options": ["3", "6", "12", "4"],
+    "answer_key": "12"
+  },
+  {
+    "id": "Q04",
+    "subject": "Mathematics",
+    "topic": "Complex Numbers",
+    "question_text": "If omega is a complex cube root of unity, find the value of (1 + omega - omega^2)^3.",
+    "options": ["-8", "8", "-1", "1"],
+    "answer_key": "-8"
+  },
+  {
+    "id": "Q05",
+    "subject": "Mathematics",
+    "topic": "Matrices",
+    "question_text": "If A is an orthogonal matrix, then the determinant of A is:",
+    "options": ["1", "-1", "0", "±1"],
+    "answer_key": "±1"
+  },
+  {
+    "id": "Q06",
+    "subject": "Mathematics",
+    "topic": "Probability",
+    "question_text": "Two dice are thrown simultaneously. What is the probability of getting a sum of 9?",
+    "options": ["1/9", "1/12", "1/6", "1/36"],
+    "answer_key": "1/9"
+  },
+  {
+    "id": "Q07",
+    "subject": "Physics",
+    "topic": "Kinematics",
+    "question_text": "A particle is projected with velocity 20 m/s at an angle of 30 degrees to the horizontal. Find its time of flight. (g = 10 m/s^2)",
+    "options": ["1 s", "2 s", "3 s", "4 s"],
+    "answer_key": "2 s"
+  },
+  {
+    "id": "Q08",
+    "subject": "Physics",
+    "topic": "Electromagnetism",
+    "question_text": "The electric flux through a closed surface enclosing a charge Q is:",
+    "options": ["Q/epsilon_0", "Q*epsilon_0", "zero", "infinite"],
+    "answer_key": "Q/epsilon_0"
+  },
+  {
+    "id": "Q09",
+    "subject": "Physics",
+    "topic": "Optics",
+    "question_text": "For a convex lens of focal length 20 cm, at what distance should an object be placed to get a real, inverted, and equal-sized image?",
+    "options": ["20 cm", "40 cm", "10 cm", "infinity"],
+    "answer_key": "40 cm"
+  },
+  {
+    "id": "Q10",
+    "subject": "Physics",
+    "topic": "Modern Physics",
+    "question_text": "The work function of a metal is 2.0 eV. Find its threshold wavelength. (hc = 1240 eV nm)",
+    "options": ["620 nm", "310 nm", "1240 nm", "400 nm"],
+    "answer_key": "620 nm"
+  },
+  {
+    "id": "Q11",
+    "subject": "Physics",
+    "topic": "Thermodynamics",
+    "question_text": "In an adiabatic process, the quantity which remains constant is:",
+    "options": ["Temperature", "Pressure", "Volume", "Heat"],
+    "answer_key": "Heat"
+  },
+  {
+    "id": "Q12",
+    "subject": "Physics",
+    "topic": "Rotation",
+    "question_text": "The moment of inertia of a solid sphere of mass M and radius R about its diameter is:",
+    "options": ["2/5 MR^2", "2/3 MR^2", "1/2 MR^2", "MR^2"],
+    "answer_key": "2/5 MR^2"
+  },
+  {
+    "id": "Q13",
+    "subject": "Physics",
+    "topic": "SHM",
+    "question_text": "The time period of a simple pendulum of length L is T. If length is made 4L, the new time period is:",
+    "options": ["T", "2T", "4T", "T/2"],
+    "answer_key": "2T"
+  },
+  {
+    "id": "Q14",
+    "subject": "Chemistry",
+    "topic": "Organic",
+    "question_text": "Which of the following undergoes SN1 reaction most rapidly?",
+    "options": ["Methyl chloride", "Ethyl chloride", "Isopropyl chloride", "tert-Butyl chloride"],
+    "answer_key": "tert-Butyl chloride"
+  },
+  {
+    "id": "Q15",
+    "subject": "Chemistry",
+    "topic": "Kinetics",
+    "question_text": "The half-life of a first-order reaction is 10 minutes. How much time is required for 75% completion of the reaction?",
+    "options": ["10 min", "20 min", "30 min", "40 min"],
+    "answer_key": "20 min"
+  },
+  {
+    "id": "Q16",
+    "subject": "Chemistry",
+    "topic": "Electrochemistry",
+    "question_text": "The standard reduction potential for Zn2+/Zn is -0.76 V and for Cu2+/Cu is +0.34 V. The standard EMF of the Daniel cell is:",
+    "options": ["1.10 V", "-1.10 V", "0.42 V", "-0.42 V"],
+    "answer_key": "1.10 V"
+  },
+  {
+    "id": "Q17",
+    "subject": "Chemistry",
+    "topic": "Coordination Compounds",
+    "question_text": "The oxidation state of Fe in K4[Fe(CN)6] is:",
+    "options": ["+2", "+3", "+4", "0"],
+    "answer_key": "+2"
+  },
+  {
+    "id": "Q18",
+    "subject": "Chemistry",
+    "topic": "Organic",
+    "question_text": "Reaction of phenol with chloroform in presence of dilute NaOH gives salicylaldehyde. This reaction is known as:",
+    "options": ["Kolbe's reaction", "Reimer-Tiemann reaction", "Friedel-Crafts reaction", "Cannizzaro reaction"],
+    "answer_key": "Reimer-Tiemann reaction"
+  },
+  {
+    "id": "Q19",
+    "subject": "Chemistry",
+    "topic": "Thermodynamics",
+    "question_text": "For a spontaneous process at constant temperature and pressure, which condition must be satisfied?",
+    "options": ["delta G > 0", "delta G < 0", "delta G = 0", "delta S < 0"],
+    "answer_key": "delta G < 0"
+  },
+  {
+    "id": "Q20",
+    "subject": "Chemistry",
+    "topic": "P-block",
+    "question_text": "Which of the following is known as laughing gas?",
+    "options": ["NO", "NO2", "N2O", "N2O5"],
+    "answer_key": "N2O"
+  }
+]

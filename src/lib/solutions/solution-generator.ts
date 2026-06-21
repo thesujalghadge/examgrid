@@ -23,22 +23,67 @@ export async function processLeasedJob(job: LeasedJob) {
     }
 
     // 2. Fetch question data and structured content
-    const { data: questionData, error: qErr } = await supabase
-      .from("questions")
-      .select("*, question_content(*)")
-      .eq("id", job.question_id)
-      .single();
+    let rawText = "";
+    let options = [];
+    let correctAnswer = "";
 
-    if (qErr || !questionData) {
-      throw new Error(`Failed to fetch question ${job.question_id}: ${qErr?.message}`);
+    let extractedSubject = "";
+    let extractedChapter = "";
+    let imageUrl = "";
+    let questionType = "";
+
+    // Try exam_questions first
+    const { data: eqData, error: eqErr } = await supabase.from("exam_questions").select("*").eq("id", job.question_id).maybeSingle();
+    
+    if (eqData) {
+      rawText = eqData.published_question_text || "";
+      options = eqData.published_options || [];
+      correctAnswer = eqData.published_answer_key || "";
+      questionType = eqData.question_type || "";
+      imageUrl = eqData.published_image_url || "";
+      
+      if (!imageUrl && Array.isArray(options)) {
+        const metaOpt = options.find((o: any) => o.id === "__metadata__");
+        if (metaOpt && metaOpt.text) {
+          try {
+             const parsed = JSON.parse(metaOpt.text);
+             if (parsed.stemImage) {
+                imageUrl = parsed.stemImage;
+             }
+          } catch(e) {}
+        }
+      }
+    } else {
+      const { data: questionData, error: qErr } = await supabase
+        .from("questions")
+        .select("*, question_content(*)")
+        .eq("id", job.question_id)
+        .single();
+
+      if (qErr || !questionData) {
+        throw new Error(`Failed to fetch question ${job.question_id}: ${qErr?.message}`);
+      }
+      const contentData = Array.isArray(questionData.question_content) ? questionData.question_content[0] : questionData.question_content;
+      const content = contentData || {};
+      rawText = content.raw_text || questionData.question_text || "";
+      options = content.structured_options || questionData.options || [];
+      correctAnswer = content.correct_answer || questionData.correct_answer || "";
+      extractedSubject = content.extracted_subject || questionData.subject || "";
+      extractedChapter = content.extracted_chapter || questionData.chapter || "";
+      questionType = questionData.question_type || "";
+      imageUrl = content.image_url || questionData.image_url || "";
     }
 
-    // Prepare inputs
-    const contentData = Array.isArray(questionData.question_content) ? questionData.question_content[0] : questionData.question_content;
-    const content = contentData || {};
-    const rawText = content.raw_text || questionData.question_text || "";
-    const options = content.structured_options || questionData.options || [];
-    const correctAnswer = content.correct_answer || questionData.correct_answer || "";
+    // Snapshot Validation
+    if (!job.question_id) {
+       throw new Error("Snapshot Validation Failed: missing question_id");
+    }
+    if (!imageUrl) {
+       throw new Error("Snapshot Validation Failed: missing image");
+    }
+    if (!correctAnswer) {
+       throw new Error("Snapshot Validation Failed: missing teacher key");
+    }
 
     const providerInput = {
       questionId: job.question_id,
@@ -46,8 +91,10 @@ export async function processLeasedJob(job: LeasedJob) {
       rawText,
       structuredOptions: options,
       correctAnswer,
-      extractedSubject: content.extracted_subject || questionData.subject,
-      extractedChapter: content.extracted_chapter || questionData.chapter,
+      extractedSubject,
+      extractedChapter,
+      imageUrl,
+      questionType
     };
 
     // 3. Check exact prompt + provider idempotency
@@ -73,31 +120,61 @@ export async function processLeasedJob(job: LeasedJob) {
 
     // Validation Layer
     const normalize = (s: string) => s.toLowerCase().trim();
-    if (correctAnswer) {
-      const match = result.finalAnswer && normalize(result.finalAnswer) === normalize(correctAnswer);
-      if (!match) {
-        // First validation failed
+    if (!result.finalAnswer) {
+      throw new Error("Validation Failed: Final Answer missing.");
+    }
+    let detectedStatus = "pending";
+
+    if (correctAnswer && normalize(result.finalAnswer) !== normalize(correctAnswer)) {
+      // Check if correctAnswer is of form "A: A" and result is "A"
+      const parts = correctAnswer.split(":");
+      const firstPart = parts[0].trim();
+      const lastPart = parts.length > 1 ? parts.slice(1).join(":").trim() : firstPart;
+
+      if (normalize(result.finalAnswer) !== normalize(firstPart) && normalize(result.finalAnswer) !== normalize(lastPart)) {
+        detectedStatus = "DISPUTED";
+        console.log(`\n============================`);
+        console.log(`WRONG KEY DETECTION TRIGGERED`);
+        console.log(`Question Number: ${eqData?.question_number || "Unknown"}`);
+        console.log(`Teacher Key: ${correctAnswer}`);
+        console.log(`Model Answer: ${result.finalAnswer}`);
+        console.log(`Confidence: Unknown (Using existing schema)`);
+        console.log(`Reasoning: Model final answer mismatched teacher key.`);
+        console.log(`Detected Status: DISPUTED`);
+        console.log(`============================\n`);
+
         await supabase.from("solution_generation_events").insert([
-          { queue_id: job.id, institute_id: job.institute_id, event_type: "validation_failed" },
-          { queue_id: job.id, institute_id: job.institute_id, event_type: "answer_key_mismatch" }
+          { queue_id: job.id, institute_id: job.institute_id, event_type: "answer_key_mismatch", metadata: { teacher_key: correctAnswer, model_answer: result.finalAnswer } }
         ]);
-
-        console.log(`Answer mismatch for job ${job.id}. Expected: ${correctAnswer}, Got: ${result.finalAnswer}. Retrying with strict prompt...`);
-        
-        promptVersion = "solution-v2-strict";
-        result = await provider.generateSolution(providerInput, promptVersion);
-
-        const secondaryMatch = result.finalAnswer && normalize(result.finalAnswer) === normalize(correctAnswer);
-        if (!secondaryMatch) {
-          console.log(`Mismatch persisted for job ${job.id}. Flagging for review.`);
-          result.answerConfidence = 0.1;
-        } else {
-          await supabase.from("solution_generation_events").insert({ queue_id: job.id, institute_id: job.institute_id, event_type: "validation_passed" });
-        }
-      } else {
-        await supabase.from("solution_generation_events").insert({ queue_id: job.id, institute_id: job.institute_id, event_type: "validation_passed" });
+        // DO NOT throw error. Let the solution be stored.
       }
     }
+
+    const meta = result.aiMetadata;
+    const validation = { passed: true, reason: null };
+    if (!meta.subject) throw new Error("Validation Failed: Subject missing.");
+    if (!meta.topic) throw new Error("Validation Failed: Topic missing.");
+    if (!meta.difficulty) throw new Error("Validation Failed: Difficulty missing.");
+    if (!meta.question_type) throw new Error("Validation Failed: Question Type missing.");
+    if (!meta.primary_concept) throw new Error("Validation Failed: Primary Concept missing.");
+    if (!meta.essential_steps || meta.essential_steps.length === 0) {
+      throw new Error("Validation Failed: Essential Steps missing.");
+    }
+
+    const allText = JSON.stringify(meta);
+    if (/as an ai|here is|certainly|let me|this means|so,/i.test(allText)) {
+      throw new Error("Validation Failed: Conversational filler detected.");
+    }
+    if (/in the image|this image shows|the provided image/i.test(allText)) {
+      throw new Error("Validation Failed: Image-description filler detected.");
+    }
+
+    const wordCount = allText.split(/\s+/).length;
+    if (wordCount > 150) {
+      throw new Error(`Validation Failed: Total output exceeds 150 words (${wordCount} words).`);
+    }
+
+    await supabase.from("solution_generation_events").insert({ queue_id: job.id, institute_id: job.institute_id, event_type: "validation_passed" });
 
     // 5. Store the result
     const { count, error: countErr } = await supabase
@@ -121,9 +198,9 @@ export async function processLeasedJob(job: LeasedJob) {
         model_name: provider.modelName,
         prompt_version: result.promptVersion,
         token_usage: result.tokenUsage,
-        generation_status: "completed",
-        review_status: "pending",
-        ai_metadata: result.aiMetadata,
+        generation_status: "COMPLETED",
+        review_status: detectedStatus,
+        ai_metadata: { ...result.aiMetadata, validation_status: "PASSED" },
         created_by: "system"
       });
 

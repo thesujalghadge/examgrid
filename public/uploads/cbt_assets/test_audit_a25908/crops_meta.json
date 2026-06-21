@@ -1,0 +1,215 @@
+{
+  "job_id": "test_audit_a25908",
+  "questions": [
+    {
+      "id": "Q1",
+      "q_num": 1,
+      "q_type": "MCQ",
+      "page": 1,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\test_audit_a25908\\vision_crops\\Q1_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/test_audit_a25908/vision_crops/Q1_crop.jpg",
+      "question_text": "Two distinct numbers a and b are selected at random from 1,2,3,\u2026,50. The probability that \ntheir product ab is divisible by 3 is",
+      "options": [
+        "8/25",
+        "561/1225",
+        "664/1225",
+        "272/1225"
+      ]
+    },
+    {
+      "id": "Q2",
+      "q_num": 2,
+      "q_type": "MCQ",
+      "page": 1,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\test_audit_a25908\\vision_crops\\Q2_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/test_audit_a25908/vision_crops/Q2_crop.jpg",
+      "question_text": "If a random variable x has the probability distribution \n \nthen P(3<x\u22646) is equal to",
+      "options": [
+        "0.22",
+        "0.33",
+        "0.34",
+        "0.64"
+      ]
+    },
+    {
+      "id": "Q3",
+      "q_num": 3,
+      "q_type": "MCQ",
+      "page": 1,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\test_audit_a25908\\vision_crops\\Q3_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/test_audit_a25908/vision_crops/Q3_crop.jpg",
+      "question_text": "Let f:[1,\u221e)\u2192R be a differentiable function. If 6\u222bx1f(t)dt=3xf(x)+x3\u22124 \nfor all x\u22651, then the value of f(2)\u2212f(3) is",
+      "options": [
+        "3",
+        "\u22124",
+        "\u22123",
+        "4"
+      ]
+    },
+    {
+      "id": "Q4",
+      "q_num": 4,
+      "q_type": "MCQ",
+      "page": 1,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\test_audit_a25908\\vision_crops\\Q4_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/test_audit_a25908/vision_crops/Q4_crop.jpg",
+      "question_text": "If the image of the point P(1,2,a) in the line x\u22126/3= y\u22127/2= 7\u2212z/2 \nis Q(5,b,c), then a2+b2+c2 is equal to",
+      "options": [
+        "293",
+        "298",
+        "264",
+        "283"
+      ]
+    },
+    {
+      "id": "Q5",
+      "q_num": 5,
+      "q_type": "NAT",
+      "page": 2,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\test_audit_a25908\\vision_crops\\Q5_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/test_audit_a25908/vision_crops/Q5_crop.jpg",
+      "question_text": "Let A be a 3\u00d73 matrix such that A+AT=O. If \nA[1\u221210]=[332], A2[1\u221210]=[\u2212319\u221224] \nand det(adj(2adj(A+I)))=2\u03b13\u03b211\u03b3, \nwhere \u03b1,\u03b2,\u03b3 are non-negative integers, then the value of \u03b1+\u03b2+\u03b3 is ______.",
+      "options": []
+    },
+    {
+      "id": "Q6",
+      "q_num": 6,
+      "q_type": "MCQ",
+      "page": 2,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\test_audit_a25908\\vision_crops\\Q6_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/test_audit_a25908/vision_crops/Q6_crop.jpg",
+      "question_text": "A projectile is thrown upward at an angle 60\u2218 with the horizontal. The speed of the \nprojectile is 20 m/s when its direction of motion is 45\u2218 with the horizontal. The initial \nspeed of the projectile is \\underline{\\hspace{1.5cm m/s.",
+      "options": [
+        "20\u221a2",
+        "40",
+        "20\u221a3",
+        "40\u221a2"
+      ]
+    },
+    {
+      "id": "Q7",
+      "q_num": 7,
+      "q_type": "MCQ",
+      "page": 2,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\test_audit_a25908\\vision_crops\\Q7_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/test_audit_a25908/vision_crops/Q7_crop.jpg",
+      "question_text": "Three identical coils C1, C2 and C3 are closely placed such that they share a common \naxis. C2 is exactly midway. C1 carries current I in anti-clockwise direction while C3 carries \ncurrent I in clockwise direction. An induced current flows through C2 will be in clockwise \ndirection when",
+      "options": [
+        "C1 and C3 move with equal speeds away from C2",
+        "C1 moves away from C2 and C3 moves towards C2",
+        "C1 moves towards C2 and C3 moves away from C2",
+        "C1 and C3 move with equal speeds towards C2"
+      ]
+    },
+    {
+      "id": "Q8",
+      "q_num": 8,
+      "q_type": "MCQ",
+      "page": 2,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\test_audit_a25908\\vision_crops\\Q8_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/test_audit_a25908/vision_crops/Q8_crop.jpg",
+      "question_text": "Given below are two statements: \n \n \nStatement I: Pressure of a fluid is exerted only on a solid surface in contact as the fluid-\n\npressure does not exist everywhere in a still fluid. \n \n \nStatement II: Excess potential energy of the molecules on the surface of a liquid, when \ncompared to interior, results in surface tension. \n \n \nIn the light of the above statements, choose the correct answer from the options given \nbelow",
+      "options": [
+        "Both Statement I and Statement II are false",
+        "Statement I is true but Statement II is false",
+        "Both Statement I and Statement II are true",
+        "Statement I is false but Statement II is true"
+      ]
+    },
+    {
+      "id": "Q9",
+      "q_num": 9,
+      "q_type": "MCQ",
+      "page": 3,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\test_audit_a25908\\vision_crops\\Q9_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/test_audit_a25908/vision_crops/Q9_crop.jpg",
+      "question_text": "XPQY is a vertical smooth long loop having a total resistance R, where PX is parallel \nto QY and the separation between them is l. A constant magnetic field B perpendicular to \nthe plane of the loop exists in the entire space. A rod CD of length L(L>l) and mass m is \nmade to slide down from rest under gravity as shown. The terminal speed acquired by the \nrod is _________ m/s.",
+      "options": [
+        "mgR/B2l2",
+        "2mgR/B2L2",
+        "8mgR/B2l2",
+        "2mgR/B2l2"
+      ]
+    },
+    {
+      "id": "Q10",
+      "q_num": 10,
+      "q_type": "NAT",
+      "page": 4,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\test_audit_a25908\\vision_crops\\Q10_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/test_audit_a25908/vision_crops/Q10_crop.jpg",
+      "question_text": "A circular disc has radius R1 and thickness T1. Another circular disc made of the same \nmaterial has radius R2 and thickness T2. If the moments of inertia of both the discs are \nsame andR1R2=2,thenT1T2=1\u03b1. \nThe value of \u03b1 is _____.",
+      "options": []
+    },
+    {
+      "id": "Q11",
+      "q_num": 11,
+      "q_type": "MCQ",
+      "page": 4,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\test_audit_a25908\\vision_crops\\Q11_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/test_audit_a25908/vision_crops/Q11_crop.jpg",
+      "question_text": "As compared with chlorocyclohexane, which of the following statements correctly apply to \nchlorobenzene? \n \n[label=\\Alph*.] \nThe magnitude of negative charge is more on chlorine atom. \nThe C--Cl bond has partial double bond character. \nC--Cl bond is less polar. \nC--Cl bond is longer due to repulsion between delocalised electrons of the aromatic ring \nand lone pairs of electrons of chlorine. \nThe C--Cl bond is formed using sp2 hybridised orbital of carbon. \n \n \nChoose the correct answer from the options given below:",
+      "options": [
+        "B, C and D Only",
+        "A, C and E Only",
+        "A, D and E Only",
+        "B, C and E Only"
+      ]
+    },
+    {
+      "id": "Q12",
+      "q_num": 12,
+      "q_type": "MCQ",
+      "page": 4,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\test_audit_a25908\\vision_crops\\Q12_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/test_audit_a25908/vision_crops/Q12_crop.jpg",
+      "question_text": "Consider the transition metal ions Mn3+,Cr3+,Fe3+ and Co3+ and all form low spin \noctahedral complexes. The correct decreasing order of unpaired electrons in their \nrespective d-orbitals of the complexes is",
+      "options": [
+        "Cr3+>Mn3+>Fe3+>Co3+",
+        "Fe3+>Co3+>Mn3+>Cr3+",
+        "Mn3+>Fe3+>Co3+>Cr3+",
+        "Cr3+>Fe3+>Co3+>Mn3+"
+      ]
+    },
+    {
+      "id": "Q13",
+      "q_num": 13,
+      "q_type": "MCQ",
+      "page": 5,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\test_audit_a25908\\vision_crops\\Q13_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/test_audit_a25908/vision_crops/Q13_crop.jpg",
+      "question_text": "Given below are two statements: \n \n \nStatement I: Benzene is nitrated to give nitrobenzene, which on further treatment \nwith CH3COCl/AlCl3 will give the product shown. \n \n \n \nStatement II: \u2212NO2 group is a meta-directing and deactivating group. \n \n \nIn the light of the above statements, choose the most appropriate answer from the options \ngiven below.",
+      "options": [
+        "Statement I is correct but Statement II is incorrect",
+        "Both Statement I and Statement II are incorrect",
+        "Statement I is incorrect but Statement II is correct",
+        "Both Statement I and Statement II are correct"
+      ]
+    },
+    {
+      "id": "Q14",
+      "q_num": 14,
+      "q_type": "MCQ",
+      "page": 5,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\test_audit_a25908\\vision_crops\\Q14_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/test_audit_a25908/vision_crops/Q14_crop.jpg",
+      "question_text": "Given below are two statements: \n \n \nStatement I: The Henry\u2019s law constant KH is constant with respect to variations in solution \nconcentration over the range for which the solution is ideally dilute. \n \n \nStatement II: KH does not differ for the same solute in different solvents. \n\n \n \nIn the light of the above statements, choose the correct answer from the options given \nbelow.",
+      "options": [
+        "Both Statement I and Statement II are false",
+        "Statement I is false but Statement II is true",
+        "Both Statement I and Statement II are true",
+        "Statement I is true but Statement II is false"
+      ]
+    },
+    {
+      "id": "Q15",
+      "q_num": 15,
+      "q_type": "NAT",
+      "page": 6,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\test_audit_a25908\\vision_crops\\Q15_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/test_audit_a25908/vision_crops/Q15_crop.jpg",
+      "question_text": "Sodium fusion extract of an organic compound (Y) with CHCl3 and chlorine water \ngives violet colour to the CHCl3 layer. 0.15g of (Y) gave 0.12g of the silver halide \nprecipitate in Carius method. Percentage of halogen in the compound (Y) is ______ \n(Nearest integer). \n \n \nGiven: \nC=12,H=1,Cl=35.5,Br=80,I=127",
+      "options": []
+    }
+  ]
+}

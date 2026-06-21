@@ -4,64 +4,107 @@ import { SOLUTION_PROMPT_V1 } from "../prompts/solution-v1";
 import { SOLUTION_PROMPT_V2_STRICT } from "../prompts/solution-v2-strict";
 import { getInstituteGeminiKey } from "@/lib/institute/get-institute-api-key";
 
-const responseSchema: Schema = {
+const responseSchemaV1: Schema = {
   type: SchemaType.OBJECT,
   properties: {
-    markdownSolution: { type: SchemaType.STRING },
-    finalAnswer: { type: SchemaType.STRING },
-    answerConfidence: { type: SchemaType.NUMBER },
-    aiMetadata: {
+    subject: { type: SchemaType.STRING },
+    topic: { type: SchemaType.STRING },
+    subtopic: { type: SchemaType.STRING },
+    difficulty: { type: SchemaType.STRING },
+    question_type: { type: SchemaType.STRING },
+    primary_concept: { type: SchemaType.STRING },
+    secondary_concept: { type: SchemaType.STRING },
+    quick_approach: { type: SchemaType.STRING },
+    essential_steps: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+    final_answer: { type: SchemaType.STRING }
+  },
+  required: [
+    "subject", "topic", "subtopic", "difficulty", "question_type",
+    "primary_concept", "secondary_concept", "quick_approach",
+    "essential_steps", "final_answer"
+  ]
+};
+
+const responseSchemaV2: Schema = {
+  type: SchemaType.OBJECT,
+  properties: {
+    concept: { type: SchemaType.STRING },
+    approach: { type: SchemaType.STRING },
+    steps: {
+      type: SchemaType.ARRAY,
+      items: {
+        type: SchemaType.OBJECT,
+        properties: {
+          title: { type: SchemaType.STRING },
+          explanation: { type: SchemaType.STRING },
+          equation: { type: SchemaType.STRING }
+        },
+        required: ["title", "explanation"]
+      }
+    },
+    finalAnswer: {
       type: SchemaType.OBJECT,
       properties: {
-        taxonomy: {
-          type: SchemaType.OBJECT,
-          properties: {
-            subject: { type: SchemaType.STRING },
-            topic: { type: SchemaType.STRING },
-            subtopic: { type: SchemaType.STRING },
-            concepts: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } }
-          }
-        },
-        cognitiveLevel: { type: SchemaType.STRING },
-        difficulty: { type: SchemaType.NUMBER },
-        mistakePatterns: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-        learningObjective: { type: SchemaType.STRING }
-      }
-    }
+        value: { type: SchemaType.STRING },
+        option: { type: SchemaType.STRING }
+      },
+      required: ["value"]
+    },
+    takeaway: { type: SchemaType.STRING },
+    difficulty: { type: SchemaType.STRING },
+    commonMistake: { type: SchemaType.STRING },
+    shortcut: { type: SchemaType.STRING },
+    timeSavingTip: { type: SchemaType.STRING },
+    estimatedSolveTime: { type: SchemaType.STRING },
+    examFrequency: { type: SchemaType.STRING },
+    subject: { type: SchemaType.STRING },
+    topic: { type: SchemaType.STRING },
+    subtopic: { type: SchemaType.STRING },
+    question_type: { type: SchemaType.STRING },
+    primary_concept: { type: SchemaType.STRING },
+    prompt_version: { type: SchemaType.STRING },
+    validation_status: { type: SchemaType.STRING }
   },
-  required: ["markdownSolution", "aiMetadata"]
+  required: [
+    "concept", "approach", "steps", "finalAnswer", "takeaway",
+    "subject", "topic", "subtopic", "question_type", "primary_concept",
+    "prompt_version", "validation_status"
+  ]
 };
 
 export class GeminiProvider implements SolutionProvider {
   name = "gemini";
-  modelName = "gemini-2.0-flash";
+  modelName = "gemini-2.5-flash";
 
   async generateSolution(
     input: SolutionGenerationInput,
-    promptVersion: string
+    promptVersion: string = "solution-v1"
   ): Promise<SolutionProviderResult> {
+    const startTime = Date.now();
     let apiKey = process.env.GEMINI_API_KEY;
     try {
-      // Attempt to get institute specific key first
       const instituteKey = await getInstituteGeminiKey(input.instituteId);
       if (instituteKey) {
         apiKey = instituteKey;
       }
     } catch (err: any) {
       console.error("Failed to get institute key:", err.message);
-      // Fallback to env default if DB lookup fails or is unavailable
     }
 
     if (!apiKey) {
       throw new Error("No Gemini API key available for provider.");
     }
 
+    console.log(`MODEL_SELECTED: ${this.modelName}`);
+
     const genAI = new GoogleGenerativeAI(apiKey);
+    const schemaToUse = promptVersion === "solution-v2-strict" ? responseSchemaV2 : responseSchemaV1;
+    
     const model = genAI.getGenerativeModel({
-      model: this.modelName,
+      model: "gemini-3.1-flash-lite",
       generationConfig: {
         responseMimeType: "application/json",
-        responseSchema: responseSchema,
+        responseSchema: schemaToUse,
       }
     });
 
@@ -78,11 +121,35 @@ export class GeminiProvider implements SolutionProvider {
       .replace("{{questionId}}", input.questionId)
       .replace("{{extractedSubject}}", input.extractedSubject || "Unknown")
       .replace("{{extractedChapter}}", input.extractedChapter || "Unknown")
+      .replace("{{questionType}}", input.questionType || "Unknown")
       .replace("{{rawText}}", input.rawText)
       .replace("{{structuredOptions}}", JSON.stringify(input.structuredOptions, null, 2))
       .replace("{{correctAnswer}}", input.correctAnswer || "Not provided");
 
-    const result = await model.generateContent(prompt);
+    const promptParts: any[] = [{ text: prompt }];
+
+    if (input.imageUrl) {
+      const fs = require("fs");
+      const path = require("path");
+      try {
+        const imagePath = path.join(process.cwd(), "public", input.imageUrl);
+        if (fs.existsSync(imagePath)) {
+          const imageBuffer = fs.readFileSync(imagePath);
+          const mimeType = input.imageUrl.toLowerCase().endsWith(".png") ? "image/png" : "image/jpeg";
+          promptParts.push({
+            inlineData: {
+              data: imageBuffer.toString("base64"),
+              mimeType
+            }
+          });
+        }
+      } catch (err) {
+        console.error("Failed to load image for Gemini:", err);
+      }
+    }
+
+    const result = await model.generateContent(promptParts);
+    console.log(`MODEL_RESPONSE_RECEIVED: ${this.modelName}`);
     const text = result.response.text();
     
     let parsed: any;
@@ -94,12 +161,28 @@ export class GeminiProvider implements SolutionProvider {
 
     const usage = result.response.usageMetadata;
     
+    // For markdown Solution (fallback / compatibility)
+    let markdownSolution = "";
+    if (promptVersion === "solution-v2-strict") {
+      const stepsText = (parsed.steps || []).map((s: any) => `* **${s.title}**: ${s.explanation} ${s.equation ? `($${s.equation}$)` : ""}`).join('\n');
+      markdownSolution = `**Approach:**\n${parsed.approach}\n\n**Calculation:**\n${stepsText}\n\n**Final Answer:**\n${parsed.finalAnswer?.value}`;
+    } else {
+      const stepsText = (parsed.essential_steps || []).map((s: string) => `* ${s}`).join('\n');
+      markdownSolution = `**Approach:**\n${parsed.quick_approach}\n\n**Calculation:**\n${stepsText}\n\n**Final Answer:**\n${parsed.final_answer}`;
+    }
+
+    // Merge whatever parsed gave us directly into aiMetadata to be stored in DB
+    const finalAnswerValue = promptVersion === "solution-v2-strict" ? parsed.finalAnswer?.value : parsed.final_answer;
+
     return {
-      markdownSolution: parsed.markdownSolution,
-      finalAnswer: parsed.finalAnswer,
-      answerConfidence: parsed.answerConfidence,
-      aiMetadata: parsed.aiMetadata || {},
       promptVersion,
+      markdownSolution,
+      finalAnswer: finalAnswerValue,
+      aiMetadata: {
+        ...parsed, // Just store the entire raw JSON from the model in aiMetadata
+        prompt_version: promptVersion,
+        validation_status: "pending"
+      },
       tokenUsage: {
         prompt: usage?.promptTokenCount || 0,
         completion: usage?.candidatesTokenCount || 0,

@@ -1,4 +1,5 @@
 import { logRepositoryFailure } from "@/lib/logging/runtime-logger";
+import { assertInstituteUuid } from "@/config/institute";
 import { getClientWorkspaceSession } from "@/lib/workspace-session";
 import { assertBatch } from "@/lib/validation/institute-ops-schema";
 import type { BatchRepository } from "@/repositories/interfaces/batch-repository";
@@ -79,6 +80,8 @@ export class SupabaseBatchRepository implements BatchRepository {
     }
 
     try {
+      assertInstituteUuid(session.instituteId, "session.instituteId");
+
       const client = requireSupabaseClient("batches.list");
       const { data, error } = await client
         .from("batches")

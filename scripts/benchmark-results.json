@@ -1,0 +1,506 @@
+[
+  {
+    "id": "Q01",
+    "passed": true,
+    "retries": 0,
+    "wordCount": 87,
+    "reason": null,
+    "output": {
+      "subject": "Mathematics",
+      "topic": "Calculus",
+      "difficulty": "Easy",
+      "question_type": "MCQ",
+      "primary_concept": "Taylor Series Expansion",
+      "essential_steps": [
+        "Identify the indeterminate form as $\\frac{0}{0}$ as $x \\to 0$.",
+        "Use the Maclaurin series expansion: $\\sin x = x - \\frac{x^3}{3!} + \\frac{x^5}{5!} - \\dots$",
+        "Substitute this expansion into the numerator: $\\sin x - x = -\\frac{x^3}{6} + \\frac{x^5}{120} - \\dots$",
+        "Divide the terms by $x^3$ to obtain: $-\\frac{1}{6} + \\frac{x^2}{120} - \\dots$",
+        "Evaluate the limit as $x \\to 0$, which leaves only the constant term: $-\\frac{1}{6}$."
+      ],
+      "final_answer": "-1/6",
+      "prompt_version": "solution-v1",
+      "quick_approach": "Substitute $\\sin x \\approx x - \\frac{x^3}{6}$ into the expression to directly yield $\\lim_{x \\to 0} \\frac{-x^3/6}{x^3} = -\\frac{1}{6}$.",
+      "secondary_concept": "L'Hopital's Rule",
+      "subtopic": "Limits of Trigonometric Functions",
+      "validation_status": "pending"
+    }
+  },
+  {
+    "id": "Q02",
+    "passed": true,
+    "retries": 0,
+    "wordCount": 122,
+    "reason": null,
+    "output": {
+      "subject": "Mathematics",
+      "topic": "Calculus",
+      "difficulty": "Easy",
+      "question_type": "MCQ",
+      "primary_concept": "King's Property of Definite Integrals",
+      "essential_steps": [
+        "Let $I = \\int_0^{\\pi/2} \\log(\\tan x) \\, dx$  --- (1)",
+        "Apply the property $\\int_0^a f(x) \\, dx = \\int_0^a f(a-x) \\, dx$ to get: $I = \\int_0^{\\pi/2} \\log\\left(\\tan\\left(\\frac{\\pi}{2} - x\\right)\\right) \\, dx = \\int_0^{\\pi/2} \\log(\\cot x) \\, dx$  --- (2)",
+        "Add (1) and (2): $2I = \\int_0^{\\pi/2} [\\log(\\tan x) + \\log(\\cot x)] \\, dx$",
+        "Simplify using $\\log A + \\log B = \\log(AB)$: $2I = \\int_0^{\\pi/2} \\log(\\tan x \\cdot \\cot x) \\, dx = \\int_0^{\\pi/2} \\log(1) \\, dx = 0$",
+        "Thus, $I = 0$."
+      ],
+      "final_answer": "0",
+      "prompt_version": "solution-v1",
+      "quick_approach": "Apply King's property: $I = \\int_0^{\\pi/2} \\log(\\tan x) dx = \\int_0^{\\pi/2} \\log(\\cot x) dx$. Adding both equations gives $2I = \\int_0^{\\pi/2} \\log(\\tan x \\cdot \\cot x) dx = \\int_0^{\\pi/2} \\log(1) dx = 0 \\implies I = 0$.",
+      "secondary_concept": "Logarithmic Identities",
+      "subtopic": "Definite Integration",
+      "validation_status": "pending"
+    }
+  },
+  {
+    "id": "Q03",
+    "passed": true,
+    "retries": 0,
+    "wordCount": 80,
+    "reason": null,
+    "output": {
+      "subject": "Mathematics",
+      "topic": "Coordinate Geometry",
+      "difficulty": "Easy",
+      "question_type": "MCQ",
+      "primary_concept": "Length of Latus Rectum of a Parabola",
+      "essential_steps": [
+        "Identify the standard equation of the parabola: $y^2 = 4ax$, where $4a$ represents the length of the latus rectum.",
+        "Compare the given equation $y^2 = 12x$ with the standard form $y^2 = 4ax$.",
+        "Equate the coefficients of $x$ to find the length of the latus rectum: $4a = 12$."
+      ],
+      "final_answer": "12",
+      "prompt_version": "solution-v1",
+      "quick_approach": "Compare $y^2 = 12x$ with $y^2 = 4ax$. The coefficient of $x$, which is $12$, is directly the length of the latus rectum ($4a$).",
+      "secondary_concept": "Standard Equation of Parabola",
+      "subtopic": "Parabola",
+      "validation_status": "pending"
+    }
+  },
+  {
+    "id": "Q04",
+    "passed": true,
+    "retries": 0,
+    "wordCount": 109,
+    "reason": null,
+    "output": {
+      "subject": "Mathematics",
+      "topic": "Complex Numbers",
+      "difficulty": "Easy",
+      "question_type": "MCQ",
+      "primary_concept": "Properties of complex cube roots of unity",
+      "essential_steps": [
+        "Identify the fundamental properties of the complex cube root of unity: $1 + \\omega + \\omega^2 = 0$ and $\\omega^3 = 1$.",
+        "Express $1 + \\omega$ as $-\\omega^2$ using the identity $1 + \\omega + \\omega^2 = 0$.",
+        "Substitute $1 + \\omega = -\\omega^2$ into the target expression: $(1 + \\omega - \\omega^2)^3 = (-\\omega^2 - \\omega^2)^3$.",
+        "Simplify the base: $(-\\omega^2 - \\omega^2)^3 = (-2\\omega^2)^3$.",
+        "Expand and evaluate using $\\omega^3 = 1$: $(-2\\omega^2)^3 = -8\\omega^6 = -8(\\omega^3)^2 = -8(1)^2 = -8$."
+      ],
+      "final_answer": "-8",
+      "prompt_version": "solution-v1",
+      "quick_approach": "Substitute $1 + \\omega = -\\omega^2$ into the expression to get $(-2\\omega^2)^3 = -8\\omega^6$. Since $\\omega^3 = 1$, the result is $-8$.",
+      "secondary_concept": "Algebraic simplification",
+      "subtopic": "Cube Roots of Unity",
+      "validation_status": "pending"
+    }
+  },
+  {
+    "id": "Q05",
+    "passed": true,
+    "retries": 0,
+    "wordCount": 111,
+    "reason": null,
+    "output": {
+      "subject": "Mathematics",
+      "topic": "Matrices",
+      "difficulty": "Easy",
+      "question_type": "MCQ",
+      "primary_concept": "Definition of Orthogonal Matrix",
+      "essential_steps": [
+        "By definition, a square matrix $A$ is orthogonal if and only if $A A^T = I$, where $A^T$ is the transpose of $A$ and $I$ is the identity matrix.",
+        "Take the determinant on both sides: $\\det(A A^T) = \\det(I)$.",
+        "Use the product property of determinants, $\\det(AB) = \\det(A)\\det(B)$, to get $\\det(A) \\cdot \\det(A^T) = 1$.",
+        "Since the determinant of a matrix equals the determinant of its transpose, $\\det(A^T) = \\det(A)$, we have $(\\det(A))^2 = 1$.",
+        "Solving for $\\det(A)$ yields $\\det(A) = \\pm 1$."
+      ],
+      "final_answer": "±1",
+      "prompt_version": "solution-v1",
+      "quick_approach": "For an orthogonal matrix $A$, $A A^T = I$. Taking determinants on both sides gives $\\det(A)^2 = 1$, which implies $\\det(A) = \\pm 1$.",
+      "secondary_concept": "Properties of Determinants",
+      "subtopic": "Orthogonal Matrix and its Properties",
+      "validation_status": "pending"
+    }
+  },
+  {
+    "id": "Q06",
+    "passed": true,
+    "retries": 0,
+    "wordCount": 97,
+    "reason": null,
+    "output": {
+      "subject": "Mathematics",
+      "topic": "Probability",
+      "difficulty": "Easy",
+      "question_type": "MCQ",
+      "primary_concept": "Classical Definition of Probability",
+      "essential_steps": [
+        "Identify the total number of outcomes when two fair six-sided dice are rolled: $n(S) = 6 \\times 6 = 36$.",
+        "List the favorable outcomes where the sum of the numbers on the two dice is equal to 9: $E = \\{(3, 6), (4, 5), (5, 4), (6, 3)\\}$.",
+        "Count the number of favorable outcomes: $n(E) = 4$.",
+        "Calculate the probability using the formula: $P(E) = \\frac{n(E)}{n(S)} = \\frac{4}{36} = \\frac{1}{9}$."
+      ],
+      "final_answer": "1/9",
+      "prompt_version": "solution-v1",
+      "quick_approach": "With 36 total outcomes, the pairs summing to 9 are (3,6), (4,5), (5,4), and (6,3). Thus, Probability = 4/36 = 1/9.",
+      "secondary_concept": "Sample Space of Two Dice",
+      "subtopic": "Classical Definition of Probability",
+      "validation_status": "pending"
+    }
+  },
+  {
+    "id": "Q07",
+    "passed": true,
+    "retries": 0,
+    "wordCount": 86,
+    "reason": null,
+    "output": {
+      "subject": "Physics",
+      "topic": "Kinematics",
+      "difficulty": "Easy",
+      "question_type": "MCQ",
+      "primary_concept": "Time of Flight in Projectile Motion",
+      "essential_steps": [
+        "Identify the given parameters: initial velocity $u = 20\\text{ m/s}$, projection angle $\\theta = 30^\\circ$, and $g = 10\\text{ m/s}^2$.",
+        "Recall the formula for the total time of flight of a projectile on a horizontal plane: $T = \\frac{2u\\sin\\theta}{g}$.",
+        "Substitute the values into the formula: $T = \\frac{2 \\times 20 \\times \\sin(30^\\circ)}{10}$.",
+        "Using $\\sin(30^\\circ) = 0.5$, compute $T = \\frac{40 \\times 0.5}{10} = 2\\text{ s}$."
+      ],
+      "final_answer": "2 s",
+      "prompt_version": "solution-v1",
+      "quick_approach": "Use the standard formula $T = \\frac{2u\\sin\\theta}{g} = \\frac{2 \\times 20 \\times 0.5}{10} = 2\\text{ s}$.",
+      "secondary_concept": "Resolution of Velocity",
+      "subtopic": "Projectile Motion",
+      "validation_status": "pending"
+    }
+  },
+  {
+    "id": "Q08",
+    "passed": true,
+    "retries": 0,
+    "wordCount": 91,
+    "reason": null,
+    "output": {
+      "subject": "Physics",
+      "topic": "Electromagnetism",
+      "difficulty": "Easy",
+      "question_type": "MCQ",
+      "primary_concept": "Gauss's Law",
+      "essential_steps": [
+        "Recall Gauss's Law of electrostatics, which relates the net electric flux through a closed surface to the net charge enclosed within it.",
+        "The mathematical expression for Gauss's Law is given by: $\\Phi_E = \\oint \\vec{E} \\cdot d\\vec{A} = \\frac{Q_{\\text{enclosed}}}{\\epsilon_0}$.",
+        "Identify the enclosed charge in the given system as $Q_{\\text{enclosed}} = Q$.",
+        "Substitute the enclosed charge into the formula to find the total electric flux: $\\Phi_E = \\frac{Q}{\\epsilon_0}$."
+      ],
+      "final_answer": "Q/epsilon_0",
+      "prompt_version": "solution-v1",
+      "quick_approach": "By Gauss's Law, the net electric flux through any closed surface is $\\Phi_E = \\frac{Q_{\\text{enclosed}}}{\\epsilon_0}$. For an enclosed charge $Q$, this simplifies directly to $\\frac{Q}{\\epsilon_0}$.",
+      "secondary_concept": "Electric Flux",
+      "subtopic": "Gauss's Law",
+      "validation_status": "pending"
+    }
+  },
+  {
+    "id": "Q09",
+    "passed": true,
+    "retries": 0,
+    "wordCount": 104,
+    "reason": null,
+    "output": {
+      "subject": "Physics",
+      "topic": "Optics",
+      "difficulty": "Easy",
+      "question_type": "MCQ",
+      "primary_concept": "Image formation by a convex lens",
+      "essential_steps": [
+        "Identify that for a convex lens to form a real, inverted, and equal-sized image, the magnification must be $m = -1$.",
+        "Using the magnification formula $m = \\frac{v}{u}$, this condition is met when the object is placed at $2F$ (i.e., $|u| = 2f$).",
+        "Substitute the given focal length $f = 20\\text{ cm}$ into the relation $u = 2f$.",
+        "Calculate the object distance: $u = 2 \\times 20\\text{ cm} = 40\\text{ cm}$."
+      ],
+      "final_answer": "40 cm",
+      "prompt_version": "solution-v1",
+      "quick_approach": "A convex lens forms an equal-sized, real, and inverted image when the object is placed at $2f$. Thus, distance $= 2 \\times 20\\text{ cm} = 40\\text{ cm}$.",
+      "secondary_concept": "Lens Formula and Magnification",
+      "subtopic": "Spherical Lenses",
+      "validation_status": "pending"
+    }
+  },
+  {
+    "id": "Q10",
+    "passed": true,
+    "retries": 0,
+    "wordCount": 90,
+    "reason": null,
+    "output": {
+      "subject": "Physics",
+      "topic": "Dual Nature of Radiation and Matter",
+      "difficulty": "Easy",
+      "question_type": "MCQ",
+      "primary_concept": "Threshold Wavelength",
+      "essential_steps": [
+        "Identify the relation between work function ($\\Phi$) and threshold wavelength ($\\lambda_{th}$): $\\Phi = \\frac{hc}{\\lambda_{th}}$",
+        "Rearrange the formula to solve for threshold wavelength: $\\lambda_{th} = \\frac{hc}{\\Phi}$",
+        "Substitute the given values $hc = 1240\\text{ eV nm}$ and $\\Phi = 2.0\\text{ eV}$ into the equation: $\\lambda_{th} = \\frac{1240\\text{ eV nm}}{2.0\\text{ eV}}$",
+        "Calculate the result to find $\\lambda_{th} = 620\\text{ nm}$"
+      ],
+      "final_answer": "620 nm",
+      "prompt_version": "solution-v1",
+      "quick_approach": "Use the formula $\\lambda_{th} = \\frac{hc}{\\Phi}$. Substituting $hc = 1240\\text{ eV nm}$ and $\\Phi = 2.0\\text{ eV}$ immediately yields $\\lambda_{th} = \\frac{1240}{2} = 620\\text{ nm}$.",
+      "secondary_concept": "Photoelectric Effect",
+      "subtopic": "Work Function and Threshold Frequency",
+      "validation_status": "pending"
+    }
+  },
+  {
+    "id": "Q11",
+    "passed": false,
+    "retries": 3,
+    "wordCount": 0,
+    "reason": "Conversational filler detected.",
+    "output": null
+  },
+  {
+    "id": "Q12",
+    "passed": true,
+    "retries": 0,
+    "wordCount": 77,
+    "reason": null,
+    "output": {
+      "subject": "Physics",
+      "topic": "Rotational Motion",
+      "difficulty": "Easy",
+      "question_type": "MCQ",
+      "primary_concept": "Moment of inertia of a uniform solid sphere",
+      "essential_steps": [
+        "Identify the object as a uniform solid sphere of mass $M$ and radius $R$.",
+        "Recall that the moment of inertia about its diameter is a standard rotational dynamics result.",
+        "Express the standard formula for the moment of inertia of a solid sphere: $I = \\frac{2}{5}MR^2$."
+      ],
+      "final_answer": "2/5 MR^2",
+      "prompt_version": "solution-v1",
+      "quick_approach": "Apply the standard, pre-derived formula for the moment of inertia of a uniform solid sphere about its diameter: $I = \\frac{2}{5}MR^2$.",
+      "secondary_concept": "Integration of elemental discs",
+      "subtopic": "Moment of Inertia",
+      "validation_status": "pending"
+    }
+  },
+  {
+    "id": "Q13",
+    "passed": true,
+    "retries": 0,
+    "wordCount": 93,
+    "reason": null,
+    "output": {
+      "subject": "Physics",
+      "topic": "Oscillations",
+      "difficulty": "Easy",
+      "question_type": "MCQ",
+      "primary_concept": "Time period of a simple pendulum",
+      "essential_steps": [
+        "State the formula for the time period of a simple pendulum: $T = 2\\pi\\sqrt{\\frac{L}{g}}$.",
+        "Identify the proportionality relationship: $T \\propto \\sqrt{L}$, since gravity $g$ remains constant.",
+        "Formulate the ratio of the new time period $T'$ to the original time period $T$ for the new length $L' = 4L$: $\\frac{T'}{T} = \\sqrt{\\frac{L'}{L}} = \\sqrt{\\frac{4L}{L}} = \\sqrt{4} = 2$.",
+        "Solve for the new time period: $T' = 2T$."
+      ],
+      "final_answer": "2T",
+      "prompt_version": "solution-v1",
+      "quick_approach": "Since $T \\propto \\sqrt{L}$, quadrupling the length ($4L$) increases the time period by a factor of $\\sqrt{4} = 2$, giving $2T$.",
+      "secondary_concept": "Proportional reasoning in physics equations",
+      "subtopic": "Simple Pendulum",
+      "validation_status": "pending"
+    }
+  },
+  {
+    "id": "Q14",
+    "passed": true,
+    "retries": 0,
+    "wordCount": 122,
+    "reason": null,
+    "output": {
+      "subject": "Chemistry",
+      "topic": "Organic Chemistry",
+      "difficulty": "Easy",
+      "question_type": "MCQ",
+      "primary_concept": "SN1 reaction mechanism and carbocation stability",
+      "essential_steps": [
+        "Recall that the rate of an $S_N1$ reaction is determined by the stability of the carbocation intermediate formed in the slow, rate-determining step.",
+        "Identify the carbocation intermediates formed by the cleavage of the C-Cl bond: methyl cation (methyl), ethyl cation ($1^\\circ$), isopropyl cation ($2^\\circ$), and tert-butyl cation ($3^\\circ$).",
+        "Compare their stabilities based on inductive effect ($+I$) and hyperconjugation: $3^\\circ > 2^\\circ > 1^\\circ > \\text{methyl}$.",
+        "Since the tert-butyl cation ($3^\\circ$) is highly stabilized by 9 hyperconjugative $\\alpha$-hydrogens, tert-butyl chloride undergoes the $S_N1$ reaction most rapidly."
+      ],
+      "final_answer": "tert-Butyl chloride",
+      "prompt_version": "solution-v1",
+      "quick_approach": "$S_N1$ reaction rate is proportional to carbocation stability ($3^\\circ > 2^\\circ > 1^\\circ > \\text{methyl}$). tert-Butyl chloride forms a highly stable tertiary carbocation, making it the fastest to react.",
+      "secondary_concept": "Hyperconjugation and Inductive Effect",
+      "subtopic": "Haloalkanes and Haloarenes",
+      "validation_status": "pending"
+    }
+  },
+  {
+    "id": "Q15",
+    "passed": true,
+    "retries": 0,
+    "wordCount": 107,
+    "reason": null,
+    "output": {
+      "subject": "Chemistry",
+      "topic": "Chemical Kinetics",
+      "difficulty": "Easy",
+      "question_type": "MCQ",
+      "primary_concept": "First-Order Kinetics",
+      "essential_steps": [
+        "Identify that for a first-order reaction, the remaining concentration after $n$ half-lives is given by $[A]_t = [A]_0 \\left(\\frac{1}{2}\\right)^n$.",
+        "For $75\\%$ completion, the remaining concentration of reactant is $[A]_t = 100\\% - 75\\% = 25\\% = \\frac{[A]_0}{4}$.",
+        "Set up the relation: $\\frac{[A]_0}{4} = [A]_0 \\left(\\frac{1}{2}\\right)^n \\implies \\left(\\frac{1}{2}\\right)^2 = \\left(\\frac{1}{2}\\right)^n$, which gives $n = 2$ half-lives.",
+        "Calculate the total time required: $t_{75\\%} = 2 \\times t_{1/2} = 2 \\times 10\\text{ min} = 20\\text{ min}$."
+      ],
+      "final_answer": "20 min",
+      "prompt_version": "solution-v1",
+      "quick_approach": "For any first-order reaction, the time required for $75\\%$ completion is exactly double the half-life ($t_{75\\%} = 2 \\times t_{1/2}$). Thus, $t = 2 \\times 10\\text{ min} = 20\\text{ min}$.",
+      "secondary_concept": "Half-life of First-Order Reactions",
+      "subtopic": "Integrated Rate Equations",
+      "validation_status": "pending"
+    }
+  },
+  {
+    "id": "Q16",
+    "passed": true,
+    "retries": 0,
+    "wordCount": 91,
+    "reason": null,
+    "output": {
+      "subject": "Chemistry",
+      "topic": "Electrochemistry",
+      "difficulty": "Easy",
+      "question_type": "MCQ",
+      "primary_concept": "Standard EMF of a Galvanic Cell ($E^\\circ_{\\text{cell}}$)",
+      "essential_steps": [
+        "Identify the cathode and anode: The electrode with the higher standard reduction potential acts as the cathode (reduction), and the electrode with the lower standard reduction potential acts as the anode (oxidation).",
+        "Given: $E^\\circ_{\\text{Cu}^{2+}/\\text{Cu}} = +0.34\\text{ V}$ (Cathode) and $E^\\circ_{\\text{Zn}^{2+}/\\text{Zn}} = -0.76\\text{ V}$ (Anode).",
+        "Apply the formula for standard cell potential: $E^\\circ_{\\text{cell}} = E^\\circ_{\\text{cathode}} - E^\\circ_{\\text{anode}}$.",
+        "Calculate the value: $E^\\circ_{\\text{cell}} = 0.34\\text{ V} - (-0.76\\text{ V}) = 1.10\\text{ V}$."
+      ],
+      "final_answer": "1.10 V",
+      "prompt_version": "solution-v1",
+      "quick_approach": "Standard EMF is $E^\\circ_{\\text{cell}} = E^\\circ_{\\text{cathode}} - E^\\circ_{\\text{anode}} = 0.34\\text{ V} - (-0.76\\text{ V}) = 1.10\\text{ V}$.",
+      "secondary_concept": "Electrode Potentials",
+      "subtopic": "Galvanic Cells",
+      "validation_status": "pending"
+    }
+  },
+  {
+    "id": "Q17",
+    "passed": true,
+    "retries": 0,
+    "wordCount": 137,
+    "reason": null,
+    "output": {
+      "subject": "Chemistry",
+      "topic": "Coordination Compounds",
+      "difficulty": "Easy",
+      "question_type": "MCQ",
+      "primary_concept": "Oxidation state determination of the central metal atom in a coordination compound",
+      "essential_steps": [
+        "Identify the charges on the counter ions and ligands: Potassium ($K^+$) has a charge of $+1$ and Cyanide ($CN^-$) is a monodentate anionic ligand with a charge of $-1$.",
+        "Set up the chemical neutrality equation for $K_4[Fe(CN)_6]$: $4(\\text{charge of } K) + \\text{oxidation state of } Fe + 6(\\text{charge of } CN) = 0$.",
+        "Substitute the known charges into the equation: $4(+1) + x + 6(-1) = 0$, where $x$ is the oxidation state of Fe.",
+        "Solve the algebraic equation: $4 + x - 6 = 0 \\implies x - 2 = 0 \\implies x = +2$."
+      ],
+      "final_answer": "+2",
+      "prompt_version": "solution-v1",
+      "quick_approach": "The complex dissociate into $4K^+$ and $[Fe(CN)_6]^{4-}$. For the complex ion, $x + 6(-1) = -4$, which directly gives $x = +2$.",
+      "secondary_concept": "Charge of counter-ions and anionic ligands",
+      "subtopic": "Oxidation state of central metal atom",
+      "validation_status": "pending"
+    }
+  },
+  {
+    "id": "Q18",
+    "passed": true,
+    "retries": 0,
+    "wordCount": 75,
+    "reason": null,
+    "output": {
+      "subject": "Chemistry",
+      "topic": "Organic Chemistry",
+      "difficulty": "Easy",
+      "question_type": "MCQ",
+      "primary_concept": "Reimer-Tiemann Reaction",
+      "essential_steps": [
+        "Identify the reactants: Phenol, chloroform ($CHCl_3$), and dilute $NaOH$.",
+        "Note that chloroform and base react to generate dichlorocarbene ($:CCl_2$), which acts as the electrophile.",
+        "The phenoxide ion undergoes electrophilic substitution by dichlorocarbene, selectively targeting the ortho position.",
+        "Subsequent hydrolysis yields salicylaldehyde (2-hydroxybenzaldehyde).",
+        "Conclude that this specific organic chemical transformation is named the Reimer-Tiemann reaction."
+      ],
+      "final_answer": "Reimer-Tiemann reaction",
+      "prompt_version": "solution-v1",
+      "quick_approach": "The treatment of phenol with $CHCl_3$ and aqueous $NaOH$ to introduce an aldehyde group at the ortho-position is the signature Reimer-Tiemann reaction.",
+      "secondary_concept": "Dichlorocarbene Electrophile",
+      "subtopic": "Phenols",
+      "validation_status": "pending"
+    }
+  },
+  {
+    "id": "Q19",
+    "passed": true,
+    "retries": 1,
+    "wordCount": 104,
+    "reason": null,
+    "output": {
+      "subject": "Chemistry",
+      "topic": "Thermodynamics",
+      "difficulty": "Easy",
+      "question_type": "MCQ",
+      "primary_concept": "Gibbs Free Energy and Spontaneity",
+      "essential_steps": [
+        "State the relation for Gibbs Free Energy change at constant temperature and pressure: $\\Delta G = \\Delta H - T\\Delta S$.",
+        "Relate the change in Gibbs Free Energy to the total entropy change of the universe: $\\Delta S_{\\text{total}} = -\\frac{\\Delta G}{T}$.",
+        "For a process to be spontaneous, the second law of thermodynamics requires $\\Delta S_{\\text{total}} > 0$.",
+        "Since absolute temperature $T$ is always positive, $\\Delta S_{\\text{total}} > 0$ mathematically requires $\\Delta G < 0$."
+      ],
+      "final_answer": "delta G < 0",
+      "prompt_version": "solution-v2-strict",
+      "quick_approach": "For any spontaneous process at constant $T$ and $P$, the Gibbs free energy must decrease, meaning $\\Delta G < 0$.",
+      "secondary_concept": "Second Law of Thermodynamics",
+      "subtopic": "Gibbs Helmholtz Equation and Spontaneity",
+      "validation_status": "pending"
+    }
+  },
+  {
+    "id": "Q20",
+    "passed": true,
+    "retries": 0,
+    "wordCount": 80,
+    "reason": null,
+    "output": {
+      "subject": "Chemistry",
+      "topic": "p-Block Elements",
+      "difficulty": "Easy",
+      "question_type": "MCQ",
+      "primary_concept": "Oxides of Nitrogen",
+      "essential_steps": [
+        "Identify the chemical names of the given options: $NO$ is nitric oxide, $NO_2$ is nitrogen dioxide, $N_2O$ is nitrous oxide (dinitrogen monoxide), and $N_2O_5$ is dinitrogen pentoxide.",
+        "Recall that nitrous oxide ($N_2O$) acts as an anesthetic and analgesic, which produces euphoric effects and laughter upon inhalation.",
+        "Conclude that nitrous oxide ($N_2O$) is commonly known as laughing gas."
+      ],
+      "final_answer": "N2O",
+      "prompt_version": "solution-v1",
+      "quick_approach": "Nitrous oxide ($N_2O$) is known as laughing gas due to its euphoric and laughing effects when inhaled.",
+      "secondary_concept": "Common Names of Inorganic Compounds",
+      "subtopic": "Group 15 Elements",
+      "validation_status": "pending"
+    }
+  }
+]

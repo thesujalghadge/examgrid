@@ -1,4 +1,4 @@
-import { isUuid } from "@/config/institute";
+import { isUuid, assertInstituteUuid } from "@/config/institute";
 import { logRepositoryFailure } from "@/lib/logging/runtime-logger";
 import { getClientWorkspaceSession } from "@/lib/workspace-session";
 import type { QuestionRepository } from "@/repositories/interfaces/question-repository";
@@ -62,6 +62,7 @@ export class SupabaseQuestionRepository implements QuestionRepository {
   private enqueuePersist(task: () => Promise<void>): void {
     this.persistChain = this.persistChain.then(task).catch((error) => {
       logRepositoryFailure("SupabaseQuestionRepository.persistChain", error);
+      throw error;
     });
   }
 
@@ -84,6 +85,8 @@ export class SupabaseQuestionRepository implements QuestionRepository {
     }
 
     try {
+      assertInstituteUuid(session.instituteId, "session.instituteId");
+
       const client = requireSupabaseClient("questions.list");
       const { data, error } = await client
         .from("questions")
@@ -108,6 +111,8 @@ export class SupabaseQuestionRepository implements QuestionRepository {
     if (isUuid(publicId)) {
       return { id: publicId, legacyId: null };
     }
+    assertInstituteUuid(instituteId, "instituteId");
+    
     const client = requireSupabaseClient("questions.resolveId");
     const { data } = await client
       .from("questions")
@@ -132,9 +137,12 @@ export class SupabaseQuestionRepository implements QuestionRepository {
       const { error } = await client.from("questions").upsert(row, {
         onConflict: "id",
       });
+      if (error) console.error(`[PERSISTENCE_LOG] table: questions, action: upsert, rows: 1, success: false, error: ${error.message}`);
+      else console.log(`[PERSISTENCE_LOG] table: questions, action: upsert, rows: 1, success: true`);
       throwIfSupabaseError(error, "questions", "upsert");
     } catch (error) {
       logRepositoryFailure("SupabaseQuestionRepository.persistOne", error);
+      throw error;
     }
   }
 
@@ -143,14 +151,19 @@ export class SupabaseQuestionRepository implements QuestionRepository {
       try {
         const session = getClientWorkspaceSession();
         if (!session?.instituteId) return;
+        assertInstituteUuid(session.instituteId, "session.instituteId");
+
         const client = requireSupabaseClient("questions.clear");
         const { error } = await client
           .from("questions")
           .delete()
           .eq("institute_id", session.instituteId);
+        if (error) console.error(`[PERSISTENCE_LOG] table: questions, action: deleteAll, success: false, error: ${error.message}`);
+        else console.log(`[PERSISTENCE_LOG] table: questions, action: deleteAll, success: true`);
         throwIfSupabaseError(error, "questions", "deleteAll");
       } catch (error) {
         logRepositoryFailure("SupabaseQuestionRepository.persistAll", error);
+        throw error;
       }
       return;
     }
@@ -162,6 +175,8 @@ export class SupabaseQuestionRepository implements QuestionRepository {
     try {
       const session = getClientWorkspaceSession();
       if (!session?.instituteId) return;
+      assertInstituteUuid(session.instituteId, "session.instituteId");
+
       const client = requireSupabaseClient("questions.prune");
       const keepLegacyIds = questions
         .filter((q) => !isUuid(q.id))
@@ -188,10 +203,13 @@ export class SupabaseQuestionRepository implements QuestionRepository {
 
       if (toDelete.length > 0) {
         const { error } = await client.from("questions").delete().in("id", toDelete);
+        if (error) console.error(`[PERSISTENCE_LOG] table: questions, action: prune, rows: ${toDelete.length}, success: false, error: ${error.message}`);
+        else console.log(`[PERSISTENCE_LOG] table: questions, action: prune, rows: ${toDelete.length}, success: true`);
         throwIfSupabaseError(error, "questions", "prune");
       }
     } catch (error) {
       logRepositoryFailure("SupabaseQuestionRepository.prune", error);
+      throw error;
     }
   }
 
@@ -205,9 +223,12 @@ export class SupabaseQuestionRepository implements QuestionRepository {
         .from("questions")
         .delete()
         .eq("id", id);
+      if (error) console.error(`[PERSISTENCE_LOG] table: questions, action: delete, success: false, error: ${error.message}`);
+      else console.log(`[PERSISTENCE_LOG] table: questions, action: delete, success: true`);
       throwIfSupabaseError(error, "questions", "delete");
     } catch (error) {
       logRepositoryFailure("SupabaseQuestionRepository.delete", error);
+      throw error;
     }
   }
 }

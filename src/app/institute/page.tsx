@@ -7,6 +7,7 @@ import { getRepositories } from "@/lib/repositories/provider";
 import { useWorkspaceAuthStore } from "@/stores/workspace-auth-store";
 import { getLocalTestAnalytics } from "@/lib/cbt/client-test-analytics";
 import { scopeByInstituteId } from "@/lib/tenant-scope";
+
 import { getScheduleStatus } from "@/services/institute-ops-service";
 import { SolutionHealthWidget } from "@/components/institute/SolutionHealthWidget";
 
@@ -64,28 +65,28 @@ export default function InstituteOverviewPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-semibold text-[#14213d]">Institute overview</h2>
-        <p className="text-sm text-[#5e5a52]">
+      <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+        <h2 className="font-heading text-2xl font-bold tracking-tight text-foreground">Institute overview</h2>
+        <p className="text-sm text-muted-foreground mt-1">
           The core workflow is simple: organize students, publish tests, monitor attempts, and read reports.
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <MetricCard label="Students" value={String(overview.students)} />
-        <MetricCard label="Batches" value={String(overview.batches)} />
-        <MetricCard label="Live tests" value={String(overview.liveTests)} />
-        <MetricCard label="Reports ready" value={String(overview.reportsReady)} />
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <MetricCard label="Students" value={String(overview.students)} delay="0ms" />
+        <MetricCard label="Batches" value={String(overview.batches)} delay="100ms" />
+        <MetricCard label="Live tests" value={String(overview.liveTests)} delay="200ms" />
+        <MetricCard label="Reports ready" value={String(overview.reportsReady)} delay="300ms" />
       </div>
 
       {instituteId && <SolutionHealthWidget instituteId={instituteId} />}
 
-      <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-        <Card className="border-[#d8d2c7]">
+      <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+        <Card className="hover:shadow-[var(--shadow-clay-md)] transition-shadow duration-300">
           <CardHeader>
-            <CardTitle className="text-base text-[#14213d]">Primary workflow</CardTitle>
+            <CardTitle className="text-lg font-semibold text-primary">Primary workflow</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-3 md:grid-cols-2">
+          <CardContent className="grid gap-4 sm:grid-cols-2">
             <FlowLink href="/institute/tests" title="1. Upload paper & publish CBT" />
             <FlowLink href="/institute/students" title="2. Students & batches" />
             <FlowLink href="/institute/analysis" title="3. Analysis" />
@@ -93,18 +94,20 @@ export default function InstituteOverviewPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-[#d8d2c7]">
+        <Card className="hover:shadow-[var(--shadow-clay-md)] transition-shadow duration-300">
           <CardHeader>
-            <CardTitle className="text-base text-[#14213d]">Recent activity</CardTitle>
+            <CardTitle className="text-lg font-semibold text-primary">Recent activity</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             {overview.recentActivity.length === 0 ? (
-              <p className="text-[#5e5a52]">Submissions will appear here.</p>
+              <div className="flex h-32 items-center justify-center rounded-2xl border border-dashed border-border bg-muted/20">
+                <p className="text-muted-foreground">Submissions will appear here.</p>
+              </div>
             ) : (
               overview.recentActivity.map((item, i) => (
-                <div key={i} className="rounded-xl border border-[#ece6da] p-3">
-                  <p className="text-[#14213d]">{item.label}</p>
-                  <p className="text-xs text-[#5e5a52]">{item.at}</p>
+                <div key={i} className="group flex flex-col justify-center rounded-2xl bg-background p-4 shadow-[var(--shadow-clay-sm)] transition-all duration-300 hover:shadow-[var(--shadow-clay-md)] hover:-translate-y-0.5">
+                  <p className="text-sm font-medium text-foreground">{item.label}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{item.at}</p>
                 </div>
               ))
             )}
@@ -115,13 +118,16 @@ export default function InstituteOverviewPage() {
   );
 }
 
-function MetricCard({ label, value }: { label: string; value: string }) {
+function MetricCard({ label, value, delay }: { label: string; value: string; delay: string }) {
   return (
-    <Card className="border-[#d8d2c7]">
-      <CardHeader>
-        <CardTitle className="text-sm font-medium text-[#5e5a52]">{label}</CardTitle>
+    <Card className="group relative overflow-hidden transition-all duration-500 hover:-translate-y-1 hover:shadow-[var(--shadow-clay-lg)] animate-in fade-in slide-in-from-bottom-4" style={{ animationFillMode: 'backwards', animationDelay: delay }}>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</CardTitle>
       </CardHeader>
-      <CardContent className="text-2xl font-semibold text-[#14213d]">{value}</CardContent>
+      <CardContent>
+        <div className="text-3xl font-bold text-foreground transition-transform duration-300 group-hover:scale-105 group-hover:text-primary origin-left">{value}</div>
+      </CardContent>
+      <div className="absolute inset-0 -z-10 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
     </Card>
   );
 }
@@ -130,9 +136,9 @@ function FlowLink({ href, title }: { href: string; title: string }) {
   return (
     <Link
       href={href}
-      className="rounded-2xl border border-[#ece6da] bg-[#fbf9f4] p-4 text-sm font-medium text-[#14213d] transition hover:border-[#8a6f3e]"
+      className="group flex h-full items-center rounded-2xl bg-background p-5 shadow-[var(--shadow-clay-sm)] ring-1 ring-border/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-[var(--shadow-clay-md)] hover:ring-primary/50"
     >
-      {title}
+      <span className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">{title}</span>
     </Link>
   );
 }

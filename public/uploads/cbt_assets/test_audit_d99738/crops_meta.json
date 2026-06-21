@@ -1,0 +1,215 @@
+{
+  "job_id": "test_audit_d99738",
+  "questions": [
+    {
+      "id": "Q1",
+      "q_num": 1,
+      "q_type": "MCQ",
+      "page": 1,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\test_audit_d99738\\vision_crops\\Q1_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/test_audit_d99738/vision_crops/Q1_crop.jpg",
+      "question_text": "Let the set of all values of r, for which the \ncircles (x+1)2+(y+4)2=r2 and x2+y2\u22124x\u22122y\u22124=0 intersect at two distinct points be the \ninterval (\u03b1,\u03b2). Then \u03b1\u03b2 is equal to",
+      "options": [
+        "25",
+        "21",
+        "24",
+        "20"
+      ]
+    },
+    {
+      "id": "Q2",
+      "q_num": 2,
+      "q_type": "MCQ",
+      "page": 1,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\test_audit_d99738\\vision_crops\\Q2_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/test_audit_d99738/vision_crops/Q2_crop.jpg",
+      "question_text": "Let the solution curve of the differential equation xdy\u2212ydx=\u221ax2+y2dx,x>0, \nwith y",
+      "options": [
+        "4",
+        "2",
+        "1",
+        "6"
+      ]
+    },
+    {
+      "id": "Q3",
+      "q_num": 3,
+      "q_type": "MCQ",
+      "page": 1,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\test_audit_d99738\\vision_crops\\Q3_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/test_audit_d99738/vision_crops/Q3_crop.jpg",
+      "question_text": "Let the line x=\u22121 divide the area of the region{(x,y):1+x2\u2264y\u22643\u2212x} \nin the ratio m:n, where gcd(m,n)=1. Then m+n is equal to",
+      "options": [
+        "27",
+        "26",
+        "25",
+        "28"
+      ]
+    },
+    {
+      "id": "Q4",
+      "q_num": 4,
+      "q_type": "MCQ",
+      "page": 1,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\test_audit_d99738\\vision_crops\\Q4_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/test_audit_d99738/vision_crops/Q4_crop.jpg",
+      "question_text": "The number of solutions oftan\u22121(4x)+tan\u22121(6x)= \u03c0/6, \nwhere\u22121/2\u221a6<x<1/2\u221a6, \nis equal to",
+      "options": [
+        "1",
+        "2",
+        "0",
+        "3"
+      ]
+    },
+    {
+      "id": "Q5",
+      "q_num": 5,
+      "q_type": "NAT",
+      "page": 2,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\test_audit_d99738\\vision_crops\\Q5_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/test_audit_d99738/vision_crops/Q5_crop.jpg",
+      "question_text": "Let ABC be a triangle. Consider four points p1,p2,p3,p4 on the side AB, five \npoints p5,p6,p7,p8,p9 on the side BC, and four points p10,p11,p12,p13 on the side AC. \nNone of these points is a vertex of the triangle ABC. Then the total number of pentagons \nthat can be formed by taking all the vertices from the points p1,p2,\u2026,p13 is _______.",
+      "options": []
+    },
+    {
+      "id": "Q6",
+      "q_num": 6,
+      "q_type": "MCQ",
+      "page": 2,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\test_audit_d99738\\vision_crops\\Q6_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/test_audit_d99738/vision_crops/Q6_crop.jpg",
+      "question_text": "Find the correct combination of A, B, C and D inputs which can cause the LED to glow.",
+      "options": [
+        "0100",
+        "1000",
+        "0011",
+        "1101"
+      ]
+    },
+    {
+      "id": "Q7",
+      "q_num": 7,
+      "q_type": "MCQ",
+      "page": 2,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\test_audit_d99738\\vision_crops\\Q7_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/test_audit_d99738/vision_crops/Q7_crop.jpg",
+      "question_text": "Electric field in a region is given by\u2192E=Ax^i+By^j, \nwhere A=10V/m2 and B=5V/m2. If the electric potential at a point (10,20) is 500 V, then the \nelectric potential at origin is \\underline{\\hspace{1cm V.",
+      "options": [
+        "1000",
+        "500",
+        "2000",
+        "0"
+      ]
+    },
+    {
+      "id": "Q8",
+      "q_num": 8,
+      "q_type": "MCQ",
+      "page": 3,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\test_audit_d99738\\vision_crops\\Q8_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/test_audit_d99738/vision_crops/Q8_crop.jpg",
+      "question_text": "A simple pendulum has a bob with mass m and charge q. The pendulum string has \nnegligible mass. When a uniform and horizontal electric field \u2192E is applied, the tension in \nthe string changes. The final tension in the string, when pendulum attains an equilibrium \nposition is _________. \n \n(g: acceleration due to gravity)",
+      "options": [
+        "\u221am2g2\u2212q2E2",
+        "\u221am2g2+q2E2",
+        "mg+qE",
+        "mg\u2212qE"
+      ]
+    },
+    {
+      "id": "Q9",
+      "q_num": 9,
+      "q_type": "MCQ",
+      "page": 3,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\test_audit_d99738\\vision_crops\\Q9_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/test_audit_d99738/vision_crops/Q9_crop.jpg",
+      "question_text": "A cylindrical tube AB of length l, closed at both ends, contains an ideal gas of 1 mol having \nmolecular weight M. The tube is rotated in a horizontal plane with constant angular \nvelocity \u03c9 about an axis perpendicular to AB and passing through the edge at end A, as \nshown in the figure. If PA and PB are the pressures at A and B respectively, then (consider \nthe temperature to be same at all points in the tube)",
+      "options": [
+        "PB=PAexp(M\u03c92l2RT)",
+        "PB=PA",
+        "PB=PAexp(M\u03c92l23RT)",
+        "PB=PAexp(M\u03c92l22RT)"
+      ]
+    },
+    {
+      "id": "Q10",
+      "q_num": 10,
+      "q_type": "NAT",
+      "page": 4,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\test_audit_d99738\\vision_crops\\Q10_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/test_audit_d99738/vision_crops/Q10_crop.jpg",
+      "question_text": "Two loudspeakers (L1 and L2) are placed with a separation of 10m, as shown in the figure. \nBoth speakers are fed with an audio input signal of the same frequency with constant \nvolume. A voice recorder, initially at point A, at equidistance to both loudspeakers, is \nmoved by 25m along the line AB while monitoring the audio signal. The measured signal \nwas found to undergo 10 cycles of minima and maxima during the movement. The \nfrequency of the input signal is _______ Hz. \n \n(Speed of sound in air is 324m/s and \u221a5=2.23)",
+      "options": []
+    },
+    {
+      "id": "Q11",
+      "q_num": 11,
+      "q_type": "MCQ",
+      "page": 4,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\test_audit_d99738\\vision_crops\\Q11_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/test_audit_d99738/vision_crops/Q11_crop.jpg",
+      "question_text": "Given below are two statements: \n \n \nStatement I: Benzene is nitrated to give nitrobenzene, which on further treatment \nwith CH3COCl/AlCl3 will give the product shown. \n\n \n \n \nStatement II: \u2212NO2 group is a meta-directing and deactivating group. \n \n \nIn the light of the above statements, choose the most appropriate answer from the \noptions given below.",
+      "options": [
+        "Statement I is correct but Statement II is incorrect",
+        "Both Statement I and Statement II are incorrect",
+        "Statement I is incorrect but Statement II is correct",
+        "Both Statement I and Statement II are correct"
+      ]
+    },
+    {
+      "id": "Q12",
+      "q_num": 12,
+      "q_type": "MCQ",
+      "page": 5,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\test_audit_d99738\\vision_crops\\Q12_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/test_audit_d99738/vision_crops/Q12_crop.jpg",
+      "question_text": "Two p-block elements X and Y form fluorides of the type EF3. The fluoride \ncompound XF3 is a Lewis acid and YF3 is a Lewis base. The hybridizations of the central \natoms of XF3 and YF3 respectively are",
+      "options": [
+        "Both sp2",
+        "Both sp3",
+        "sp2 and sp3",
+        "sp3 and sp2"
+      ]
+    },
+    {
+      "id": "Q13",
+      "q_num": 13,
+      "q_type": "MCQ",
+      "page": 5,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\test_audit_d99738\\vision_crops\\Q13_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/test_audit_d99738/vision_crops/Q13_crop.jpg",
+      "question_text": "A p-block element E and hydrogen form a binary cation (EHx)+, while EH3 on treatment \nwith K2HgI4 in alkaline medium gives a precipitate of basic mercury(II) amido-iodide. \nGiven below are first ionisation enthalpy values (kJ mol\u22121) for the first elements each from \ngroups 13, 14, 15 and 16. Identify the correct first ionisation enthalpy value for element E.",
+      "options": [
+        "1402",
+        "801",
+        "1312",
+        "1086"
+      ]
+    },
+    {
+      "id": "Q14",
+      "q_num": 14,
+      "q_type": "MCQ",
+      "page": 6,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\test_audit_d99738\\vision_crops\\Q14_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/test_audit_d99738/vision_crops/Q14_crop.jpg",
+      "question_text": "The formal charges on the atoms marked as",
+      "options": [
+        "+1,0,0,\u22121",
+        "0,\u22121,0,+1",
+        "0,+1,0,\u22121",
+        "0,0,\u22121,+1"
+      ]
+    },
+    {
+      "id": "Q15",
+      "q_num": 15,
+      "q_type": "NAT",
+      "page": 6,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\test_audit_d99738\\vision_crops\\Q15_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/test_audit_d99738/vision_crops/Q15_crop.jpg",
+      "question_text": "Consider a solution of CO2(g) dissolved in water in a closed container. Which one of the \nfollowing plots correctly represents variation of log (partial pressure of CO2 in vapour \nphase above water) [y-axis] with log (mole fraction of CO2 in water) [x-axis] at 25\u2218C?",
+      "options": []
+    }
+  ]
+}

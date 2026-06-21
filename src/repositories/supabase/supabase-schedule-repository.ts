@@ -1,4 +1,5 @@
 import { logRepositoryFailure } from "@/lib/logging/runtime-logger";
+import { assertInstituteUuid } from "@/config/institute";
 import { getClientWorkspaceSession } from "@/lib/workspace-session";
 import { assertExamSchedule } from "@/lib/validation/institute-ops-schema";
 import type { ScheduleRepository } from "@/repositories/interfaces/schedule-repository";
@@ -86,6 +87,8 @@ export class SupabaseScheduleRepository implements ScheduleRepository {
     }
 
     try {
+      assertInstituteUuid(session.instituteId, "session.instituteId");
+
       const client = requireSupabaseClient("exam_schedules.list");
       const { data: schedules, error: scheduleError } = await client
         .from("exam_schedules")

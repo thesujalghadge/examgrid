@@ -27,10 +27,19 @@ export async function POST(request: Request) {
       
       jobsProcessed += result.processed || 0;
 
-      // Strict 4500ms wait between calls if we process more to avoid 429
+      // Wait 3000ms between calls if we process more to avoid hitting the 15 RPM limit
       if (i < MAX_JOBS - 1) {
-        await new Promise((resolve) => setTimeout(resolve, 4500));
+        await new Promise((resolve) => setTimeout(resolve, 3000));
       }
+    }
+
+    if (jobsProcessed > 0) {
+      // Daisy-chain to continue processing the queue in the background
+      const processUrl = new URL('/api/internal/process-solution-queue', request.url).toString();
+      fetch(processUrl, {
+        method: 'POST',
+        headers: { 'authorization': `Bearer ${CRON_SECRET}` }
+      }).catch(err => console.error('Failed to daisy-chain background processing:', err));
     }
 
     return NextResponse.json({

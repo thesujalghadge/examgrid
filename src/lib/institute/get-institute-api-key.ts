@@ -116,10 +116,18 @@ export async function getInstituteGeminiKey(instituteId: string): Promise<string
   }
 
   if (!encrypted || !iv) {
-    throw new Error(`No Gemini API key configured for institute ${instituteId}`);
+    const error = new Error(`No Gemini API key configured for institute ${instituteId}`);
+    error.name = "NO_KEY";
+    throw error;
   }
 
-  return decryptApiKey(encrypted, iv);
+  try {
+    return await decryptApiKey(encrypted, iv);
+  } catch(e: any) {
+    const error = new Error(`Failed to decrypt API key: ${e.message}`);
+    error.name = "INVALID_SECRET";
+    throw error;
+  }
 }
 
 export { createServiceRoleClient };

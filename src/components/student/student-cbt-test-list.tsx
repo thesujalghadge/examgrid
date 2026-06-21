@@ -100,23 +100,27 @@ export function StudentCbtTestList() {
   if (!candidate) return null;
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-1">
-        <h2 className="text-2xl font-semibold text-[#14213d]">Upcoming tests</h2>
-        <p className="text-sm text-[#5e5a52]">
+    <div className="space-y-6">
+      <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+        <h2 className="font-heading text-2xl font-bold tracking-tight text-foreground">Upcoming tests</h2>
+        <p className="text-sm text-muted-foreground mt-1">
           Start live tests, resume unfinished attempts, or wait for upcoming windows to open.
         </p>
       </div>
 
       {!isOperationalSchedulingActive() ? (
-        <p className="text-sm text-[#5e5a52]">
-          No CBT windows are active yet. Your institute will publish tests here when they are ready.
-        </p>
+        <div className="flex h-32 items-center justify-center rounded-2xl border border-dashed border-border bg-muted/20">
+          <p className="text-sm text-muted-foreground">
+            No CBT windows are active yet. Your institute will publish tests here when they are ready.
+          </p>
+        </div>
       ) : rows.length === 0 ? (
-        <p className="text-sm text-[#5e5a52]">No institute tests are assigned to you right now.</p>
+        <div className="flex h-32 items-center justify-center rounded-2xl border border-dashed border-border bg-muted/20">
+          <p className="text-sm text-muted-foreground">No institute tests are assigned to you right now.</p>
+        </div>
       ) : (
-        <div className="grid gap-3">
-          {rows.map(({ test, schedule, status, hasSubmitted, hasInProgress }) => {
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {rows.map(({ test, schedule, status, hasSubmitted, hasInProgress }, index) => {
             const startLimit = new Date(schedule.startAt).getTime() + 10 * 60 * 1000;
             const isLate = Date.now() > startLimit;
             const missed = status === "active" && !hasSubmitted && !hasInProgress && isLate;
@@ -129,19 +133,26 @@ export function StudentCbtTestList() {
                 : "Start test";
 
             return (
-              <Card key={`${test.id}-${schedule.id}`} className="border-[#d8d2c7]">
-                <CardHeader>
-                  <CardTitle className="text-base text-[#14213d]">{test.title}</CardTitle>
-                  <CardDescription className="text-[#5e5a52]">
-                    {test.durationMinutes} min | {test.questions.length} questions |{" "}
-                    <span className="capitalize">{missed ? "Missed" : status}</span>
+              <Card key={`${test.id}-${schedule.id}`} className="group relative overflow-hidden transition-all duration-500 hover:-translate-y-1 hover:shadow-[var(--shadow-clay-lg)] animate-in fade-in slide-in-from-bottom-4" style={{ animationFillMode: 'backwards', animationDelay: `${index * 100}ms` }}>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg font-bold text-foreground group-hover:text-primary transition-colors">{test.title}</CardTitle>
+                  <CardDescription className="text-muted-foreground flex items-center gap-1.5 mt-1">
+                    <span className="inline-flex items-center rounded-full bg-secondary/30 px-2 py-0.5 text-xs font-medium text-secondary-foreground">
+                      {test.durationMinutes} min
+                    </span>
+                    <span className="inline-flex items-center rounded-full bg-secondary/30 px-2 py-0.5 text-xs font-medium text-secondary-foreground">
+                      {test.questions.length} Qs
+                    </span>
+                    <span className="ml-auto text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      {missed ? "Missed" : status}
+                    </span>
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   {hasSubmitted ? (
                     <Link
                       href={`/student/tests/${test.id}/result`}
-                      className={cn(buttonVariants({ variant: "outline" }), "bg-white")}
+                      className={cn(buttonVariants({ variant: "outline" }), "w-full")}
                     >
                       {ctaLabel}
                     </Link>
@@ -150,17 +161,17 @@ export function StudentCbtTestList() {
                       href={`/student/tests/${test.id}`}
                       className={cn(
                         buttonVariants(),
-                        "bg-[#14213d] text-white hover:bg-[#0f1a31]",
+                        "w-full bg-primary hover:bg-primary/90",
                       )}
                     >
                       {ctaLabel}
                     </Link>
                   ) : missed ? (
-                    <span className="text-sm text-red-500 font-medium">
+                    <span className="text-sm text-danger font-medium block text-center bg-danger/10 p-2 rounded-xl">
                       Missed (joined more than 10 mins late)
                     </span>
                   ) : status === "upcoming" ? (
-                    <span className="text-sm text-[#5e5a52]">
+                    <span className="text-sm text-muted-foreground block text-center bg-muted/30 p-2 rounded-xl">
                       Opens{" "}
                       {new Date(schedule.startAt).toLocaleString("en-IN", {
                         dateStyle: "medium",
@@ -168,9 +179,10 @@ export function StudentCbtTestList() {
                       })}
                     </span>
                   ) : (
-                    <span className="text-sm text-[#5e5a52]">Window closed</span>
+                    <span className="text-sm text-muted-foreground block text-center bg-muted/30 p-2 rounded-xl">Window closed</span>
                   )}
                 </CardContent>
+                <div className="absolute inset-0 -z-10 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
               </Card>
             );
           })}

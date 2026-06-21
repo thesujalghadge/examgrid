@@ -32,9 +32,17 @@ export class LocalExamRepository implements ExamRepository {
   save(exam: ExamDefinition): void {
     const parsed = parseExamDefinition(exam);
     if (!parsed.success) return;
-    const all = this.list().filter((e) => e.id !== exam.id);
-    all.push(parsed.data as ExamDefinition);
-    writeStorageJson("local", STORAGE_KEYS.examCatalog, all);
+    
+    const all = this.list();
+    const existing = all.find((e) => e.id === exam.id);
+    if ((existing as any)?.status === "PUBLISHED") {
+      console.error("Exam has already been published. Published questions cannot be modified.");
+      return;
+    }
+    
+    const filtered = all.filter((e) => e.id !== exam.id);
+    filtered.push(parsed.data as ExamDefinition);
+    writeStorageJson("local", STORAGE_KEYS.examCatalog, filtered);
   }
 
   getById(id: string): ExamDefinition | undefined {

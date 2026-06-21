@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 interface ApiKeyStatus {
   hasKey: boolean;
   setAt: string | null;
+  status: "VALID" | "INVALID_SECRET" | "NO_KEY";
 }
 
 export function InstituteApiKeySection({ instituteId }: { instituteId: string }) {
@@ -30,7 +31,7 @@ export function InstituteApiKeySection({ instituteId }: { instituteId: string })
         if (!cancelled) setStatus(data);
       })
       .catch(() => {
-        if (!cancelled) setStatus({ hasKey: false, setAt: null });
+        if (!cancelled) setStatus({ hasKey: false, setAt: null, status: "NO_KEY" });
       });
     return () => {
       cancelled = true;
@@ -83,7 +84,7 @@ export function InstituteApiKeySection({ instituteId }: { instituteId: string })
       }
       setMessage({ type: "success", text: "API key removed successfully." });
       setKeyInput("");
-      setStatus({ hasKey: false, setAt: null });
+      setStatus({ hasKey: false, setAt: null, status: "NO_KEY" });
     } finally {
       setSaving(false);
     }
@@ -98,12 +99,22 @@ export function InstituteApiKeySection({ instituteId }: { instituteId: string })
         </p>
       </div>
 
-      {status?.hasKey ? (
-        <div className="rounded bg-green-50 px-3 py-2 text-xs text-green-700">
-          Key configured
+      {status ? (
+        <div
+          className={`rounded px-3 py-2 text-xs flex items-center gap-1.5 font-medium ${
+            status.status === "VALID"
+              ? "bg-green-50 text-green-700"
+              : status.status === "INVALID_SECRET"
+                ? "bg-red-50 text-red-700"
+                : "bg-gray-50 text-gray-700"
+          }`}
+        >
+          {status.status === "VALID" && <span>✅ API Key Valid</span>}
+          {status.status === "INVALID_SECRET" && <span>❌ API Key Invalid (Please re-enter)</span>}
+          {status.status === "NO_KEY" && <span>⚪ No API Key Configured</span>}
+          
           {status.setAt ? (
-            <span className="text-gray-500">
-              {" "}
+            <span className="text-gray-500 font-normal ml-1">
               · Set on {new Date(status.setAt).toLocaleDateString()}
             </span>
           ) : null}

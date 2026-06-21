@@ -35,7 +35,7 @@ export async function enqueueQuestionsForGeneration(
     .from("solution_generation_queue")
     .select("question_id")
     .in("question_id", toEnqueue)
-    .in("status", ["pending", "processing"]);
+    .in("status", ["PENDING", "PROCESSING", "WAITING_RETRY"]);
 
   if (queueError) throw queueError;
   const queueSet = new Set(queuedAlready?.map((s: any) => s.question_id) || []);
@@ -53,12 +53,18 @@ export async function enqueueQuestionsForGeneration(
         question_id: qId,
         institute_id: instituteId,
         priority: priority,
-        status: "pending"
+        status: "PENDING"
       }))
     )
     .select("id, institute_id");
 
-  if (insertError) throw insertError;
+  if (insertError) {
+    if (insertError.code === '23505') {
+      console.warn("Caught queue unique constraint violation (concurrent publish). Ignoring duplicate jobs.");
+      return { enqueued: 0, skipped: questionIds.length };
+    }
+    throw insertError;
+  }
 
   // 4. Insert audit events
   if (queued && queued.length > 0) {
@@ -87,14 +93,21 @@ export async function leaseJob(): Promise<LeasedJob | null> {
   const supabase = createServiceRoleClient();
   if (!supabase) return null;
 
-  const { data, error } = await supabase.rpc("lease_solution_generation_job");
+  const { data, error } = await supabase.rpc("lease_solution_generation_job_v2");
   if (error) {
     console.error("Error leasing job:", error);
     return null;
   }
   
   if (data && data.length > 0 && data[0].id) {
-    return data[0] as LeasedJob;
+    const { data: qItem } = await supabase.from('solution_generation_queue').select('question_id, institute_id, attempts').eq('id', data[0].id).single();
+    if (!qItem) return null;
+    return {
+      id: data[0].id,
+      question_id: qItem.question_id,
+      institute_id: qItem.institute_id || "ddcc7407-fbb6-42bd-9751-576ef43e2241",
+      attempts: qItem.attempts || 0
+    };
   }
   return null;
 }
@@ -105,7 +118,7 @@ export async function markJobComplete(jobId: string, instituteId: string) {
 
   await supabase
     .from("solution_generation_queue")
-    .update({ status: "completed", updated_at: new Date().toISOString() })
+    .update({ status: "COMPLETED", completed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
     .eq("id", jobId);
 
   await supabase.from("solution_generation_events").insert({
@@ -120,7 +133,7 @@ export async function markJobFailed(jobId: string, instituteId: string, errorMsg
   if (!supabase) return;
 
   const isPermanent = currentAttempts >= maxAttempts;
-  const nextStatus = isPermanent ? "failed" : "pending";
+  const nextStatus = isPermanent ? "FAILED" : "PENDING";
   
   // Exponential backoff: 1 min, 2 min, 4 min...
   const delayMinutes = Math.pow(2, currentAttempts - 1);

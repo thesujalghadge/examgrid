@@ -1,4 +1,5 @@
 import { logRepositoryFailure } from "@/lib/logging/runtime-logger";
+import { assertInstituteUuid } from "@/config/institute";
 import { getClientWorkspaceSession } from "@/lib/workspace-session";
 import { assertAuditLogEntry } from "@/lib/validation/audit-schema";
 import type { AuditRepository } from "@/repositories/interfaces/audit-repository";
@@ -82,6 +83,8 @@ export class SupabaseAuditRepository implements AuditRepository {
     if (!session?.instituteId) {
       return { rows: [], total: 0, page: query.page ?? 1, pageSize: query.pageSize ?? 25 };
     }
+    assertInstituteUuid(session.instituteId, "session.instituteId");
+
     const client = requireSupabaseClient("audit_logs.list");
     const page = Math.max(1, query.page ?? 1);
     const pageSize = Math.min(100, Math.max(10, query.pageSize ?? 25));
@@ -123,6 +126,8 @@ export class SupabaseAuditRepository implements AuditRepository {
   private async persistOne(entry: AuditLogEntry): Promise<void> {
     const session = getClientWorkspaceSession();
     if (!session?.instituteId) return;
+    assertInstituteUuid(session.instituteId, "session.instituteId");
+
     const client = requireSupabaseClient("audit_logs.insert");
     const { error } = await client.from("audit_logs").insert(entryToRow(entry, session.instituteId));
     throwIfSupabaseError(error, "audit_logs", "insert");

@@ -1,12 +1,12 @@
 {
   "name": "ExamGrid",
   "short_name": "ExamGrid",
-  "description": "Workflow-first CBT operations for coaching institutes and students.",
+  "description": "Premium CBT platform for coaching institutes and students.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#f5f1e8",
-  "theme_color": "#1a3c6e",
+  "background_color": "#FAFAFA",
+  "theme_color": "#4F46E5",
   "icons": [
     {
       "src": "/icon-192.png",
