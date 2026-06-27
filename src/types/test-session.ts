@@ -1,4 +1,5 @@
 export type TestSessionStatus = "in_progress" | "submitted" | "auto_submitted";
+import type { QuestionType } from "./exam";
 
 export type TestSessionIntegrityEventType =
   | "tab_switch"
@@ -17,7 +18,7 @@ export interface TestSessionIntegrityEvent {
 
 /** Compact key for server-side scoring verification. */
 export interface TestAnswerKeyEntry {
-  type: "MCQ_SINGLE" | "NUMERICAL";
+  type: QuestionType;
   correctOptionId?: string;
   correctNumericalAnswer?: string;
   marks: number;
@@ -32,6 +33,11 @@ export interface TestQuestionResult {
   correct: boolean;
   marksAwarded: number;
   maxMarks: number;
+  timeSpentSeconds?: number;
+  visitedCount?: number;
+  answerChangedCount?: number;
+  firstAnswer?: string | null;
+  markedForReview?: boolean;
 }
 
 export interface TestResultBreakdown {
@@ -71,6 +77,12 @@ export interface TestSession {
   resultBreakdown?: TestResultBreakdown;
   answerKey?: TestAnswerKey;
   signedAnswerKey?: string;
+  telemetry?: {
+    timeSpentSeconds: Record<string, number>;
+    visitedCount: Record<string, number>;
+    answerChangedCount: Record<string, number>;
+    firstAnswer: Record<string, string | null>;
+  };
 }
 
 export interface TestSessionTimerClaims {

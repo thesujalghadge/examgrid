@@ -42,7 +42,7 @@ export async function POST(
 
     const actualExamId = exam.id;
 
-    let releaseTime = null;
+    let releaseTime = new Date().toISOString();
     if (exam.scheduled_at) {
       const startMs = new Date(exam.scheduled_at).getTime();
       const durationMs = (exam.duration_minutes || 0) * 60 * 1000;
@@ -106,7 +106,8 @@ export async function POST(
     // 3. Trigger Queue (Idempotent)
     const result = await enqueueSolutionsForExam(actualExamId, instituteId);
 
-    // 4. Verification
+    // Note: Background worker is no longer triggered here. 
+    // It is processed by a distributed cron orchestrator.
     const expectedCount = questions ? questions.length : 0;
     const actualCount = result.enqueued + result.skipped;
     

@@ -5,7 +5,7 @@ export type QuestionPaletteStatus =
   | "marked-for-review"
   | "answered-and-marked";
 
-export type QuestionType = "MCQ_SINGLE" | "NUMERICAL";
+export type QuestionType = "MCQ_SINGLE" | "MCQ_MULTIPLE" | "NUMERICAL" | "INTEGER";
 
 export type ExamViolationType =
   | "tab_switch"
@@ -62,6 +62,7 @@ export interface ExamDefinition {
   instructions: string[];
   scheduledAt: string;
   solutionsReleaseTime?: string;
+  instituteId?: string;
 }
 
 export interface Candidate {

@@ -71,7 +71,26 @@ export async function POST(request: Request) {
   }
 
   const authoritativeExam = await getExamByIdServer(body.testId);
-  const durationMinutes = authoritativeExam?.durationMinutes ?? body.durationMinutes;
+  if (!authoritativeExam) {
+    logCbtWarning("cbt start rejected", {
+      reason: "exam_not_found",
+      testId: body.testId,
+      userId: ws.userId,
+    });
+    return NextResponse.json({ error: "Exam not found" }, { status: 404 });
+  }
+
+  if (authoritativeExam.instituteId !== ws.instituteId) {
+    logCbtWarning("cbt start rejected", {
+      reason: "exam_institute_mismatch",
+      testId: body.testId,
+      expected: authoritativeExam.instituteId,
+      actual: ws.instituteId,
+    });
+    return NextResponse.json({ error: "Unauthorized access to exam" }, { status: 403 });
+  }
+
+  const durationMinutes = authoritativeExam.durationMinutes;
   const startedAt = Date.now();
   const endsAt = startedAt + durationMinutes * 60 * 1000;
   const claims: TestSessionTimerClaims = {
@@ -84,11 +103,7 @@ export async function POST(request: Request) {
   };
 
   let signedAnswerKey: string | undefined;
-  const answerKey: TestAnswerKey | undefined = authoritativeExam
-    ? buildAnswerKeyFromExam(authoritativeExam)
-    : body.answerKey;
-  
-  require('fs').writeFileSync('cbt_start_log.txt', 'AnswerKey: ' + JSON.stringify(answerKey));
+  const answerKey: TestAnswerKey = buildAnswerKeyFromExam(authoritativeExam);
 
   if (answerKey && Object.keys(answerKey).length > 0) {
     signedAnswerKey = signAnswerKey(answerKey, body.testId);
@@ -102,14 +117,7 @@ export async function POST(request: Request) {
     }
   }
 
-  if (!authoritativeExam) {
-    logCbtWarning("cbt start used fallback answer key source", {
-      testId: body.testId,
-      studentId: ws.userId,
-      instituteId: ws.instituteId,
-      source: body.answerKey ? "client_payload" : "none",
-    });
-  } else if (durationMinutes !== body.durationMinutes) {
+  if (durationMinutes !== body.durationMinutes) {
     logCbtGuard("cbt start normalized duration from exam catalog", {
       testId: body.testId,
       studentId: ws.userId,

@@ -11,9 +11,7 @@ import { useWorkspaceAuthStore } from "@/stores/workspace-auth-store";
 const NAV = [
   { href: "/student/tests", label: "Upcoming Tests" },
   { href: "/student/attempted", label: "Attempted Tests" },
-  { href: "/student/reports", label: "Reports" },
-  { href: "/student/analysis", label: "Analysis" },
-  { href: "/student/pyq", label: "PYQ Practice" },
+  { href: "/student/reports", label: "Report" },
 ];
 
 export function StudentShell({ children }: { children: React.ReactNode }) {
@@ -40,7 +38,10 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
 
     if (!candidate) {
       router.replace("/student/login");
+      return;
     }
+
+    import("@/lib/cbt/test-session-answers-storage").then((m) => m.cleanupOldSessions());
   }, [candidate, isHydrated, wsHydrated, sessionRole, pathname, router, logout, workspaceLogout]);
 
   if (pathname === "/student/login") return <>{children}</>;

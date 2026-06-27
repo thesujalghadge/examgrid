@@ -25,19 +25,21 @@ export async function writeExam(exam: ExamDefinition): Promise<void> {
   return Promise.resolve(getRepositories().exams.save(exam));
 }
 
+import { loadExamAttempt, saveExamAttempt } from "@/lib/persistence";
+
 export async function readExamAttempt(
   examId: string,
   candidateRoll: string,
 ): Promise<PersistedExamAttempt | null> {
   return Promise.resolve(
-    getRepositories().attempts.load(examId, candidateRoll),
+    loadExamAttempt(examId, candidateRoll),
   );
 }
 
 export async function writeExamAttempt(
   attempt: PersistedExamAttempt,
 ): Promise<void> {
-  return Promise.resolve(getRepositories().attempts.save(attempt));
+  return Promise.resolve(saveExamAttempt(attempt) ? undefined : undefined);
 }
 
 export async function readStudentSession(): Promise<StudentRecord | null> {

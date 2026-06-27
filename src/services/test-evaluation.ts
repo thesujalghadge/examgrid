@@ -15,6 +15,7 @@ export function clearEvaluationCache(sessionId?: string): void {
   else evaluationCache.clear();
 }
 
+
 export function evaluateTestSession(input: {
   sessionId: string;
   answers: Record<string, string | null>;
@@ -22,6 +23,12 @@ export function evaluateTestSession(input: {
   startedAt: number;
   submittedAt: number;
   integrityEvents?: TestSessionIntegrityEvent[];
+  telemetry?: {
+    timeSpentSeconds?: Record<string, number>;
+    visitedCount?: Record<string, number>;
+    answerChangedCount?: Record<string, number>;
+    firstAnswer?: Record<string, string | null>;
+  };
   useCache?: boolean;
 }): TestResultBreakdown {
   const { sessionId, useCache = true } = input;
@@ -49,6 +56,10 @@ export function evaluateTestSession(input: {
         correct: false,
         marksAwarded: 0,
         maxMarks: key.marks,
+        timeSpentSeconds: input.telemetry?.timeSpentSeconds?.[questionId] ?? 0,
+        visitedCount: input.telemetry?.visitedCount?.[questionId] ?? 0,
+        answerChangedCount: input.telemetry?.answerChangedCount?.[questionId] ?? 0,
+        firstAnswer: input.telemetry?.firstAnswer?.[questionId] ?? null,
       };
     }
 
@@ -84,6 +95,10 @@ export function evaluateTestSession(input: {
       correct: isCorrect,
       marksAwarded,
       maxMarks: key.marks,
+      timeSpentSeconds: input.telemetry?.timeSpentSeconds?.[questionId] ?? 0,
+      visitedCount: input.telemetry?.visitedCount?.[questionId] ?? 0,
+      answerChangedCount: input.telemetry?.answerChangedCount?.[questionId] ?? 0,
+      firstAnswer: input.telemetry?.firstAnswer?.[questionId] ?? null,
     };
   });
 

@@ -22,6 +22,7 @@ import type {
   InstituteStudent,
   StudentImportPreview,
 } from "@/types/institute-ops";
+import { verifyBatchExistsRemote } from "@/app/institute/actions/analytics-fetch";
 
 const blank = {
   fullName: "",
@@ -101,16 +102,9 @@ export default function InstituteStudentsPage() {
   const verifyBatchExists = async (batchId: string): Promise<boolean> => {
     if (!tenantId) return false;
     const currentTenantId = tenantId;
-    const client = createSupabaseClient();
-    if (client) {
-      const { data, error } = await client
-        .from("batches")
-        .select("id")
-        .eq("id", batchId)
-        .eq("institute_id", currentTenantId)
-        .maybeSingle();
-      if (!error) return Boolean(data);
-    }
+    const existsRemote = await verifyBatchExistsRemote(batchId);
+    if (existsRemote) return true;
+    
     return repos.batches
       .list()
       .some((batch) => batch.id === batchId && batch.instituteId === currentTenantId);

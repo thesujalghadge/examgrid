@@ -1,39 +1,57 @@
-import { STORAGE_KEYS } from "@/repositories/storage-keys";
+const PREFIX = "examgrid:attempt:";
 
-const PREFIX = `${STORAGE_KEYS.testSessions}:answers:`;
-
-function key(sessionId: string): string {
-  return `${PREFIX}${sessionId}`;
+function key(attemptId: string): string {
+  return `${PREFIX}${attemptId}:answers`;
 }
 
-export function loadSessionAnswers(
-  sessionId: string,
-): Record<string, string | null> | null {
+export function loadSessionAnswers(attemptId: string): Record<string, string | null> | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = localStorage.getItem(key(sessionId));
-    if (!raw) {
-      console.log(`[loadSessionAnswers] No answers found for ${sessionId}`);
-      return null;
-    }
-    const parsed = JSON.parse(raw) as Record<string, string | null>;
-    console.log(`[loadSessionAnswers] Loaded ${Object.keys(parsed).length} answers for ${sessionId}`);
-    return parsed;
+    const raw = localStorage.getItem(key(attemptId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed.answers as Record<string, string | null>;
   } catch {
     return null;
   }
 }
 
-export function saveSessionAnswers(
-  sessionId: string,
-  answers: Record<string, string | null>,
-): void {
+export function saveSessionAnswers(attemptId: string, answers: Record<string, string | null>): void {
   if (typeof window === "undefined") return;
-  console.log(`[saveSessionAnswers] Persisting ${Object.keys(answers).length} answers to localStorage for ${sessionId}`);
-  localStorage.setItem(key(sessionId), JSON.stringify(answers));
+  const payload = {
+    updatedAt: Date.now(),
+    answers
+  };
+  localStorage.setItem(key(attemptId), JSON.stringify(payload));
 }
 
-export function removeSessionAnswers(sessionId: string): void {
+export function removeSessionAnswers(attemptId: string): void {
   if (typeof window === "undefined") return;
-  localStorage.removeItem(key(sessionId));
+  localStorage.removeItem(key(attemptId));
+}
+
+export function cleanupOldSessions(): void {
+  if (typeof window === "undefined") return;
+  try {
+    const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(PREFIX)) {
+        const raw = localStorage.getItem(k);
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw);
+            if (now - parsed.updatedAt > SEVEN_DAYS) {
+              localStorage.removeItem(k);
+            }
+          } catch {
+            localStorage.removeItem(k);
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.error("Cleanup failed", e);
+  }
 }

@@ -12,9 +12,10 @@ import {
   throwIfSupabaseError,
 } from "@/repositories/supabase/supabase-repo-utils";
 import type { StudentRow } from "@/repositories/supabase/types";
-import { LocalStudentRepository } from "@/repositories/local/local-student-repository";
 import type { StudentRecord } from "@/types/student";
 import type { InstituteStudent } from "@/types/institute-ops";
+
+const STUDENT_SESSION_KEY = "examgrid:student_session";
 
 /** Supabase student roster with local session persistence for CBT attempts. */
 export class SupabaseStudentRepository implements StudentRepository {
@@ -22,22 +23,30 @@ export class SupabaseStudentRepository implements StudentRepository {
   private hydrated = false;
   private refreshPromise: Promise<void> | null = null;
   private persistChain: Promise<void> = Promise.resolve();
-  private readonly session = new LocalStudentRepository();
 
   get isHydrated(): boolean {
     return this.hydrated;
   }
 
   getSession(): StudentRecord | null {
-    return this.session.getSession();
+    if (typeof window === "undefined") return null;
+    const raw = localStorage.getItem(STUDENT_SESSION_KEY);
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw) as StudentRecord;
+    } catch {
+      return null;
+    }
   }
 
   saveSession(student: StudentRecord): void {
-    this.session.saveSession(student);
+    if (typeof window === "undefined") return;
+    localStorage.setItem(STUDENT_SESSION_KEY, JSON.stringify(student));
   }
 
   clearSession(): void {
-    this.session.clearSession();
+    if (typeof window === "undefined") return;
+    localStorage.removeItem(STUDENT_SESSION_KEY);
   }
 
   list(): InstituteStudent[] {

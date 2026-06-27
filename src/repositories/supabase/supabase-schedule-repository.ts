@@ -158,6 +158,22 @@ export class SupabaseScheduleRepository implements ScheduleRepository {
           })),
         );
       throwIfSupabaseError(linkError, "exam_schedule_batches", "insert");
+
+      // Trigger syllabus mapping asynchronously for each assigned batch
+      try {
+        for (const batchId of schedule.batchIds) {
+          fetch("/api/internal/trigger-syllabus-mapping", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              batchId,
+              instituteId: schedule.instituteId,
+            }),
+          }).catch(console.error);
+        }
+      } catch (err) {
+        console.error("Failed to trigger mapping service", err);
+      }
     }
   }
 

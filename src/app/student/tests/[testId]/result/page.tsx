@@ -51,12 +51,9 @@ export default function StudentCbtResultPage() {
       router.replace("/student/login");
       return;
     }
-    const test = getRepositories().cbtTests.getById(testId);
     const ws = useWorkspaceAuthStore.getState().session;
     if (
-      !test ||
-      !exam ||
-      (ws?.instituteId && test.instituteId !== ws.instituteId)
+      !exam
     ) {
       router.replace("/student/tests");
       return;
@@ -100,7 +97,7 @@ export default function StudentCbtResultPage() {
             });
             setResult({
               examId: testId,
-              examTitle: test.title,
+              examTitle: exam.title,
               totalQuestions: bd.correct + bd.incorrect + bd.unattempted,
               candidateName: candidate.name,
               rollNumber: candidate.rollNumber,

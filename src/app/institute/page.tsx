@@ -26,39 +26,22 @@ export default function InstituteOverviewPage() {
     }
 
     const repos = getRepositories();
-    const tests = scopeByInstituteId(repos.cbtTests.list(), instituteId);
     const schedules = scopeByInstituteId(repos.schedules.list(), instituteId);
+    
+    // An institute's exams are those they have scheduled
+    const testIds = new Set(schedules.map(s => s.examId));
+    const tests = repos.exams.list().filter(e => testIds.has(e.id));
+    
     const students = scopeByInstituteId(repos.students.list(), instituteId);
     const nameByRoll = new Map(students.map((s) => [s.rollNumber, s.fullName]));
 
-    const recentActivity = tests
-      .flatMap((test) =>
-        repos.cbtAttempts.listByTestId(test.id).map((row) => ({ row, test })),
-      )
-      .filter(
-        ({ row }) =>
-          row.attempt.instituteId === instituteId && row.attempt.submittedAt,
-      )
-      .sort((a, b) => (b.row.attempt.submittedAt ?? 0) - (a.row.attempt.submittedAt ?? 0))
-      .slice(0, 6)
-      .map(({ row, test }) => {
-        const name = nameByRoll.get(row.attempt.studentId) ?? row.attempt.studentId;
-        return {
-          label: `${name} submitted ${test.title} — score ${row.attempt.score ?? 0}`,
-          at: new Date(row.attempt.submittedAt!).toLocaleString("en-IN", {
-            dateStyle: "medium",
-            timeStyle: "short",
-          }),
-        };
-      });
+    const recentActivity: { label: string; at: string }[] = []; // Submissions now via API, not local repo
 
     return {
       students: students.length,
       batches: scopeByInstituteId(repos.batches.list(), instituteId).length,
       liveTests: schedules.filter((schedule) => getScheduleStatus(schedule) === "active").length,
-      reportsReady: tests.filter(
-        (test) => getLocalTestAnalytics(test.id, instituteId).attemptCount > 0,
-      ).length,
+      reportsReady: 0, // Migrated to API
       recentActivity,
     };
   }, [instituteId]);

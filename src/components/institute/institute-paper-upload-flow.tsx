@@ -44,7 +44,7 @@ import type {
   SupportedPaperFileType,
 } from "@/types/cbt-paper-processing";
 
-type FlowStep = "upload" | "configure" | "metadata" | "processing" | "review" | "done";
+type FlowStep = "setup" | "processing" | "review" | "done";
 
 interface ParsedGeminiOption {
   id: string;
@@ -85,7 +85,7 @@ export function InstitutePaperUploadFlow() {
   const instituteId = session?.instituteId ?? "";
   const createdBy = session?.userId ?? "institute-admin";
 
-  const [step, setStep] = useState<FlowStep>("upload");
+  const [step, setStep] = useState<FlowStep>("setup");
   const [processing, setProcessing] = useState(false);
   const [progressText, setProgressText] = useState("Initializing pipeline...");
   const [paperFile, setPaperFile] = useState<File | null>(null);
@@ -392,7 +392,7 @@ export function InstitutePaperUploadFlow() {
       setPkg(configured);
       setStep("review");
     } catch (error) {
-      setStep("metadata");
+      setStep("setup");
       setPublishError(error instanceof Error ? error.message : "Could not read the paper. Try again or paste text.");
       logSecurityEvent("paper_processing_blocked", { instituteId, message: String(error) });
     } finally {
@@ -446,7 +446,6 @@ export function InstitutePaperUploadFlow() {
     saveQuestionBank(merged);
 
     const repos = getRepositories();
-    repos.cbtTests.save(test);
     const startMs = scheduleStart ? new Date(scheduleStart).getTime() : 0;
     const endAt = scheduleEnd ? new Date(scheduleEnd).toISOString() : (scheduleStart ? new Date(startMs + test.durationMinutes * 60 * 1000).toISOString() : undefined);
     const examDef = cbtTestToExamDefinition(test, undefined, endAt);
@@ -497,7 +496,7 @@ export function InstitutePaperUploadFlow() {
   };
 
   const resetFlow = () => {
-    setStep("upload");
+    setStep("setup");
     setPkg(null);
     setPaperFile(null);
     setKeyFile(null);
@@ -510,13 +509,13 @@ export function InstitutePaperUploadFlow() {
     <div className="space-y-5">
       <WizardStepper step={step} />
       <div className="hidden flex-wrap gap-2 text-sm">
-        {(["configure", "review", "done"] as FlowStep[]).map((id, index) => (
+        {(["setup", "review", "done"] as FlowStep[]).map((id, index) => (
           <button
             key={id}
             type="button"
             disabled={id === "review" && !pkg}
             onClick={() => {
-              if (id === "configure") setStep("configure");
+              if (id === "setup") setStep("setup");
               if (id === "review" && pkg) setStep("review");
             }}
             className={
@@ -525,232 +524,136 @@ export function InstitutePaperUploadFlow() {
                 : "rounded-lg border border-[#ece6da] bg-white px-4 py-2 text-[#5e5a52] enabled:hover:border-[#8a6f3e] disabled:opacity-40"
             }
           >
-            {index + 1}. {id === "configure" ? "Configure" : id === "review" ? "Preview & Edit" : "Done"}
+            {index + 1}. {id === "setup" ? "Configure & Upload" : id === "review" ? "Preview & Edit" : "Done"}
           </button>
         ))}
       </div>
 
-      {step === "upload" && (
+      {step === "setup" && (
         <Card className="border-[#d8d2c7]">
           <CardHeader>
-            <CardTitle className="text-xl text-[#14213d]">Upload CBT files</CardTitle>
-            <CardDescription>
-              Add the required question paper and optional answer key before configuring the test.
-            </CardDescription>
+            <CardTitle className="text-xl text-[#14213d]">Configure & Upload CBT</CardTitle>
+            <CardDescription>Set the test details, configure subjects, and upload the files to process.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-2">
-            <UploadCard
-              title="Question Paper"
-              required
-              accept={ACCEPT_PAPER}
-              formats="PDF, DOC, DOCX, TXT, CSV, XLSX"
-              limit="Max 10 MB"
-              file={paperFile}
-              onChange={setPaperFile}
-            />
-            <UploadCard
-              title="Answer Key"
-              accept={ACCEPT_KEY}
-              formats="PDF, DOC, DOCX, TXT, CSV, XLSX"
-              limit="Max 2 MB"
-              file={keyFile}
-              onChange={setKeyFile}
-              />
-            </div>
-            {publishError ? (
-              <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">{publishError}</p>
-            ) : null}
-            <div className="flex justify-end gap-2">
-              <Button className="bg-[#14213d] px-6" disabled={!paperFile} onClick={() => setStep("configure")}>
-                Continue to configure
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {step === "configure" && (
-        <Card className="border-[#d8d2c7]">
-          <CardHeader>
-            <CardTitle className="text-xl text-[#14213d]">Configure subjects</CardTitle>
-            <CardDescription>
-              Map question ranges to subjects before processing the paper.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="hidden gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <label className="space-y-1.5 md:col-span-2">
-                <Label>Test name</Label>
-                <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="JEE Main Mock 1" />
-              </label>
-              <label className="space-y-1.5">
-                <Label>Duration (minutes)</Label>
-                <Input type="text" inputMode="numeric" pattern="[0-9]*" value={duration} onChange={(e) => setDuration(e.target.value)} />
-              </label>
-              <label className="space-y-1.5">
-                <Label>Marks per question</Label>
-                <Input type="text" inputMode="numeric" pattern="[0-9]*" value={marksPerQuestion} onChange={(e) => setMarksPerQuestion(e.target.value)} />
-              </label>
-              <label className="space-y-1.5">
-                <Label>Negative marks</Label>
-                <Input type="text" inputMode="decimal" value={negativeMarks} onChange={(e) => setNegativeMarks(e.target.value)} />
-              </label>
-              <label className="space-y-1.5">
-                <Label>Available from</Label>
-                <Input type="datetime-local" value={scheduleStart} onChange={(e) => setScheduleStart(e.target.value)} />
-              </label>
-              <label className="space-y-1.5">
-                <Label>Available until</Label>
-                <Input type="datetime-local" value={scheduleEnd} onChange={(e) => setScheduleEnd(e.target.value)} />
-              </label>
-            </div>
-
-            <div className="hidden space-y-2">
-              <Label>Batches</Label>
-              <div className="flex flex-wrap gap-2">
-                {batches.map((batch) => (
-                  <label
-                    key={batch.id}
-                    className="flex cursor-pointer items-center gap-2 rounded-lg border border-[#ece6da] px-3 py-2 text-sm"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedBatchIds.includes(batch.id)}
-                      onChange={() =>
-                        setSelectedBatchIds((current) =>
-                          current.includes(batch.id)
-                            ? current.filter((id) => id !== batch.id)
-                            : [...current, batch.id],
-                        )
-                      }
-                    />
-                    {batch.name}
-                  </label>
-                ))}
-                {batches.length === 0 && (
-                  <p className="text-sm text-[#5e5a52]">No batches yet — you can assign later.</p>
-                )}
-              </div>
-            </div>
-
-            <div className="hidden gap-4 md:grid-cols-2">
-              <label className="space-y-1.5 rounded-lg border border-[#ece6da] bg-[#fbf9f4] p-4">
-                <Label>Question paper</Label>
-                <Input type="file" accept={ACCEPT_PAPER} onChange={(e) => setPaperFile(e.target.files?.[0] ?? null)} />
-                <p className="text-xs text-[#5e5a52]">{paperFile?.name ?? "PDF, DOC, DOCX, CSV, XLSX, TXT"}</p>
-              </label>
-              <label className="space-y-1.5 rounded-lg border border-[#ece6da] bg-[#fbf9f4] p-4">
-                <Label>Answer key</Label>
-                <Input type="file" accept={ACCEPT_KEY} onChange={(e) => setKeyFile(e.target.files?.[0] ?? null)} />
-                <p className="text-xs text-[#5e5a52]">{keyFile?.name ?? "Optional — 1-A, 1. B, 1 A, tables"}</p>
-              </label>
-            </div>
-
+          <CardContent className="space-y-8">
+            {/* Metadata Section */}
             <div className="space-y-4">
-              <label className="space-y-1.5">
-                <Label>Expected questions</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={plannedQuestions}
-                  onChange={(e) => setPlannedQuestions(e.target.value)}
-                />
-                <p className="text-xs text-[#5e5a52]">Used for subject ranges before parsing.</p>
-              </label>
-              <SubjectRangeTable
-                ranges={subjectRanges}
-                totalQuestions={questionCountForSubjects}
-                validationMessage={rangeValidation.message}
-                mappedCount={rangeValidation.mappedCount}
-                onAdd={addSubjectRange}
-                onRemove={removeSubjectRange}
-                onUpdate={updateSubjectRange}
-              />
-            </div>
-
-            {publishError ? (
-              <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">{publishError}</p>
-            ) : null}
-
-            <Button
-              className="bg-[#14213d] px-6"
-              disabled={Boolean(rangeValidation.message)}
-              onClick={() => setStep("metadata")}
-            >
-              {processing ? "Preparing preview…" : "Continue to preview"}
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {step === "metadata" && (
-        <Card className="border-[#d8d2c7]">
-          <CardHeader>
-            <CardTitle className="text-xl text-[#14213d]">Test Metadata</CardTitle>
-            <CardDescription>Set the live test details and batch visibility.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-2">
-              <label className="space-y-1.5">
-                <Label>Test Title</Label>
-                <Input value={title} required onChange={(e) => setTitle(e.target.value)} placeholder="JEE Main Mock 1" />
-              </label>
-              <label className="space-y-1.5">
-                <Label>Exam Type</Label>
-                <select
-                  className="h-10 rounded-md border border-[#d7dde7] bg-white px-3 text-sm"
-                  value={examType}
-                  onChange={(e) => setExamType(e.target.value as ExamDefinition["examType"])}
-                >
-                  <option value="JEE_MAIN">JEE_MAIN</option>
-                  <option value="NEET">NEET</option>
-                  <option value="CET">CET</option>
-                </select>
-              </label>
-              <label className="space-y-1.5">
-                <Label>Duration</Label>
-                <Input type="text" inputMode="numeric" pattern="[0-9]*" value={duration} onChange={(e) => setDuration(e.target.value)} />
-              </label>
-              <label className="space-y-1.5">
-                <Label>Scheduled Date & Time</Label>
-                <Input type="datetime-local" value={scheduleStart} onChange={(e) => setScheduleStart(e.target.value)} />
-              </label>
-              <label className="space-y-1.5">
-                <Label>Marks per question</Label>
-                <Input type="text" inputMode="numeric" pattern="[0-9]*" value={marksPerQuestion} onChange={(e) => setMarksPerQuestion(e.target.value)} />
-              </label>
-              <label className="space-y-1.5">
-                <Label>Negative marks</Label>
-                <Input type="text" inputMode="decimal" value={negativeMarks} onChange={(e) => setNegativeMarks(e.target.value)} />
-              </label>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Batches</Label>
-              <div className="flex flex-wrap gap-2">
-                {batches.map((batch) => (
-                  <label
-                    key={batch.id}
-                    className="flex cursor-pointer items-center gap-2 rounded-lg border border-[#ece6da] px-3 py-2 text-sm"
+              <h3 className="text-lg font-semibold text-[#14213d]">1. Test Details</h3>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <label className="space-y-1.5 md:col-span-2">
+                  <Label>Test Title *</Label>
+                  <Input value={title} required onChange={(e) => setTitle(e.target.value)} placeholder="JEE Main Mock 1" />
+                </label>
+                <label className="space-y-1.5">
+                  <Label>Exam Type</Label>
+                  <select
+                    className="h-10 w-full rounded-md border border-[#d7dde7] bg-white px-3 text-sm"
+                    value={examType}
+                    onChange={(e) => setExamType(e.target.value as ExamDefinition["examType"])}
                   >
-                    <input
-                      type="checkbox"
-                      checked={selectedBatchIds.includes(batch.id)}
-                      onChange={() =>
-                        setSelectedBatchIds((current) =>
-                          current.includes(batch.id)
-                            ? current.filter((id) => id !== batch.id)
-                            : [...current, batch.id],
-                        )
-                      }
-                    />
-                    {batch.name}
-                  </label>
-                ))}
-                {batches.length === 0 && (
-                  <p className="text-sm text-[#5e5a52]">No batches yet. You can assign later.</p>
-                )}
+                    <option value="JEE_MAIN">JEE_MAIN</option>
+                    <option value="NEET">NEET</option>
+                    <option value="CET">CET</option>
+                  </select>
+                </label>
+                <label className="space-y-1.5">
+                  <Label>Duration (minutes)</Label>
+                  <Input type="text" inputMode="numeric" pattern="[0-9]*" value={duration} onChange={(e) => setDuration(e.target.value)} />
+                </label>
+                <label className="space-y-1.5">
+                  <Label>Marks per question</Label>
+                  <Input type="text" inputMode="numeric" pattern="[0-9]*" value={marksPerQuestion} onChange={(e) => setMarksPerQuestion(e.target.value)} />
+                </label>
+                <label className="space-y-1.5">
+                  <Label>Negative marks</Label>
+                  <Input type="text" inputMode="decimal" value={negativeMarks} onChange={(e) => setNegativeMarks(e.target.value)} />
+                </label>
+                <label className="space-y-1.5 md:col-span-1">
+                  <Label>Available from *</Label>
+                  <Input type="datetime-local" required value={scheduleStart} onChange={(e) => setScheduleStart(e.target.value)} />
+                </label>
+                <label className="space-y-1.5 md:col-span-1">
+                  <Label>Available until</Label>
+                  <Input type="datetime-local" value={scheduleEnd} onChange={(e) => setScheduleEnd(e.target.value)} />
+                </label>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Assign to Batches</Label>
+                <div className="flex flex-wrap gap-2">
+                  {batches.map((batch) => (
+                    <label
+                      key={batch.id}
+                      className="flex cursor-pointer items-center gap-2 rounded-lg border border-[#ece6da] px-3 py-2 text-sm"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedBatchIds.includes(batch.id)}
+                        onChange={() =>
+                          setSelectedBatchIds((current) =>
+                            current.includes(batch.id)
+                              ? current.filter((id) => id !== batch.id)
+                              : [...current, batch.id],
+                          )
+                        }
+                      />
+                      {batch.name}
+                    </label>
+                  ))}
+                  {batches.length === 0 && (
+                    <p className="text-sm text-[#5e5a52]">No batches yet. You can assign later.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Subjects Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-[#14213d]">2. Subject Mapping</h3>
+              <div className="space-y-4">
+                <label className="space-y-1.5 block max-w-[200px]">
+                  <Label>Expected questions</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={plannedQuestions}
+                    onChange={(e) => setPlannedQuestions(e.target.value)}
+                  />
+                  <p className="text-xs text-[#5e5a52]">Used for subject ranges before parsing.</p>
+                </label>
+                <SubjectRangeTable
+                  ranges={subjectRanges}
+                  totalQuestions={questionCountForSubjects}
+                  validationMessage={rangeValidation.message}
+                  mappedCount={rangeValidation.mappedCount}
+                  onAdd={addSubjectRange}
+                  onRemove={removeSubjectRange}
+                  onUpdate={updateSubjectRange}
+                />
+              </div>
+            </div>
+
+            {/* Upload Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-[#14213d]">3. Upload Files</h3>
+              <div className="grid gap-4 md:grid-cols-2">
+                <UploadCard
+                  title="Question Paper"
+                  required
+                  accept={ACCEPT_PAPER}
+                  formats="PDF, DOC, DOCX, TXT, CSV, XLSX"
+                  limit="Max 10 MB"
+                  file={paperFile}
+                  onChange={setPaperFile}
+                />
+                <UploadCard
+                  title="Answer Key"
+                  accept={ACCEPT_KEY}
+                  formats="PDF, DOC, DOCX, TXT, CSV, XLSX"
+                  limit="Max 2 MB"
+                  file={keyFile}
+                  onChange={setKeyFile}
+                />
               </div>
             </div>
 
@@ -758,16 +661,13 @@ export function InstitutePaperUploadFlow() {
               <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">{publishError}</p>
             ) : null}
 
-            <div className="flex flex-wrap justify-between gap-2">
-              <Button variant="outline" onClick={() => setStep("configure")}>
-                Back
-              </Button>
+            <div className="flex justify-end pt-4 border-t border-[#ece6da]">
               <Button
-                className="bg-[#14213d] px-6"
-                disabled={processing || !paperFile}
+                className="bg-[#14213d] px-8 py-6 text-lg"
+                disabled={processing || !paperFile || Boolean(rangeValidation.message) || !title.trim() || !scheduleStart}
                 onClick={() => void buildAndOpenReview()}
               >
-                Continue to preview
+                {processing ? "Processing Paper..." : "Process Paper & Continue"}
               </Button>
             </div>
           </CardContent>
@@ -792,7 +692,7 @@ export function InstitutePaperUploadFlow() {
                 {pkg.totalQuestions} questions · {pkg.totalMarks} marks · {errorCount > 0 ? `${errorCount} need attention` : "Ready to publish"}
               </p>
             </div>
-            <Button variant="outline" size="sm" onClick={() => setStep("metadata")}>
+            <Button variant="outline" size="sm" onClick={() => setStep("setup")}>
               Back to setup
             </Button>
           </div>
@@ -884,7 +784,7 @@ export function InstitutePaperUploadFlow() {
           ) : null}
 
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" onClick={() => setStep("configure")}>
+            <Button variant="outline" onClick={() => setStep("setup")}>
               Back
             </Button>
             <p className="text-sm text-[#5e5a52]">
@@ -923,16 +823,12 @@ export function InstitutePaperUploadFlow() {
 
 function WizardStepper({ step }: { step: FlowStep }) {
   const items: { id: FlowStep; label: string; rank: number }[] = [
-    { id: "upload", label: "Upload", rank: 0 },
-    { id: "configure", label: "Configure", rank: 1 },
-    { id: "processing", label: "Processing", rank: 2 },
-    { id: "review", label: "Preview & Edit", rank: 3 },
-    { id: "done", label: "Publish", rank: 4 },
+    { id: "setup", label: "Configure & Upload", rank: 0 },
+    { id: "processing", label: "Processing", rank: 1 },
+    { id: "review", label: "Preview & Edit", rank: 2 },
+    { id: "done", label: "Publish", rank: 3 },
   ];
-  const currentRank =
-    step === "metadata"
-      ? 1
-      : items.find((item) => item.id === step)?.rank ?? 0;
+  const currentRank = items.find((item) => item.id === step)?.rank ?? 0;
 
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[#ece6da] bg-white px-4 py-3 text-sm">
@@ -1282,22 +1178,30 @@ function cropsMetaToProcessedPackage(
 
     const questionNumber = Number(q.q_num) || index;
 
-    sectionMap.get(sectionName)!.push({
-      questionId: `${id}-q${questionNumber}`,
-      sequence: questionNumber,
-      section: sectionName,
-      subject: sectionName,
-      chapter: undefined,
-      topic: undefined,
-      difficulty: undefined,
-      confidence: 1.0,
-      questionType: q.q_type === "NAT" ? "NUMERICAL" : "MCQ_SINGLE",
-      detectionSource: q.question_text ? "hybrid" : "vision_crop",
-      questionText: q.question_text || "",
-      stemImage: q.asset_path,
-      hasEquation: false,
-      hasImage: true,
-      correctAnswer: answerMap.get(questionNumber) || (q.q_type === "NAT" ? "" : "A"),
+      let rawAnswer = answerMap.get(questionNumber) || "";
+      if (q.q_type !== "NAT" && /^[1-4]$/.test(rawAnswer)) {
+        rawAnswer = String.fromCharCode(64 + parseInt(rawAnswer, 10)); // 1->A, 2->B, etc.
+      }
+      
+      const isNat = q.q_type === "NAT";
+      const finalAnswer = rawAnswer || (isNat ? "" : "A");
+
+      sectionMap.get(sectionName)!.push({
+        questionId: `${id}-q${questionNumber}`,
+        sequence: questionNumber,
+        section: sectionName,
+        subject: sectionName,
+        chapter: undefined,
+        topic: undefined,
+        difficulty: undefined,
+        confidence: 1.0,
+        questionType: isNat ? "NUMERICAL" : "MCQ_SINGLE",
+        detectionSource: q.question_text ? "hybrid" : "vision_crop",
+        questionText: q.question_text || "",
+        stemImage: q.asset_path,
+        hasEquation: false,
+        hasImage: true,
+        correctAnswer: finalAnswer,
       solution: undefined,
       marks: 4,
       negativeMarks: 1,

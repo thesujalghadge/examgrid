@@ -81,19 +81,13 @@ export class GeminiProvider implements SolutionProvider {
     promptVersion: string = "solution-v1"
   ): Promise<SolutionProviderResult> {
     const startTime = Date.now();
-    let apiKey = process.env.GEMINI_API_KEY;
-    try {
-      const instituteKey = await getInstituteGeminiKey(input.instituteId);
-      if (instituteKey) {
-        apiKey = instituteKey;
-      }
-    } catch (err: any) {
-      console.error("Failed to get institute key:", err.message);
-    }
 
-    if (!apiKey) {
-      throw new Error("No Gemini API key available for provider.");
-    }
+    // ── Institute key is mandatory. No .env fallback. ──────────────────────────
+    // If the institute has no Gemini key configured, getInstituteGeminiKey()
+    // throws with name="NO_KEY". This propagates to processLeasedJob() which
+    // calls markJobFailed() with error_code "NO_KEY".
+    // This prevents one institute from silently consuming a global quota.
+    const apiKey = await getInstituteGeminiKey(input.instituteId);
 
     console.log(`MODEL_SELECTED: ${this.modelName}`);
 

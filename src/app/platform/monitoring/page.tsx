@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { listPlatformInstitutes } from "@/lib/platform-institute-registry";
 import { getRepositoryMode, getRepositories } from "@/lib/repositories/provider";
 import { getScheduleStatus } from "@/services/institute-ops-service";
+import { listSessionsLocal } from "@/services/test-session-engine";
 
 export default function PlatformMonitoringPage() {
   const monitoring = useMemo(() => {
@@ -12,7 +13,7 @@ export default function PlatformMonitoringPage() {
     const institutes = listPlatformInstitutes();
     const schedules = repos.schedules.list();
     const activeSchedules = schedules.filter((s) => getScheduleStatus(s) === "active");
-    const sessions = repos.testSessions.list();
+    const sessions = listSessionsLocal();
     const inProgress = sessions.filter((s) => s.status === "in_progress");
     const flagged = sessions.filter((s) => s.flagged);
     const students = repos.students.list().length;

@@ -87,7 +87,7 @@ function slug(text: string): string {
 
 function normalizeText(text: string): string {
   return text
-    .replace(/\u0000/g, " ")
+    .replace(/[\u0000\uFEFF\u200B]/g, " ")
     .replace(/\r/g, "\n")
     .replace(/Page\s+\d+\s+of\s+\d+/gi, " ")
     .replace(/https?:\/\/\S+/gi, " ")
@@ -374,10 +374,10 @@ function detectSubject(section: string): string {
 
 function normalizeAnswerKeyText(text: string): string {
   return normalizeText(text)
-    .replace(/(\d{1,3})\s*,\s*([A-Da-d])/g, "$1 $2")
-    .replace(/(\d{1,3})\s*,\s*(-?\d)/g, "$1 $2")
+    .replace(/(\d{1,3})\s*,\s*([A-Da-d])/g, "$1,$2")
+    .replace(/(\d{1,3})\s*,\s*(-?\d)/g, "$1,$2")
     .replace(/[|;/\\]+/g, "\n")
-    .replace(/\s{2,}/g, " ");
+    .replace(/[ \t]{2,}/g, " ");
 }
 
 function parseAnswerKeyEntries(text?: string): ParsedAnswerEntry[] {
@@ -387,14 +387,24 @@ function parseAnswerKeyEntries(text?: string): ParsedAnswerEntry[] {
   const seen = new Set<number>();
 
   const patterns = [
-    /(?:^|[\s\n])(?:q(?:uestion)?|que\.?)?\s*#?\s*(\d{1,3})\s*(?:[-–>]+|[:.,])\s*([A-D])(?![A-Za-z])/gi,
-    /(?:^|[\s\n])(?:q(?:uestion)?|que\.?)?\s*#?\s*(\d{1,3})\s*(?:[-–>]+|[:.,])\s*(-?\d+(?:\.\d+)?(?:e[+-]?\d+)?)/gi,
-    /(?:^|[\s\n])(\d{1,3})\s*\.\s*([A-D])(?![A-Za-z])/gi,
-    /(?:^|[\s\n])(\d{1,3})\s*\.\s*(-?\d+(?:\.\d+)?(?:e[+-]?\d+)?)/gi,
-    /(?:^|[\s\n])(\d{1,3})\s+([A-D])(?![A-Za-z])/gi,
-    /(?:^|[\s\n])(\d{1,3})\s+(-?\d+(?:\.\d+)?(?:e[+-]?\d+)?)/gi,
-    /(?:^|[\s\n])(\d{1,3})\s*,\s*([A-D])(?![A-Za-z])/gi,
-    /(?:^|[\s\n])(\d{1,3})\s*,\s*(-?\d+(?:\.\d+)?(?:e[+-]?\d+)?)/gi,
+    // Explicit arrow separator: 5->C or 5->42  (must come first — most specific)
+    /(?:^|[\s\n])(?:q(?:uestion)?|que\.?)?\s*#?\s*(\d{1,3})\s*->\s*\(?\s*([A-D])\s*\)?(?![A-Za-z])/gim,
+    /(?:^|[\s\n])(?:q(?:uestion)?|que\.?)?\s*#?\s*(\d{1,3})\s*->\s*\(?\s*(-?\d+(?:\.\d+)?(?:e[+-]?\d+)?)\s*\)?/gim,
+    // Dash / colon / comma separators: 1-A, 6: D, 4,C
+    /(?:^|[\s\n])(?:q(?:uestion)?|que\.?)?\s*#?\s*(\d{1,3})\s*(?:[-–]|[:.,])\s*\(?\s*([A-D])\s*\)?(?![A-Za-z])/gim,
+    /(?:^|[\s\n])(?:q(?:uestion)?|que\.?)?\s*#?\s*(\d{1,3})\s*(?:[-–]|[:.,])\s*\(?\s*(-?\d+(?:\.\d+)?(?:e[+-]?\d+)?)\s*\)?/gim,
+    // Space-surrounded dash: 7 - 42
+    /(?:^|[\s\n])(?:q(?:uestion)?|que\.?)?\s*#?\s*(\d{1,3})\s+-\s+([A-D])(?![A-Za-z])/gim,
+    /(?:^|[\s\n])(?:q(?:uestion)?|que\.?)?\s*#?\s*(\d{1,3})\s+-\s+(-?\d+(?:\.\d+)?(?:e[+-]?\d+)?)/gim,
+    // Period separator: 2. B
+    /(?:^|[\s\n])(\d{1,3})\.\s*\(?\s*([A-D])\s*\)?(?![A-Za-z])/gim,
+    /(?:^|[\s\n])(\d{1,3})\.\s*\(?\s*(-?\d+(?:\.\d+)?(?:e[+-]?\d+)?)\s*\)?/gim,
+    // Bare space: 3 A (only at line start to avoid false positives)
+    /^(\d{1,3})\s+([A-D])(?![A-Za-z])/gim,
+    /^(\d{1,3})\s+(-?\d+(?:\.\d+)?(?:e[+-]?\d+)?)(?!\S)/gim,
+    // Comma-separated: 4,C
+    /(?:^|[\s\n])(\d{1,3})\s*,\s*\(?\s*([A-D])\s*\)?(?![A-Za-z])/gim,
+    /(?:^|[\s\n])(\d{1,3})\s*,\s*\(?\s*(-?\d+(?:\.\d+)?(?:e[+-]?\d+)?)\s*\)?/gim,
   ];
 
   for (const pattern of patterns) {
@@ -415,10 +425,15 @@ function parseAnswerKeyEntries(text?: string): ParsedAnswerEntry[] {
 
   const lines = normalized.split("\n").map((line) => sanitizeLine(line)).filter(Boolean);
   for (const line of lines) {
-    const cells = line.split(/\s{2,}|\t+/).map((cell) => sanitizeLine(cell)).filter(Boolean);
+    // Treat comma, tab, or double spaces as delimiters. Strip quotes.
+    const cells = line
+      .split(/\s{2,}|\t+|,/)
+      .map((cell) => sanitizeLine(cell.replace(/["']/g, "")))
+      .filter(Boolean);
     if (cells.length >= 2) {
-      const qMatch = cells[0].match(/^(\d{1,3})$/);
-      const aMatch = cells[1].match(/^([A-D]|-?\d+(?:\.\d+)?(?:e[+-]?\d+)?)$/i);
+      const qCell = cells[0].replace(/[.\)]$/, "");
+      const qMatch = qCell.match(/^(\d{1,3})$/);
+      const aMatch = cells[1].match(/^\(?\s*([A-D]|-?\d+(?:\.\d+)?(?:e[+-]?\d+)?)\s*\)?$/i);
       if (qMatch && aMatch) {
         const questionNumber = Number(qMatch[1]);
         if (!seen.has(questionNumber)) {

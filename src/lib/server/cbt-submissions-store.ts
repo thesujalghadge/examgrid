@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createSupabaseClientFromEnv } from "@/lib/supabase/client";
+import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import type { TestResultBreakdown, TestSession } from "@/types/test-session";
 
@@ -81,13 +82,19 @@ function toMillis(value: string): number {
 }
 
 function requireSupabase() {
-  const client = createSupabaseClientFromEnv();
-  if (!client) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !serviceKey) {
     throw new Error(
-      "Supabase is not configured. CBT submissions require NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.",
+      "Supabase is not configured. CBT submissions require NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.",
     );
   }
-  return client;
+  return createClient(url, serviceKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
 }
 
 function parseRpcSubmission(raw: unknown): PersistedCbtSubmission {

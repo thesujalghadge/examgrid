@@ -46,6 +46,10 @@ export function QuestionCard({ review }: QuestionCardProps) {
   const section = exam.sections.find((s) => s.id === question.sectionId);
   const selected = draftAnswers[currentQuestionId] ?? "";
   const globalIndex = exam.sections.flatMap((s) => s.questionIds).indexOf(currentQuestionId) + 1;
+  // NTA-style: question number resets to 1 for each section (independent of PDF numbering)
+  const sectionQuestionIndex = section
+    ? (section.questionIds.indexOf(currentQuestionId) + 1)
+    : question.number;
   const isNumerical = question.type === "NUMERICAL";
   const options = question.options ?? [];
   const displayOptions: ExamOption[] =
@@ -59,6 +63,8 @@ export function QuestionCard({ review }: QuestionCardProps) {
   let reviewCorrectValue = question.correctOptionId
     ? options.find((option) => option.id === question.correctOptionId)?.label ?? ""
     : question.correctNumericalAnswer ?? "";
+    
+  const isMultiple = question.type === "MCQ_MULTIPLE";
 
   // Map A/B/C/D to 1/2/3/4 for NTA style UI
   const labelMap: Record<string, string> = { A: "1", B: "2", C: "3", D: "4" };
@@ -92,7 +98,7 @@ export function QuestionCard({ review }: QuestionCardProps) {
               </button>
             )}
             <span className="text-sm font-semibold text-gray-700 ml-1">
-              Q{question.number}
+              Q{sectionQuestionIndex}
             </span>
           </div>
           <span className="rounded border border-gray-300 bg-white px-2 py-0.5 text-xs font-medium text-gray-700">
@@ -101,7 +107,7 @@ export function QuestionCard({ review }: QuestionCardProps) {
           </span>
         </div>
         <p className="mt-1 text-xs text-gray-500">
-          {section?.name} · Q{question.number} (#{globalIndex})
+          {section?.name} · Q{sectionQuestionIndex} (#{globalIndex})
         </p>
       </div>
 
@@ -115,7 +121,7 @@ export function QuestionCard({ review }: QuestionCardProps) {
           </div>
           <div className="flex items-start gap-4 px-5 py-6 text-[15px] leading-relaxed text-gray-800">
             <span className="mt-0.5 font-extrabold text-slate-900 text-lg">
-              Q{question.number}.
+              Q{sectionQuestionIndex}.
             </span>
             {question.stemImage ? (
               <div className="w-full">
@@ -193,100 +199,64 @@ export function QuestionCard({ review }: QuestionCardProps) {
               Options
             </legend>
             {(() => {
-              const isVisionCrop = question.hasImage && !!question.stemImage;
-              const allOptionsEmpty = displayOptions.every((opt) => !opt.text && !opt.image);
-              const renderHorizontal = isVisionCrop && allOptionsEmpty;
-
+              // Both Student and Teacher views: NTA style buttons only, no text.
               return (
-                <ul className={cn(renderHorizontal ? "flex flex-wrap gap-8" : "space-y-3")}>
+                <div className="flex flex-wrap gap-8 pt-4 pb-2 px-2">
                   {displayOptions.map((option, optionIndex) => {
                     const displayLabel = String(optionIndex + 1);
                     const teacherValue = labelMap[option.label] ?? displayLabel;
-                    const isSelected = isTeacherEdit
-                      ? reviewCorrectValue === teacherValue
-                      : selected === option.id;
+
+                    let isSelected = false;
+                    if (isTeacherEdit) {
+                      if (isMultiple) {
+                        isSelected = reviewCorrectValue.split(",").includes(teacherValue);
+                      } else {
+                        isSelected = reviewCorrectValue === teacherValue;
+                      }
+                    } else {
+                      if (isMultiple) {
+                        const selectedArr = selected ? selected.split(",") : [];
+                        isSelected = selectedArr.includes(option.id);
+                      } else {
+                        isSelected = selected === option.id;
+                      }
+                    }
+
                     return (
-                      <li key={option.id} className={cn(renderHorizontal && "flex-1 min-w-[80px]")}>
-                        <label
-                          className={cn(
-                            isTeacherEdit
-                              ? "flex items-start gap-3 rounded border px-3 py-2 transition-colors"
-                              : "flex w-full cursor-pointer items-center gap-3 rounded border px-4 py-2 text-sm transition-colors",
-                            isTeacherEdit
-                              ? "border-gray-300 bg-white"
-                              : isSelected
-                                ? "border-[#1a3c6e] bg-blue-50/50 text-gray-900"
-                                : "border-gray-300 bg-white text-gray-900 hover:bg-gray-50 hover:border-gray-400",
-                            isTeacherEdit && isSelected && "border-[#1a3c6e] bg-[#eef3fa]",
-                            renderHorizontal && "border-none shadow-none bg-transparent hover:bg-transparent p-0",
-                          )}
-                          onClick={() => {
-                            if (!isTeacherEdit) selectOption(question.id, option.id);
+                      <label
+                        key={option.id}
+                        className={cn(
+                          "flex items-center gap-2 cursor-pointer font-medium text-slate-800",
+                          isTeacherEdit ? "" : "flex-1 min-w-[80px]"
+                        )}
+                      >
+                        <input
+                          type={isMultiple ? "checkbox" : "radio"}
+                          name={question.id}
+                          checked={isSelected}
+                          onChange={() => {
+                            if (isTeacherEdit) {
+                              if (isMultiple) {
+                                const arr = reviewCorrectValue ? reviewCorrectValue.split(",") : [];
+                                if (!isSelected) {
+                                  review?.onCorrectAnswerChange?.([...arr, option.label].sort().join(","));
+                                } else {
+                                  review?.onCorrectAnswerChange?.(arr.filter(a => a !== option.label).join(","));
+                                }
+                              } else {
+                                review?.onCorrectAnswerChange?.(option.label);
+                              }
+                            } else {
+                              selectOption(question.id, option.id, isMultiple);
+                            }
                           }}
-                        >
-                          {isTeacherEdit ? (
-                            <input
-                              type="radio"
-                              name={question.id}
-                              value={teacherValue}
-                              checked={isSelected}
-                              onChange={() => review?.onCorrectAnswerChange?.(option.label)}
-                              className={cn("mt-0.5 h-4 w-4 shrink-0 accent-[#1a3c6e]", renderHorizontal && "mt-1")}
-                            />
-                          ) : (
-                            <input
-                              type="radio"
-                              name={question.id}
-                              value={option.id}
-                              checked={isSelected}
-                              readOnly
-                              className={cn("mt-0.5 h-4 w-4 shrink-0 accent-[#1a3c6e] cursor-pointer", renderHorizontal && "mt-1")}
-                            />
-                          )}
-                          <div
-                            className={cn(
-                              "flex flex-1 items-center gap-3 whitespace-pre-wrap break-words text-[15px] leading-relaxed",
-                              "text-gray-900",
-                            )}
-                          >
-                            <span
-                              className={cn(
-                                "font-bold text-gray-700 shrink-0",
-                                !renderHorizontal && "w-6"
-                              )}
-                            >
-                              {displayLabel})
-                            </span>
-                            {!renderHorizontal && (
-                              <div className="min-w-0 flex-1">
-                                {option.image ? (
-                                  <img
-                                    src={option.image}
-                                    alt={`Option ${displayLabel}`}
-                                    className="max-h-40 max-w-full rounded border border-slate-100 object-contain"
-                                  />
-                                ) : isTeacherEdit ? (
-                                  (question.hasImage || question.stemImage) && !option.text ? null : (
-                                    <input
-                                      className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
-                                      value={option.text || ""}
-                                      placeholder="Option text (optional)"
-                                      onChange={(event) =>
-                                        review?.onOptionTextChange?.(option.label, event.target.value)
-                                      }
-                                    />
-                                  )
-                                ) : option.text ? (
-                                  <MathRenderer text={option.text} />
-                                ) : null}
-                              </div>
-                            )}
-                          </div>
-                        </label>
-                      </li>
+                          className="h-4 w-4 shrink-0 accent-[#1a3c6e] cursor-pointer"
+                        />
+                        <span className="text-[15px]">{displayLabel})</span>
+                      </label>
                     );
                   })}
-                </ul>
+                </div>
               );
             })()}
             {isTeacherEdit && (

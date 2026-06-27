@@ -130,6 +130,7 @@ export function rowsToExamDefinition(
     questions,
     instructions: Array.isArray(examRow.instructions) ? examRow.instructions : [],
     scheduledAt: examRow.scheduled_at,
+    instituteId: examRow.institute_id,
   };
 }
 

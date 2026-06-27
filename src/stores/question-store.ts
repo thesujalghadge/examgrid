@@ -17,6 +17,11 @@ interface QuestionState {
   paletteCounts: PaletteCounts;
   questionStatuses: Record<string, QuestionPaletteStatus>;
 
+  timeSpentSeconds: Record<string, number>;
+  answerChangedCount: Record<string, number>;
+  visitedCount: Record<string, number>;
+  firstAnswer: Record<string, string | null>;
+
   loadExam: (exam: ExamDefinition, startQuestionId: string) => void;
   restoreState: (payload: {
     exam: ExamDefinition;
@@ -25,10 +30,14 @@ interface QuestionState {
     markedForReview: Record<string, boolean>;
     currentQuestionId: string;
     currentSectionId: string;
+    timeSpentSeconds?: Record<string, number>;
+    answerChangedCount?: Record<string, number>;
+    visitedCount?: Record<string, number>;
+    firstAnswer?: Record<string, string | null>;
   }) => void;
   reset: () => void;
 
-  selectOption: (questionId: string, optionId: string) => void;
+  selectOption: (questionId: string, optionId: string, isMultiple?: boolean) => void;
   setNumericalAnswer: (questionId: string, value: string) => void;
   clearResponse: (questionId: string) => void;
   toggleMarkForReview: (questionId: string, marked: boolean) => void;
@@ -38,6 +47,7 @@ interface QuestionState {
   goPrevious: () => void;
   saveAndNext: () => void;
   markForReviewAndNext: () => void;
+  incrementTimeSpent: (questionId: string, seconds: number) => void;
 }
 
 const initialState = {
@@ -50,6 +60,10 @@ const initialState = {
   currentSectionId: null as string | null,
   paletteCounts: EMPTY_PALETTE_COUNTS,
   questionStatuses: {} as Record<string, QuestionPaletteStatus>,
+  timeSpentSeconds: {} as Record<string, number>,
+  answerChangedCount: {} as Record<string, number>,
+  visitedCount: {} as Record<string, number>,
+  firstAnswer: {} as Record<string, string | null>,
 };
 
 function withDerived(
@@ -78,6 +92,10 @@ export const useQuestionStore = create<QuestionState>((set, get) => ({
           markedForReview: {},
           currentQuestionId: startQuestionId,
           currentSectionId: sectionId,
+          timeSpentSeconds: {},
+          answerChangedCount: {},
+          visitedCount: { [startQuestionId]: 1 },
+          firstAnswer: {},
         },
         get(),
       ),
@@ -95,6 +113,10 @@ export const useQuestionStore = create<QuestionState>((set, get) => ({
           markedForReview: payload.markedForReview,
           currentQuestionId: payload.currentQuestionId,
           currentSectionId: payload.currentSectionId,
+          timeSpentSeconds: payload.timeSpentSeconds ?? {},
+          answerChangedCount: payload.answerChangedCount ?? {},
+          visitedCount: payload.visitedCount ?? {},
+          firstAnswer: payload.firstAnswer ?? {},
         },
         get(),
       ),
@@ -103,41 +125,62 @@ export const useQuestionStore = create<QuestionState>((set, get) => ({
 
   reset: () => set(initialState),
 
-  selectOption: (questionId, optionId) => {
-    set((state) =>
-      withDerived(
+  selectOption: (questionId, optionId, isMultiple) => {
+    set((state) => {
+      let newValue: string | null = optionId;
+      if (isMultiple) {
+        const current = state.draftAnswers[questionId] || "";
+        const arr = current ? current.split(",") : [];
+        if (arr.includes(optionId)) {
+          const filtered = arr.filter((id) => id !== optionId);
+          newValue = filtered.length > 0 ? filtered.join(",") : null;
+        } else {
+          newValue = [...arr, optionId].sort().join(",");
+        }
+      }
+      const changed = state.draftAnswers[questionId] !== newValue;
+      const first = state.firstAnswer[questionId] === undefined ? newValue : state.firstAnswer[questionId];
+      return withDerived(
         {
-          draftAnswers: { ...state.draftAnswers, [questionId]: optionId },
+          draftAnswers: { ...state.draftAnswers, [questionId]: newValue },
           visited: { ...state.visited, [questionId]: true },
+          answerChangedCount: changed ? { ...state.answerChangedCount, [questionId]: (state.answerChangedCount[questionId] || 0) + 1 } : state.answerChangedCount,
+          firstAnswer: { ...state.firstAnswer, [questionId]: first },
         },
         state,
-      ),
-    );
+      );
+    });
   },
 
   setNumericalAnswer: (questionId, value) => {
-    set((state) =>
-      withDerived(
+    set((state) => {
+      const changed = state.draftAnswers[questionId] !== value;
+      const first = state.firstAnswer[questionId] === undefined ? value : state.firstAnswer[questionId];
+      return withDerived(
         {
           draftAnswers: { ...state.draftAnswers, [questionId]: value },
           visited: { ...state.visited, [questionId]: true },
+          answerChangedCount: changed ? { ...state.answerChangedCount, [questionId]: (state.answerChangedCount[questionId] || 0) + 1 } : state.answerChangedCount,
+          firstAnswer: { ...state.firstAnswer, [questionId]: first },
         },
         state,
-      ),
-    );
+      );
+    });
   },
 
   clearResponse: (questionId) => {
-    set((state) =>
-      withDerived(
+    set((state) => {
+      const changed = state.draftAnswers[questionId] !== null;
+      return withDerived(
         {
           answers: { ...state.answers, [questionId]: null },
           draftAnswers: { ...state.draftAnswers, [questionId]: null },
           visited: { ...state.visited, [questionId]: true },
+          answerChangedCount: changed ? { ...state.answerChangedCount, [questionId]: (state.answerChangedCount[questionId] || 0) + 1 } : state.answerChangedCount,
         },
         state,
-      ),
-    );
+      );
+    });
   },
 
   toggleMarkForReview: (questionId, marked) => {
@@ -169,6 +212,7 @@ export const useQuestionStore = create<QuestionState>((set, get) => ({
           currentQuestionId: questionId,
           currentSectionId: section?.id ?? state.currentSectionId,
           visited: { ...state.visited, [questionId]: true },
+          visitedCount: { ...state.visitedCount, [questionId]: (state.visitedCount[questionId] || 0) + 1 },
           draftAnswers: rollbackDrafts,
         },
         state,
@@ -192,6 +236,7 @@ export const useQuestionStore = create<QuestionState>((set, get) => ({
           currentSectionId: sectionId,
           currentQuestionId: firstQ,
           visited: { ...state.visited, [firstQ]: true },
+          visitedCount: { ...state.visitedCount, [firstQ]: (state.visitedCount[firstQ] || 0) + 1 },
           draftAnswers: rollbackDrafts,
         },
         state,
@@ -254,6 +299,12 @@ export const useQuestionStore = create<QuestionState>((set, get) => ({
       });
     }
     get().goNext();
+  },
+
+  incrementTimeSpent: (questionId, seconds) => {
+    set((state) => ({
+      timeSpentSeconds: { ...state.timeSpentSeconds, [questionId]: (state.timeSpentSeconds[questionId] || 0) + seconds }
+    }));
   },
 }));
 

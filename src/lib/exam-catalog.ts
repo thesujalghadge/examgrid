@@ -25,14 +25,7 @@ export function getExamById(examId: string): ExamDefinition | undefined {
     if (validPersisted[0]) return validPersisted[0];
   }
 
-  if (typeof window === "undefined") return undefined;
-
-  const cbt = getRepositories().cbtTests.getById(examId);
-  if (!cbt) return undefined;
-  const definition = cbtTestToExamDefinition(cbt);
-  if (!definition) return undefined;
-  const valid = filterValidExams([definition]);
-  return valid[0];
+  return undefined;
 }
 
 export async function getExamByIdServer(examId: string): Promise<ExamDefinition | undefined> {

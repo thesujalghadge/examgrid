@@ -18,4 +18,3 @@ export const questionBankRepository: QuestionBankRepository = {
   delete: (id) => getRepositories().questions.delete(id),
 };
 
-export { LocalQuestionRepository } from "@/repositories/local/local-question-repository";
