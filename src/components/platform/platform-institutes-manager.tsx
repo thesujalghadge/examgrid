@@ -35,7 +35,7 @@ export function PlatformInstitutesManager() {
   const statsFor = (instituteId: string) => {
     const repos = getRepositories();
     const students = repos.students.list().filter((s) => s.instituteId === instituteId);
-    const tests = repos.cbtTests.list().filter((t) => t.instituteId === instituteId);
+    const tests = repos.exams.list();
     const active = repos.schedules
       .list()
       .filter(

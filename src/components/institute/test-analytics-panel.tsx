@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/card";
 import {
   fetchServerTestAnalytics,
-  getLocalTestAnalytics,
 } from "@/lib/cbt/client-test-analytics";
 import type { TestAnalytics } from "@/types/test-session";
 
@@ -23,19 +22,15 @@ export function TestAnalyticsPanel({
   instituteId: string;
   nameByRoll: Record<string, string>;
 }) {
-  const local = useMemo(
-    () => getLocalTestAnalytics(testId, instituteId, nameByRoll),
-    [testId, instituteId, nameByRoll],
-  );
   const [server, setServer] = useState<TestAnalytics | null>(null);
 
   useEffect(() => {
     void fetchServerTestAnalytics(testId).then(setServer);
   }, [testId]);
 
-  const data =
-    (local.attemptCount >= (server?.attemptCount ?? 0) ? local : server) ??
-    local;
+  const data = server;
+
+  if (!data) return null;
 
   return (
     <Card>

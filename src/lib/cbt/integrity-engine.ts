@@ -40,8 +40,12 @@ export function detectRapidNavigation(
   return recent.length >= NAV_BURST_COUNT;
 }
 
-export function integrityPenaltyPoints(integrityScore: number, maxScore: number): number {
-  if (integrityScore >= INTEGRITY_FLAG_THRESHOLD) return 0;
-  const deficit = INTEGRITY_FLAG_THRESHOLD - integrityScore;
-  return Math.round((deficit / 100) * maxScore * 100) / 100;
+/**
+ * Integrity violations (tab switch, window blur, etc.) flag an attempt for
+ * manual review — they MUST NOT deduct marks from the academic score.
+ * Academic scores are determined solely by correct/incorrect answers.
+ * Returning 0 always is intentional and correct.
+ */
+export function integrityPenaltyPoints(_integrityScore: number, _maxScore: number): number {
+  return 0;
 }

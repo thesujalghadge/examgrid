@@ -139,7 +139,7 @@ async function run() {
   while (true) {
       const wRes = await runGeminiWorker();
       if ((wRes.processed || 0) > 0) processed++;
-      if (wRes.status === "FAILED" || !wRes.success) {
+      if (!wRes.success) {
           failed++;
           console.log("Worker returned error:", wRes.reason);
       }

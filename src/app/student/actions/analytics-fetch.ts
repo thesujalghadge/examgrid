@@ -1,0 +1,138 @@
+"use server";
+
+import { readVerifiedWorkspaceSession } from "@/lib/workspace-session-server";
+import { createClient } from "@supabase/supabase-js";
+
+export async function fetchStudentExamAnalytics(examId: string) {
+  const session = await readVerifiedWorkspaceSession();
+  if (!session || session.role !== "student") {
+    throw new Error("Unauthorized");
+  }
+
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+  const studentId = session.userId;
+
+  // 1. Fetch result & attempt (Validating Ownership)
+  const { data: result, error: resultError } = await supabase
+    .from("cbt_results")
+    .select("*, cbt_attempts!inner(id, test_id, student_id)")
+    .eq("cbt_attempts.student_id", studentId)
+    .eq("cbt_attempts.test_id", examId)
+    .single();
+
+  if (resultError || !result) {
+    throw new Error("No results found or access denied.");
+  }
+
+  // 2. Fetch specific analytics data
+  const [
+    { data: subjects },
+    { data: chapters },
+    { data: concepts },
+    { data: recommendations },
+    { data: cumulative },
+    { data: answers },
+    { data: qAnalytics }
+  ] = await Promise.all([
+    supabase.from("student_subject_analytics").select("*").eq("student_id", studentId).eq("exam_id", examId),
+    supabase.from("student_chapter_analytics").select("*").eq("student_id", studentId).eq("exam_id", examId),
+    supabase.from("student_concept_analytics").select("*").eq("student_id", studentId).eq("exam_id", examId),
+    supabase.from("student_recommendations").select("*").eq("student_id", studentId).eq("exam_id", examId),
+    supabase.from("student_cumulative_subject_analytics").select("*").eq("student_id", studentId),
+    supabase.from("cbt_attempt_answers").select("question_id, is_correct, selected_answer, time_taken_seconds").eq("attempt_id", result.cbt_attempts.id),
+    supabase.from("question_analytics").select("*").eq("exam_id", examId)
+  ]);
+
+  const nodeIds = new Set<string>();
+  subjects?.forEach(s => nodeIds.add(s.syllabus_node_id));
+  chapters?.forEach(c => nodeIds.add(c.syllabus_node_id));
+  concepts?.forEach(c => nodeIds.add(c.syllabus_node_id));
+  recommendations?.forEach(r => {
+      if (r.payload?.syllabus_node_id) nodeIds.add(r.payload.syllabus_node_id);
+  });
+
+  const { data: fetchedNodes } = await supabase.from("batch_syllabus_nodes").select("id, name").in("id", Array.from(nodeIds));
+
+  return {
+    result,
+    subjects: subjects || [],
+    chapters: chapters || [],
+    concepts: concepts || [],
+    recommendations: recommendations || [],
+    cumulative: cumulative || [],
+    answers: answers || [],
+    qAnalytics: qAnalytics || [],
+    nodes: fetchedNodes || []
+  };
+}
+
+export async function fetchStudentReports() {
+  const session = await readVerifiedWorkspaceSession();
+  if (!session || session.role !== "student") {
+    throw new Error("Unauthorized");
+  }
+
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+  const studentId = session.userId;
+
+  const [
+    { data: results },
+    { data: sub },
+    { data: chap },
+    { data: con },
+    { data: recs }
+  ] = await Promise.all([
+    supabase.from("cbt_results").select("*, cbt_attempts!inner(id, test_id, student_id)").eq("cbt_attempts.student_id", studentId),
+    supabase.from("student_cumulative_subject_analytics").select("*").eq("student_id", studentId),
+    supabase.from("student_cumulative_chapter_analytics").select("*").eq("student_id", studentId),
+    supabase.from("student_cumulative_concept_analytics").select("*").eq("student_id", studentId),
+    supabase.from("student_recommendations").select("*").eq("student_id", studentId)
+  ]);
+
+  const allNodeIds = new Set<string>();
+  sub?.forEach(s => allNodeIds.add(s.syllabus_node_id));
+  chap?.forEach(c => allNodeIds.add(c.syllabus_node_id));
+  con?.forEach(c => allNodeIds.add(c.syllabus_node_id));
+  recs?.forEach(r => { if(r.payload?.syllabus_node_id) allNodeIds.add(r.payload.syllabus_node_id); });
+
+  const { data: nData } = await supabase.from("batch_syllabus_nodes").select("id, name, parent_id").in("id", Array.from(allNodeIds));
+
+  return {
+    results: results || [],
+    sub: sub || [],
+    chap: chap || [],
+    con: con || [],
+    recs: recs || [],
+    nodes: nData || []
+  };
+}
+
+export async function fetchStudentAttemptedExams() {
+  const session = await readVerifiedWorkspaceSession();
+  if (!session || session.role !== "student") {
+    throw new Error("Unauthorized");
+  }
+
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+  const studentId = session.userId;
+
+  const { data: results, error } = await supabase
+    .from("cbt_results")
+    .select("*, cbt_attempts!inner(student_id, exams!inner(id, title, exam_type))")
+    .eq("cbt_attempts.student_id", studentId)
+    .order("generated_at", { ascending: false });
+
+  if (error) {
+    console.error("fetchStudentAttemptedExams error:", error);
+    throw new Error(`Failed to load attempted exams: ${error.message}`);
+  }
+  
+  if (!results || results.length === 0) return [];
+
+  const merged = results.map(r => ({
+    ...r,
+    exams: r.cbt_attempts.exams || { title: "Unknown", exam_type: "UNKNOWN" }
+  }));
+
+  return merged;
+}

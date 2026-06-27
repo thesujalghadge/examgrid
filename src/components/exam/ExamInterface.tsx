@@ -6,7 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { getExamById } from "@/lib/exam-catalog";
 import { useExamPersistence } from "@/hooks/use-exam-persistence";
 import { useExamGuard } from "@/hooks/useExamGuard";
-import { bootstrapExamSession, startExamAttempt } from "@/lib/exam-bootstrap";
+import { bootstrapExamSession } from "@/lib/exam-bootstrap";
 import { ExamInstructions } from "./ExamInstructions";
 import { canSubmitExam, ensureExamReadyForCbt } from "@/lib/cbt/session-safety";
 import { requestExamFullscreen } from "@/lib/fullscreen";
@@ -17,7 +17,7 @@ import {
   canCandidateAccessExam,
   isOperationalSchedulingActive,
 } from "@/services/institute-ops-service";
-import { persistCbtFinalAttempt } from "@/services/cbt-attempt-persist";
+
 import { recordAuditEvent } from "@/services/audit-service";
 import { useTestSessionEngine } from "@/hooks/use-test-session-engine";
 import { getRepositories } from "@/lib/repositories/provider";
@@ -111,15 +111,14 @@ export function ExamInterface({
   const instituteId = wsSession?.instituteId;
   const candidateRollNumber = candidate?.rollNumber;
   const lifecyclePhase = useExamLifecycleStore((s) => s.phase);
-  const cbtTest = useMemo(() => getRepositories().cbtTests.getById(examId), [examId]);
-  const isInstituteCbt = !isTeacherReview && Boolean(cbtTest);
+  const isInstituteCbt = !isTeacherReview && Boolean(instituteId);
 
   const testEngine = useTestSessionEngine({
     enabled: isInstituteCbt && Boolean(candidateRollNumber && instituteId),
     testId: examId,
     studentId: candidateRollNumber ?? "",
     instituteId: instituteId ?? "",
-    durationMinutes: cbtTest?.durationMinutes ?? 180,
+    durationMinutes: exam?.durationMinutes ?? 180,
     onExpired: () => finalizeRef.current(),
   });
   const testEngineRef = useRef(testEngine);
@@ -279,6 +278,17 @@ export function ExamInterface({
     setStartedAtRef.current = setStartedAt;
     testEngineRef.current = testEngine;
   }, [nav, router, setStartedAt, testEngine]);
+
+  useEffect(() => {
+    if (isTeacherReview || !ready || submitState !== "idle") return;
+    const interval = setInterval(() => {
+      const state = useQuestionStore.getState();
+      if (state.currentQuestionId) {
+        state.incrementTimeSpent(state.currentQuestionId, 1);
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isTeacherReview, ready, submitState]);
 
   const reviewExamSignature = useMemo(() => {
     if (!review) return "";

@@ -10,9 +10,12 @@ import {
   applySignedAnswerKey,
   autoSubmitExpiredTests,
   getRemainingSeconds,
+  getSessionLocal,
   hydrateSessionAnswers,
+  listSessionsLocal,
   logIntegrityEvent,
   saveAnswer,
+  saveSessionLocal,
   startTest,
   submitTest,
   syncTestSessionFromServerEndsAt,
@@ -21,6 +24,7 @@ import { useQuestionStore } from "@/stores/question-store";
 
 import { useTimerStore } from "@/stores/timer-store";
 import type { TestSession, TestSessionIntegrityEventType } from "@/types/test-session";
+import type { ExamDefinition } from "@/types/exam";
 
 const AUTOSAVE_DEBOUNCE_MS = 400;
 const AUTOSAVE_INTERVAL_MS = 15_000;
@@ -62,6 +66,12 @@ export function useTestSessionEngine(params: {
       currentSectionId: questionState.currentSectionId ?? undefined,
       markedForReview: questionState.markedForReview,
       visited: questionState.visited,
+      telemetry: {
+        timeSpentSeconds: questionState.timeSpentSeconds,
+        visitedCount: questionState.visitedCount,
+        answerChangedCount: questionState.answerChangedCount,
+        firstAnswer: questionState.firstAnswer,
+      }
     });
     console.log(`[flushSave] flushed ${Object.keys(questionState.answers).length} answers from question store`);
   }, []);
@@ -116,7 +126,29 @@ export function useTestSessionEngine(params: {
 
   const applyShuffledExam = useCallback(
     (session: TestSession) => {
-      const baseExam = getExamById(testId);
+      let baseExam: ExamDefinition | undefined = undefined;
+      const cacheKey = `examgrid:frozen_exam:${testId}`;
+      
+      try {
+        const frozen = sessionStorage.getItem(cacheKey);
+        if (frozen) {
+          baseExam = JSON.parse(frozen) as ExamDefinition;
+        }
+      } catch (e) {
+        // Ignore cache errors
+      }
+
+      if (!baseExam) {
+        baseExam = getExamById(testId);
+        if (baseExam) {
+          try {
+            sessionStorage.setItem(cacheKey, JSON.stringify(baseExam));
+          } catch (e) {
+            // Quota exceeded, just continue
+          }
+        }
+      }
+      
       if (!baseExam) return;
       const shuffled = buildShuffledExamView(baseExam, session);
       const questionState = useQuestionStore.getState();
@@ -153,6 +185,7 @@ export function useTestSessionEngine(params: {
             integrityEvents: session.integrityEvents,
             status: mode,
             submittedAt: Date.now(),
+            telemetry: session.telemetry,
           }),
         });
         if (!response.ok) {
@@ -182,8 +215,7 @@ export function useTestSessionEngine(params: {
     });
 
     if (!session) {
-      const prior = getRepositories()
-        .testSessions.list()
+      const prior = listSessionsLocal()
         .find(
           (row) =>
             row.testId === testId &&
@@ -258,7 +290,7 @@ export function useTestSessionEngine(params: {
       if (!session) return null;
 
       const fresh = hydrateSessionAnswers(
-        getRepositories().testSessions.getById(session.id) ?? session,
+        getSessionLocal(session.id) ?? session,
       );
       
       const submitStartMs = performance.now();
@@ -275,8 +307,11 @@ export function useTestSessionEngine(params: {
          locked.score = responsePayload.score;
          locked.integrityScore = responsePayload.integrityScore;
          locked.flagged = responsePayload.flagged;
-         getRepositories().testSessions.save(locked);
+         saveSessionLocal(locked);
       }
+      
+      // Clear local storage answers since it's successfully persisted to server
+      import("@/lib/cbt/test-session-answers-storage").then((m) => m.removeSessionAnswers(fresh.id));
 
       sessionRef.current = locked;
       onSubmitted?.(locked);
@@ -295,9 +330,10 @@ export function useTestSessionEngine(params: {
 
     let prevAnswers = useQuestionStore.getState().answers;
     const unsubscribeQuestionStore = useQuestionStore.subscribe((state) => {
+      let changed = false;
       if (state.answers !== prevAnswers) {
         prevAnswers = state.answers;
-        scheduleSave();
+        changed = true;
       }
       const questionId = state.currentQuestionId;
       if (questionId && questionId !== prevQuestionRef.current) {
@@ -307,7 +343,9 @@ export function useTestSessionEngine(params: {
         }
         navTimestampsRef.current = [...navTimestampsRef.current, now].slice(-8);
         prevQuestionRef.current = questionId;
+        changed = true;
       }
+      if (changed) scheduleSave();
     });
 
     intervalRef.current = setInterval(() => {

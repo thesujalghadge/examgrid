@@ -108,14 +108,8 @@ export async function verifyAndFetchSolution(
       return { error: "Solution unavailable. Institute has been notified." };
     }
 
-    // Auto-process queue locally during development since Vercel cron isn't running
-    if (process.env.NODE_ENV !== "production" && qItem && (qItem.status === 'PENDING' || qItem.status === 'WAITING_RETRY')) {
-      setTimeout(() => {
-        runGeminiWorker().catch(console.error);
-      }, 100);
-    }
-    
     // 2. Count completed solutions
+
     let completed = 0;
     if (total > 0) {
       const qIds = questions!.map(q => q.id);

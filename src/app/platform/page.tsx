@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { listPlatformInstitutes } from "@/lib/platform-institute-registry";
 import { getRepositories } from "@/lib/repositories/provider";
 import { getScheduleStatus } from "@/services/institute-ops-service";
+import { listSessionsLocal } from "@/services/test-session-engine";
 
 export default function PlatformOverviewPage() {
   const stats = useMemo(() => {
@@ -13,7 +14,7 @@ export default function PlatformOverviewPage() {
     const repos = getRepositories();
     const active = institutes.filter((i) => i.status === "active").length;
     const liveTests = repos.schedules.list().filter((s) => getScheduleStatus(s) === "active").length;
-    const submissions = repos.testSessions.list().filter(
+    const submissions = listSessionsLocal().filter(
       (s) => s.status === "submitted" || s.status === "auto_submitted",
     ).length;
     return {

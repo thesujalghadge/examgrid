@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import { verifySignedAnswerKey } from "@/lib/cbt/answer-key";
+import { getExamByIdServer } from "@/lib/exam-catalog";
 import {
   computeIntegrityScore,
   isSessionFlagged,
@@ -44,11 +45,17 @@ const submitSessionSchema = z.object({
   integrityEvents: z.array(integrityEventSchema).max(250).optional(),
   status: z.enum(["in_progress", "submitted", "auto_submitted"]).optional(),
   submittedAt: z.number().int().nonnegative().optional(),
+  telemetry: z.object({
+    timeSpentSeconds: z.record(z.string(), z.number()).optional(),
+    visitedCount: z.record(z.string(), z.number()).optional(),
+    answerChangedCount: z.record(z.string(), z.number()).optional(),
+    firstAnswer: z.record(z.string(), z.union([z.string(), z.null()])).optional(),
+  }).optional(),
 });
 
 import { createSupabaseClientFromEnv } from "@/lib/supabase/client";
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   require('fs').appendFileSync('cbt_submit_debug.log', `[${new Date().toISOString()}] POST /submit reached\n`);
   const ws = await readVerifiedWorkspaceSession();
   if (!ws || ws.role !== "student") {
@@ -112,6 +119,28 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid timer session" }, { status: 403 });
   }
 
+  const authoritativeExam = await getExamByIdServer(body.testId);
+  if (!authoritativeExam) {
+    require('fs').appendFileSync('cbt_submit_debug.log', `[${new Date().toISOString()}] Failed: Exam not found\n`);
+    logCbtWarning("cbt submit rejected", {
+      reason: "exam_not_found",
+      testId: body.testId,
+      userId: ws.userId,
+    });
+    return NextResponse.json({ error: "Exam not found" }, { status: 404 });
+  }
+
+  if (authoritativeExam.instituteId !== ws.instituteId) {
+    require('fs').appendFileSync('cbt_submit_debug.log', `[${new Date().toISOString()}] Failed: Exam institute mismatch\n`);
+    logCbtWarning("cbt submit rejected", {
+      reason: "exam_institute_mismatch",
+      testId: body.testId,
+      expected: authoritativeExam.instituteId,
+      actual: ws.instituteId,
+    });
+    return NextResponse.json({ error: "Unauthorized access to exam" }, { status: 403 });
+  }
+
   const answerKey = verifySignedAnswerKey(body.signedAnswerKey, body.testId);
   if (!answerKey) {
     require('fs').appendFileSync('cbt_submit_debug.log', `[${new Date().toISOString()}] Failed: Invalid answer key signature\n`);
@@ -133,6 +162,30 @@ export async function POST(request: Request) {
         typeof value === "string" ? value.trim().slice(0, 200) : null,
       ]),
   );
+
+  // Invariant 3: Check that submitted option IDs actually exist in the exam definition
+  for (const [qId, ans] of Object.entries(normalizedAnswers)) {
+    if (!ans) continue;
+    const q = authoritativeExam.questions[qId];
+    if (!q) continue;
+    if (q.type === "MCQ_SINGLE" || q.type === "MCQ_MULTIPLE") {
+      const ansArray = q.type === "MCQ_MULTIPLE" && ans.includes(",") ? ans.split(",") : [ans];
+      for (const a of ansArray) {
+        const optExists = q.options.some((o) => o.id === a);
+        if (!optExists) {
+          logCbtWarning("cbt submit rejected", {
+            reason: "invalid_option_id",
+            testId: body.testId,
+            questionId: qId,
+            invalidAnswer: a,
+            studentId: ws.userId,
+          });
+          require('fs').writeFileSync('cbt_submit_log.txt', `Submit Error: Invalid option ID ${a} for question ${qId}`);
+          return NextResponse.json({ error: `Invalid option ID submitted for question ${qId}` }, { status: 400 });
+        }
+      }
+    }
+  }
   
   require('fs').appendFileSync('cbt_submit_debug.log', `[${new Date().toISOString()}] SUBMIT DIAGNOSTICS:\nbody.answers keys: ${Object.keys(body.answers).length}\nanswerKey keys: ${Object.keys(answerKey).length}\nnormalizedAnswers keys: ${Object.keys(normalizedAnswers).length}\n`);
   const integrityEvents: TestSessionIntegrityEvent[] = (body.integrityEvents ?? [])
@@ -151,6 +204,7 @@ export async function POST(request: Request) {
     startedAt: timer.startedAt,
     submittedAt,
     integrityEvents,
+    telemetry: body.telemetry,
     useCache: false,
   });
 
@@ -179,6 +233,46 @@ export async function POST(request: Request) {
     await saveCbtSubmission(submission);
     require('fs').appendFileSync('cbt_submit_debug.log', `[${new Date().toISOString()}] saveCbtSubmission SUCCESS\n`);
     require('fs').writeFileSync('cbt_submit_log.txt', 'Submit Success!');
+
+    // Queue Analytics Job
+    try {
+      const supabaseAdmin = createSupabaseClientFromEnv();
+      if (supabaseAdmin) {
+        // Find the attempt UUID
+        const { data: attemptRow } = await supabaseAdmin
+          .from("cbt_attempts")
+          .select(`
+            id,
+            students!inner(batch_id)
+          `)
+          .eq("session_id", body.sessionId)
+          .single();
+
+        if (attemptRow) {
+          // @ts-ignore
+          const batchId = Array.isArray(attemptRow.students) ? attemptRow.students[0]?.batch_id : attemptRow.students?.batch_id;
+
+          if (!batchId) {
+            throw new Error(`Attempt ${attemptRow.id} missing batch_id from student record.`);
+          }
+
+          await supabaseAdmin.from("analytics_jobs").insert({
+            attempt_id: attemptRow.id,
+            student_id: ws.userId,
+            exam_id: body.testId,
+            batch_id: batchId,
+            status: "PENDING"
+          });
+          
+          // Trigger the worker async
+          fetch(`${request.nextUrl.origin}/api/internal/analytics/trigger-worker`, {
+            method: "POST"
+          }).catch(console.error);
+        }
+      }
+    } catch (analyticsErr) {
+      console.error("Failed to queue analytics job:", analyticsErr);
+    }
   } catch (error) {
     require('fs').appendFileSync('cbt_submit_debug.log', `[${new Date().toISOString()}] Failed: saveCbtSubmission threw error: ${error instanceof Error ? error.message : "unknown"}\n`);
     require('fs').writeFileSync('cbt_submit_log.txt', 'Submit Error: ' + (error instanceof Error ? error.message : "unknown"));

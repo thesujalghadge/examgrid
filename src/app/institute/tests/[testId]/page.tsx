@@ -46,12 +46,7 @@ export default function InstituteTestDetailPage() {
     setStudents(getRepositories().students.list());
   }, [testId, instituteId]);
 
-  const test = useMemo(() => getRepositories().cbtTests.getById(testId), [testId]);
-
-  const attempts = useMemo(
-    () => (test ? getRepositories().cbtAttempts.listByTestId(test.id) : []),
-    [test],
-  );
+  const test = useMemo(() => getRepositories().exams.getById(testId), [testId]);
 
   useEffect(() => {
     if (!test || !instituteId) return;
@@ -92,9 +87,7 @@ export default function InstituteTestDetailPage() {
   const avg =
     serverSubmissions.length > 0
       ? serverSubmissions.reduce((a, x) => a + x.score, 0) / serverSubmissions.length
-      : attempts.length === 0
-      ? null
-      : attempts.reduce((a, x) => a + (x.attempt.score ?? 0), 0) / attempts.length;
+      : null;
 
   return (
     <div className="space-y-6 p-6">
@@ -104,11 +97,11 @@ export default function InstituteTestDetailPage() {
         </Link>
         <h1 className="mt-2 text-2xl font-bold text-gray-900">{test.title}</h1>
         <p className="text-sm text-gray-600">
-          {test.durationMinutes} min · {test.questions.length} questions · total marks{" "}
-          {test.totalMarks}
+          {test.durationMinutes} min · {Object.keys(test.questions).length} questions · total marks{" "}
+          {Object.values(test.questions).reduce((sum, q) => sum + (q.marks ?? 0), 0)}
           {avg != null && ` · cohort avg ${avg.toFixed(2)}`}
         </p>
-        <ExamSolutionProgress testId={testId} totalQuestions={test.questions.length} />
+        <ExamSolutionProgress testId={testId} totalQuestions={Object.keys(test.questions).length} />
       </div>
 
       {instituteId && (
@@ -137,13 +130,13 @@ export default function InstituteTestDetailPage() {
                 </tr>
               </thead>
               <tbody>
-                {serverSubmissions.length === 0 && attempts.length === 0 ? (
+                {serverSubmissions.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="py-4 text-gray-500">
                       No submissions yet.
                     </td>
                   </tr>
-                ) : serverSubmissions.length > 0 ? (
+                ) : (
                   serverSubmissions.map((r) => (
                     <tr key={r.sessionId} className="border-t border-gray-100">
                       <td className="py-2 pr-4">
@@ -165,23 +158,6 @@ export default function InstituteTestDetailPage() {
                       </td>
                     </tr>
                   ))
-                ) : (
-                  attempts.map((r) => {
-                    const correct = r.responses.filter((x) => x.isCorrect).length;
-                    return (
-                      <tr key={r.attempt.id} className="border-t border-gray-100">
-                        <td className="py-2 pr-4">
-                          {nameByRoll.get(r.attempt.studentId) ?? "—"}
-                        </td>
-                        <td className="py-2 pr-4">{r.attempt.studentId}</td>
-                        <td className="py-2 pr-4">{r.attempt.score ?? "—"}</td>
-                        <td className="py-2">
-                          {correct}/{r.responses.length}
-                        </td>
-                        <td className="py-2">Local</td>
-                      </tr>
-                    );
-                  })
                 )}
               </tbody>
             </table>

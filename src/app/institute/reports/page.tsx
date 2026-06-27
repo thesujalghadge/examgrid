@@ -1,28 +1,36 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getRepositories } from "@/lib/repositories/provider";
 import { useWorkspaceAuthStore } from "@/stores/workspace-auth-store";
-import { getLocalTestAnalytics } from "@/lib/cbt/client-test-analytics";
+import { fetchInstituteReports } from "@/app/institute/actions/analytics-fetch";
 
 export default function InstituteReportsPage() {
   const instituteId = useWorkspaceAuthStore((s) => s.session?.instituteId ?? "");
+  const [reportRows, setReportRows] = useState<any[]>([]);
 
-  const reportRows = useMemo(() => {
-    if (!instituteId) return [];
-    return getRepositories().cbtTests.list().map((test) => {
-      const analytics = getLocalTestAnalytics(test.id, instituteId);
-      return {
-        id: test.id,
-        title: test.title,
-        submissions: analytics.attemptCount,
-        averageScore: analytics.averageScore,
-        averagePercent: analytics.averagePercent,
-        weakQuestions: analytics.weakQuestions.length,
-      };
-    });
+  useEffect(() => {
+    if (!instituteId) return;
+    async function load() {
+      try {
+        const data = await fetchInstituteReports();
+        
+        const rows = data.exams.map((exam: any) => ({
+          id: exam.id,
+          title: exam.title,
+          submissions: exam.studentsCount || 0,
+          averageScore: exam.averageScore || 0,
+          averagePercent: 0, // Calculate this if needed or fetch total_marks server-side
+          weakQuestions: 0,
+        }));
+        
+        setReportRows(rows);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    load();
   }, [instituteId]);
 
   return (
@@ -62,7 +70,7 @@ export default function InstituteReportsPage() {
                 </thead>
                 <tbody>
                   {reportRows.map((row) => (
-                    <tr key={row.id} className="border-b border-[#f1ece4]">
+                     <tr key={row.id} className="border-b border-[#f1ece4]">
                       <td className="py-3 font-medium text-[#14213d]">{row.title}</td>
                       <td className="py-3">{row.submissions}</td>
                       <td className="py-3">{row.averageScore.toFixed(1)}</td>

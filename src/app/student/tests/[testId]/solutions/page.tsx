@@ -352,12 +352,6 @@ export default function StudentSolutionsPage() {
       router.replace("/student/login");
       return;
     }
-    const test = getRepositories().cbtTests.getById(testId);
-    if (!test) {
-      router.replace("/student/tests");
-      return;
-    }
-    setTestData(test);
 
     fetch(`/api/cbt/test-session/result?testId=${encodeURIComponent(testId)}`, {
       credentials: "include",
@@ -387,11 +381,12 @@ export default function StudentSolutionsPage() {
     );
   }
 
-  if (attemptData === undefined || !testData || !ws?.instituteId || !candidate) {
+  const exam = getExamById(testId);
+
+  if (attemptData === undefined || !ws?.instituteId || !candidate) {
     return <div className="min-h-screen flex items-center justify-center text-slate-500 bg-[#f8f9fa]">Loading...</div>;
   }
 
-  const exam = getExamById(testId);
   const breakdown = attemptData?.resultBreakdown as TestResultBreakdown | undefined;
   if (!exam) {
     return <div className="min-h-screen flex items-center justify-center text-slate-500 bg-[#f8f9fa]">Exam data could not be loaded.</div>;
@@ -431,15 +426,37 @@ export default function StudentSolutionsPage() {
 
   const answerLabel = (question: ExamQuestion, answer: string | null | undefined) => {
     if (!answer) return null;
-    if (question.type === "NUMERICAL") return answer;
-    const index = question.options.findIndex((option) => option.id === answer);
-    return index >= 0 ? String(index + 1) : answer;
+    if (question.type === "NUMERICAL" || question.type === "INTEGER") return answer;
+    
+    if (answer.includes(",")) {
+       return answer.split(",").map(ans => {
+         const opt = question.options.find((o) => o.id === ans);
+         return opt ? `Option ${opt.label}` : ans;
+       }).sort().join(", ");
+    }
+    
+    const opt = question.options.find((o) => o.id === answer);
+    return opt ? `Option ${opt.label}` : answer;
   };
 
   const correctLabel = (question: ExamQuestion) => {
-    if (question.type === "NUMERICAL") return question.correctNumericalAnswer ?? null;
-    const index = question.options.findIndex((option) => option.id === question.correctOptionId);
-    return index >= 0 ? String(index + 1) : null;
+    if (question.type === "NUMERICAL" || question.type === "INTEGER") return question.correctNumericalAnswer ?? null;
+    if (!question.correctOptionId) return null;
+    
+    if (question.correctOptionId.includes(",")) {
+       return question.correctOptionId.split(",").map(ans => {
+          const opt = question.options.find((o) => o.id === ans);
+          if (opt) return `Option ${opt.label}`;
+          const labelMap: Record<string, string> = { A: "Option A", B: "Option B", C: "Option C", D: "Option D" };
+          return labelMap[ans] ?? ans;
+       }).sort().join(", ");
+    }
+    
+    const opt = question.options.find((o) => o.id === question.correctOptionId);
+    if (opt) return `Option ${opt.label}`;
+    
+    const labelMap: Record<string, string> = { A: "Option A", B: "Option B", C: "Option C", D: "Option D" };
+    return labelMap[question.correctOptionId] ?? question.correctOptionId;
   };
 
   const questions = exam.sections.flatMap((section) => section.questionIds).map((questionId) => {
@@ -464,7 +481,7 @@ export default function StudentSolutionsPage() {
       <header className="bg-white border-b border-slate-200 px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sticky top-0 z-10">
         <div>
           <h1 className="text-xl font-bold text-slate-900">Solutions Review</h1>
-          <p className="text-sm text-slate-500 font-medium">{testData.title}</p>
+          <p className="text-sm text-slate-500 font-medium">{exam.title}</p>
         </div>
         <Button variant="outline" className="border-slate-300 text-slate-700 hover:bg-slate-50" onClick={() => router.push(`/student/tests/${testId}/result`)}>
           Back to Result
