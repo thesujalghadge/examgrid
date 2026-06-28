@@ -16,6 +16,7 @@ import { fetchStudentAttemptedExams } from "@/app/student/actions/analytics-fetc
 export default function StudentAttemptedTestsPage() {
   const candidate = useAuthStore((s) => s.candidate);
   const instituteId = useWorkspaceAuthStore((s) => s.session?.instituteId ?? "");
+  const role = useWorkspaceAuthStore((s) => s.session?.role);
   const [results, setResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [reposHydrated, setReposHydrated] = useState(false);
@@ -25,7 +26,7 @@ export default function StudentAttemptedTestsPage() {
   }, []);
 
   useEffect(() => {
-    if (!candidate || !instituteId) return;
+    if (!candidate || !instituteId || role !== "student") return;
 
     async function loadReports() {
       try {
@@ -38,7 +39,7 @@ export default function StudentAttemptedTestsPage() {
       }
     }
     loadReports();
-  }, [candidate, instituteId]);
+  }, [candidate, instituteId, role]);
 
   if (loading || !reposHydrated) return <div className="p-12 text-center text-muted-foreground">Loading attempted tests...</div>;
 

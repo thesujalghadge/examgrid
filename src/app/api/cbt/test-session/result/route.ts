@@ -12,10 +12,12 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const testId = searchParams.get("testId");
+  let testId = searchParams.get("testId");
   if (!testId) {
     return NextResponse.json({ error: "Missing testId" }, { status: 400 });
   }
+
+
 
   const submission = await getCbtSubmission(
     ws.instituteId || "",

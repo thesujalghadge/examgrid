@@ -23,16 +23,11 @@ export async function POST(
     }
 
     // 1. Fetch exam to compute release time and resolve real UUID
-    let query = supabase
+    const query = supabase
       .from('exams')
       .select('id, scheduled_at, duration_minutes')
-      .eq('institute_id', instituteId);
-    
-    if (isUuid(testId)) {
-      query = query.eq('id', testId);
-    } else {
-      query = query.eq('legacy_id', testId);
-    }
+      .eq('institute_id', instituteId)
+      .eq('id', testId);
 
     const { data: exam, error: examError } = await query.single();
 

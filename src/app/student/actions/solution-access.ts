@@ -36,17 +36,11 @@ export async function verifyAndFetchSolution(
   }
 
   // Phase 3.5 Test A & B: Release time enforcement
-  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(testId);
   const query = supabase
     .from("exams")
     .select("id, solutions_release_time")
-    .eq("institute_id", instituteId);
-    
-  if (isUuid) {
-    query.or(`id.eq.${testId},legacy_id.eq.${testId}`);
-  } else {
-    query.eq("legacy_id", testId);
-  }
+    .eq("institute_id", instituteId)
+    .eq("id", testId);
   
   const { data: exam, error } = await query.maybeSingle();
 

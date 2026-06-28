@@ -211,9 +211,21 @@ export async function POST(request: NextRequest) {
   const status: "submitted" | "auto_submitted" =
     body.status === "auto_submitted" ? "auto_submitted" : "submitted";
 
+  let realUuid = authoritativeExam.uuid || authoritativeExam.id;
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(realUuid);
+  
+  if (!isUuid) {
+    return NextResponse.json(
+      {
+        error: "Invariant violation: analytics attempted with non-uuid exam id"
+      },
+      { status: 400 }
+    );
+  }
+
   const submission = {
     sessionId: body.sessionId,
-    testId: body.testId,
+    testId: realUuid,
     instituteId: body.instituteId,
     studentId: ws.userId,
     status,
@@ -259,7 +271,7 @@ export async function POST(request: NextRequest) {
           await supabaseAdmin.from("analytics_jobs").insert({
             attempt_id: attemptRow.id,
             student_id: ws.userId,
-            exam_id: body.testId,
+            exam_id: realUuid,
             batch_id: batchId,
             status: "PENDING"
           });
@@ -267,6 +279,11 @@ export async function POST(request: NextRequest) {
           // Trigger the worker async
           fetch(`${request.nextUrl.origin}/api/internal/analytics/trigger-worker`, {
             method: "POST"
+          }).catch(console.error);
+
+          // Trigger the solution worker async to ensure solutions are processed smoothly
+          fetch(`${request.nextUrl.origin}/api/internal/solution-worker`, {
+            method: "GET"
           }).catch(console.error);
         }
       }

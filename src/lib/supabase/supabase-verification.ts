@@ -110,7 +110,6 @@ export async function runSupabaseSmokeTest(): Promise<SmokeTestResult> {
     const client = requireSupabaseClient("smoke.insert");
     const row = {
       id: crypto.randomUUID(),
-      legacy_id: legacyId,
       institute_id: session.instituteId,
       subject: "Physics",
       chapter: "Smoke",
@@ -136,8 +135,8 @@ export async function runSupabaseSmokeTest(): Promise<SmokeTestResult> {
 
     const { data: fetched, error: fetchErr } = await client
       .from("questions")
-      .select("id, legacy_id, question_text")
-      .eq("legacy_id", legacyId)
+      .select("id, question_text")
+      .eq("id", insertedId)
       .maybeSingle();
 
     if (fetchErr) throw new Error(fetchErr.message);
@@ -201,7 +200,6 @@ export async function verifyExamPersistence(): Promise<ExamPersistenceVerifyResu
 
     const { error: examErr } = await client.from("exams").insert({
       id: examUuid,
-      legacy_id: legacyId,
       institute_id: session.instituteId,
       title: "Smoke Test Exam",
       subtitle: "Delete me",
@@ -244,8 +242,8 @@ export async function verifyExamPersistence(): Promise<ExamPersistenceVerifyResu
 
     const { data: readExam, error: readErr } = await client
       .from("exams")
-      .select("id, legacy_id, title")
-      .eq("legacy_id", legacyId)
+      .select("id, title")
+      .eq("id", examUuid)
       .maybeSingle();
     if (readErr) throw new Error(readErr.message);
     if (!readExam) throw new Error("Exam not found after insert");

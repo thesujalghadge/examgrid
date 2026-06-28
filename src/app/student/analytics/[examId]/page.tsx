@@ -3,6 +3,7 @@
 import { useEffect, useState, use } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { useAuthStore } from "@/stores/auth-store";
+import { useWorkspaceAuthStore } from "@/stores/workspace-auth-store";
 import { ArrowLeft, Target, Trophy, Clock, AlertTriangle, Lightbulb, CheckCircle2, TrendingUp } from "lucide-react";
 import Link from "next/link";
 
@@ -24,11 +25,12 @@ export default function StudentAnalyticsPage({ params }: { params: Promise<{ exa
     qAnalytics: any[];
   } | null>(null);
   const [loading, setLoading] = useState(true);
+  const role = useWorkspaceAuthStore((s) => s.session?.role);
 
   useEffect(() => {
-    if (!candidate?.rollNumber) return;
+    if (!candidate?.rollNumber || role !== "student") return;
     loadAnalytics();
-  }, [candidate?.rollNumber]);
+  }, [candidate?.rollNumber, role]);
 
   const loadAnalytics = async () => {
     try {

@@ -1,4 +1,5 @@
-import { isUuid, assertInstituteUuid } from "@/config/institute";
+import { assertInstituteUuid } from "@/config/institute";
+import { assertPersistedUuid } from "@/lib/identity-boundary";
 import { logRepositoryFailure } from "@/lib/logging/runtime-logger";
 import { getClientWorkspaceSession } from "@/lib/workspace-session";
 import type { QuestionRepository } from "@/repositories/interfaces/question-repository";
@@ -104,36 +105,15 @@ export class SupabaseQuestionRepository implements QuestionRepository {
     }
   }
 
-  private async resolveExistingId(
-    publicId: string,
-    instituteId: string,
-  ): Promise<{ id: string; legacyId: string | null }> {
-    if (isUuid(publicId)) {
-      return { id: publicId, legacyId: null };
-    }
-    assertInstituteUuid(instituteId, "instituteId");
-    
-    const client = requireSupabaseClient("questions.resolveId");
-    const { data } = await client
-      .from("questions")
-      .select("id, legacy_id")
-      .eq("institute_id", instituteId)
-      .eq("legacy_id", publicId)
-      .maybeSingle();
 
-    if (data?.id) {
-      return { id: data.id as string, legacyId: publicId };
-    }
-    return { id: crypto.randomUUID(), legacyId: publicId };
-  }
 
   private async persistOne(question: BankQuestion): Promise<void> {
     try {
       const session = getClientWorkspaceSession();
       if (!session?.instituteId) return;
       const client = requireSupabaseClient("questions.upsert");
-      const { id, legacyId } = await this.resolveExistingId(question.id, session.instituteId);
-      const row = bankQuestionToRow(question, id, legacyId, session.instituteId);
+      const id = assertPersistedUuid(question.id, "questions.id");
+      const row = bankQuestionToRow(question, id, session.instituteId);
       const { error } = await client.from("questions").upsert(row, {
         onConflict: "id",
       });
@@ -178,27 +158,17 @@ export class SupabaseQuestionRepository implements QuestionRepository {
       assertInstituteUuid(session.instituteId, "session.instituteId");
 
       const client = requireSupabaseClient("questions.prune");
-      const keepLegacyIds = questions
-        .filter((q) => !isUuid(q.id))
-        .map((q) => q.id);
-      const keepUuids = questions.filter((q) => isUuid(q.id)).map((q) => q.id);
+      const keepUuids = questions.map((q) => assertPersistedUuid(q.id, "questions.id"));
 
       const { data: remote } = await client
         .from("questions")
-        .select("id, legacy_id")
+        .select("id")
         .eq("institute_id", session.instituteId);
 
       if (!remote) return;
 
-      const toDelete = (remote as { id: string; legacy_id: string | null }[])
-        .filter((r) => {
-          const pub = r.legacy_id ?? r.id;
-          return (
-            !keepUuids.includes(r.id) &&
-            !keepLegacyIds.includes(pub) &&
-            !keepLegacyIds.includes(r.legacy_id ?? "")
-          );
-        })
+      const toDelete = (remote as { id: string }[])
+        .filter((r) => !keepUuids.includes(r.id))
         .map((r) => r.id);
 
       if (toDelete.length > 0) {
@@ -218,7 +188,7 @@ export class SupabaseQuestionRepository implements QuestionRepository {
       const session = getClientWorkspaceSession();
       if (!session?.instituteId) return;
       const client = requireSupabaseClient("questions.delete");
-      const { id } = await this.resolveExistingId(publicId, session.instituteId);
+      const id = assertPersistedUuid(publicId, "questions.id");
       const { error } = await client
         .from("questions")
         .delete()
@@ -232,3 +202,4 @@ export class SupabaseQuestionRepository implements QuestionRepository {
     }
   }
 }
+

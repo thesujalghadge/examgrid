@@ -18,6 +18,7 @@ import { fetchStudentReports } from "@/app/student/actions/analytics-fetch";
 export default function StudentCumulativeReportPage() {
   const candidate = useAuthStore((s) => s.candidate);
   const instituteId = useWorkspaceAuthStore((s) => s.session?.instituteId ?? "");
+  const role = useWorkspaceAuthStore((s) => s.session?.role);
   const [results, setResults] = useState<any[]>([]);
   const [subjects, setSubjects] = useState<any[]>([]);
   const [chapters, setChapters] = useState<any[]>([]);
@@ -32,7 +33,7 @@ export default function StudentCumulativeReportPage() {
   }, []);
 
   useEffect(() => {
-    if (!candidate || !instituteId) return;
+    if (!candidate || !instituteId || role !== "student") return;
 
   const loadReports = async () => {
     try {
@@ -50,7 +51,7 @@ export default function StudentCumulativeReportPage() {
     }
   }
     loadReports();
-  }, [candidate, instituteId]);
+  }, [candidate, instituteId, role]);
 
   const metrics = useMemo(() => {
     if (!results.length) return null;

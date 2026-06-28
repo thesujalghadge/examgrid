@@ -56,9 +56,9 @@ const STUD_A1 = crypto.randomUUID();
 const STUD_A2 = crypto.randomUUID();
 const STUD_B1 = crypto.randomUUID();
 
-// Exams (stored as text in cbt_attempts.test_id)
-const EXAM_A = `verify-rank-exam-a-${RUN}`;
-const EXAM_B = `verify-rank-exam-b-${RUN}`;
+// Exams use UUID primary keys throughout the CBT flow
+const EXAM_A = crypto.randomUUID();
+const EXAM_B = crypto.randomUUID();
 
 // Students handled above
 
@@ -142,6 +142,11 @@ async function setupEntities(): Promise<void> {
     { id: STUD_B1, institute_id: INST_B, batch_id: INST_B, roll_number: "roll_B1", name: "Student B1", full_name: "Student B1", application_number: "appB1" },
   ]);
   if (e3) throw new Error(`Student insert failed: ${e3.message}`);
+  const { error: e4 } = await db.from("exams").insert([
+    { id: EXAM_A, institute_id: INST_A, legacy_id: `verify-rank-exam-a-${RUN}`, title: "Rank Exam A", exam_type: "JEE_MAIN", duration_minutes: 60, scheduled_at: new Date().toISOString(), is_published: true },
+    { id: EXAM_B, institute_id: INST_B, legacy_id: `verify-rank-exam-b-${RUN}`, title: "Rank Exam B", exam_type: "JEE_MAIN", duration_minutes: 60, scheduled_at: new Date().toISOString(), is_published: true },
+  ]);
+  if (e4) throw new Error(`Exam insert failed: ${e4.message}`);
 }
 
 async function insertAttemptAndResult(
@@ -156,6 +161,16 @@ async function insertAttemptAndResult(
   // inserting directly into cbt_attempts we bypass that. However, foreign keys on
   // student_id and institute_id are checked.
 
+  await db.from("exams").upsert({
+    id: examId,
+    institute_id: instituteId,
+    legacy_id: `verify-rank-${examId}`,
+    title: `Rank Exam ${examId}`,
+    exam_type: "JEE_MAIN",
+    duration_minutes: 60,
+    scheduled_at: new Date().toISOString(),
+    is_published: true,
+  }, { onConflict: "id" });
   // Insert cbt_attempt
   const { data: attempt, error: attErr } = await db
     .from("cbt_attempts")
@@ -346,7 +361,7 @@ async function main(): Promise<void> {
 
   // ── Phase 8: Tie-breaking test (two equal scores) ──────────────────────
   console.log("\nPhase 8: Tie-breaking test (two equal scores) …");
-  const EXAM_TIE = `verify-rank-exam-tie-${RUN}`;
+  const EXAM_TIE = crypto.randomUUID();
   let tie1: string, tie2: string, tie3: string;
   try {
     tie1 = await insertAttemptAndResult(INST_A, STUD_A1, EXAM_TIE, 80);
@@ -371,42 +386,33 @@ async function main(): Promise<void> {
   assertEq(t3?.rank, 3, "Tie: score=50 → rank 3 (skips 2)");
 
   await db.from("cbt_attempts").delete().eq("test_id", EXAM_TIE);
+  await db.from("exams").delete().eq("id", EXAM_TIE);
 
-  // ── Phase 9: Cross-Institute Leakage Test (Shared Exam ID) ──────────────────
-  console.log("\nPhase 9: Cross-Institute Leakage Test (Shared Exam ID) …");
-  const SHARED_EXAM = `verify-rank-shared-${RUN}`;
-  let sharedA1: string, sharedB1: string;
+  // ── Phase 9: Cross-Institute Direct Insert Rejection ───────────────────────
+  console.log("\nPhase 9: Cross-Institute Direct Insert Rejection …");
+  const SHARED_EXAM = crypto.randomUUID();
+  let sharedA1: string;
   try {
-    // Both institutes use the exact same test_id string
     sharedA1 = await insertAttemptAndResult(INST_A, STUD_A1, SHARED_EXAM, 100);
-    sharedB1 = await insertAttemptAndResult(INST_B, STUD_B1, SHARED_EXAM, 100);
-    
-    // Run rank engine for Institute A ONLY
-    await runRankEngine(SHARED_EXAM, INST_A);
+    await insertAttemptAndResult(INST_B, STUD_B1, SHARED_EXAM, 100);
+    console.error("  ❌ FAIL  Cross-institute attempt insert unexpectedly succeeded");
+    failures++;
   } catch (err: any) {
-    console.error("FATAL: Shared exam test failed:", err.message);
-    await cleanup();
-    process.exit(1);
+    assert(
+      String(err.message).includes("cbt_attempts_test_institute_fkey") ||
+        String(err.message).includes("foreign key") ||
+        String(err.message).includes("violates"),
+      "Cross-institute attempt insert is rejected by DB constraints"
+    );
   }
 
-  const { data: sa } = await db.from("cbt_results").select("rank, total_candidates").eq("id", sharedA1).single();
-  const { data: sb } = await db.from("cbt_results").select("rank, total_candidates").eq("id", sharedB1).single();
-
-  // Institute A should have 1 candidate
-  assertEq(sa?.rank, 1, "Shared Exam: Institute A candidate gets rank 1");
-  assertEq(sa?.total_candidates, 1, "Shared Exam: Institute A total candidates is 1 (Institute B ignored)");
-  
-  // Institute B should be completely untouched
-  assert(
-    sb?.rank === null || sb?.rank === undefined,
-    "Shared Exam: Institute B rank is still null (not leaked)"
-  );
-  assert(
-    sb?.total_candidates === null || sb?.total_candidates === undefined || sb?.total_candidates === 0,
-    "Shared Exam: Institute B total_candidates is still null/0"
-  );
+  await runRankEngine(SHARED_EXAM, INST_A);
+  const { data: sa } = await db.from("cbt_results").select("rank, total_candidates").eq("id", sharedA1!).single();
+  assertEq(sa?.rank, 1, "Tenant-constrained exam candidate gets rank 1");
+  assertEq(sa?.total_candidates, 1, "Tenant-constrained exam total candidates is 1");
 
   await db.from("cbt_attempts").delete().eq("test_id", SHARED_EXAM);
+  await db.from("exams").delete().eq("id", SHARED_EXAM);
 
   // ── Summary ──────────────────────────────────────────────────────────────
   await cleanup();
@@ -427,3 +433,10 @@ main().catch((err) => {
   console.error("Unhandled error:", err);
   process.exit(1);
 });
+
+
+
+
+
+
+

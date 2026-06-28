@@ -57,9 +57,9 @@ export async function POST(
     const result = await enqueueQuestionsForGeneration(questionIds, instituteId, priority);
     
     // Trigger immediate background processing
-    const processUrl = new URL('/api/internal/process-solution-queue', request.url).toString();
+    const processUrl = new URL('/api/internal/solution-worker', request.url).toString();
     fetch(processUrl, {
-      method: 'POST',
+      method: 'GET',
       headers: { 'authorization': `Bearer ${process.env.CRON_SECRET || 'dev-secret'}` }
     }).catch(err => console.error('Failed to trigger background processing:', err));
 
