@@ -62,7 +62,7 @@ export async function getExamSolutionProgress(testId: string) {
   const { data: exam } = await supabase
     .from("exams")
     .select("id")
-    .or(`id.eq.${testId},legacy_id.eq.${testId}`)
+    .eq("id", testId)
     .maybeSingle();
 
   if (!exam) return null;

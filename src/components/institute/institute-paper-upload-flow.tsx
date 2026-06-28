@@ -30,7 +30,7 @@ import {
 import { logSecurityEvent, logUploadEvent } from "@/lib/logging/runtime-logger";
 import { awaitRepositoryPersist } from "@/lib/repositories/await-persist";
 import { getRepositories } from "@/lib/repositories/provider";
-import { makeCbtId } from "@/lib/cbt/cbt-ids";
+
 import { createScheduleInput } from "@/services/institute-ops-service";
 import { getQuestionBank, saveQuestionBank } from "@/services/question-bank-service";
 import { useWorkspaceAuthStore } from "@/stores/workspace-auth-store";
@@ -428,7 +428,7 @@ export function InstitutePaperUploadFlow() {
       return;
     }
 
-    const testId = publishTestIdRef.current ?? `${makeCbtId("cbt")}-${pkg.id}`;
+    const testId = publishTestIdRef.current ?? crypto.randomUUID();
     publishTestIdRef.current = testId;
     const { test, bankQuestions } = buildCbtTestFromProcessedPaper(
       finalPkg,

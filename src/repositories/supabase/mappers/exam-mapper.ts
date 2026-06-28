@@ -1,10 +1,12 @@
 import { isUuid } from "@/config/institute";
+import { assertPersistedUuid } from "@/lib/identity-boundary";
 import type {
   ExamDefinition,
   ExamQuestion,
   ExamSection,
 } from "@/types/exam";
 import type {
+
   ExamQuestionRow,
   ExamRow,
   ExamSectionRow,
@@ -15,12 +17,9 @@ export function examDefinitionToRows(exam: ExamDefinition, examUuid: string, ins
   examRow: Omit<ExamRow, "created_at" | "updated_at">;
   sections: Omit<ExamSectionRow, "created_at" | "updated_at">[];
   questions: Omit<ExamQuestionRow, "created_at" | "updated_at">[];
-  legacyId: string | null;
 } {
-  const legacyId = isUuid(exam.id) ? null : exam.id;
   const examRow = {
     id: examUuid,
-    legacy_id: legacyId,
     institute_id: instituteId,
     title: exam.title,
     subtitle: exam.subtitle,
@@ -35,7 +34,7 @@ export function examDefinitionToRows(exam: ExamDefinition, examUuid: string, ins
 
   const sections: Omit<ExamSectionRow, "created_at" | "updated_at">[] =
     exam.sections.map((sec, idx) => ({
-      id: sec.id,
+      id: assertPersistedUuid(sec.id, "exam_sections.id"),
       exam_id: examUuid,
       institute_id: instituteId,
       name: sec.name,
@@ -51,7 +50,7 @@ export function examDefinitionToRows(exam: ExamDefinition, examUuid: string, ins
     });
   }
 
-  return { examRow, sections, questions, legacyId };
+  return { examRow, sections, questions };
 }
 
 function examQuestionToRow(
@@ -72,9 +71,9 @@ function examQuestionToRow(
   };
 
   return {
-    id: q.id,
+    id: assertPersistedUuid(q.id, "exam_questions.id"),
     exam_id: examUuid,
-    section_id: sectionId,
+    section_id: assertPersistedUuid(sectionId, "exam_questions.section_id"),
     institute_id: instituteId,
     question_number: q.number,
     question_type: q.type,
@@ -101,7 +100,7 @@ export function rowsToExamDefinition(
   questionRows: ExamQuestionRow[],
   bankQuestionsMap?: Record<string, any>,
 ): ExamDefinition {
-  const publicExamId = examRow.legacy_id ?? examRow.id;
+  const publicExamId = examRow.id;
   const sections: ExamSection[] = [...sectionRows]
     .sort((a, b) => a.sort_order - b.sort_order)
     .map((s) => ({
@@ -121,6 +120,7 @@ export function rowsToExamDefinition(
 
   return {
     id: publicExamId,
+    uuid: examRow.id,
     title: examRow.title,
     subtitle: examRow.subtitle,
     examType: examRow.exam_type,
@@ -184,12 +184,3 @@ export function validateExamForWrite(exam: ExamDefinition): ExamDefinition | nul
   return parsed.data as ExamDefinition;
 }
 
-export function resolveExamUuid(publicId: string): {
-  examUuid: string;
-  legacyId: string | null;
-} {
-  if (isUuid(publicId)) {
-    return { examUuid: publicId, legacyId: null };
-  }
-  return { examUuid: crypto.randomUUID(), legacyId: publicId };
-}

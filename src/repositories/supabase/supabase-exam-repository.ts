@@ -1,4 +1,5 @@
 import { isUuid, assertInstituteUuid } from "@/config/institute";
+import { assertPersistedUuid } from "@/lib/identity-boundary";
 import { logRepositoryFailure } from "@/lib/logging/runtime-logger";
 import { getClientWorkspaceSession } from "@/lib/workspace-session";
 import type { ExamRepository } from "@/repositories/interfaces/exam-repository";
@@ -140,8 +141,7 @@ export class SupabaseExamRepository implements ExamRepository {
       }
 
       this.cache = examRows.map((examRow) => {
-        const publicId = examRow.legacy_id ?? examRow.id;
-        this.idMap.set(publicId, examRow.id);
+        this.idMap.set(examRow.id, examRow.id);
         return rowsToExamDefinition(
           examRow,
           sectionRows.filter((s) => s.exam_id === examRow.id),
@@ -158,40 +158,10 @@ export class SupabaseExamRepository implements ExamRepository {
   }
 
   private async resolveExamUuid(publicId: string, instituteId: string): Promise<string> {
-    const cached = this.idMap.get(publicId);
-    if (cached) return cached;
-
-    assertInstituteUuid(instituteId, "instituteId");
-
-    const client = requireSupabaseClient("exams.resolveId");
-    if (isUuid(publicId)) {
-      const { data } = await client
-        .from("exams")
-        .select("id")
-        .eq("id", publicId)
-        .maybeSingle();
-      if (data?.id) {
-        this.idMap.set(publicId, data.id as string);
-        return data.id as string;
-      }
-      return publicId;
+    if (!isUuid(publicId)) {
+      throw new Error(`Invariant violation: resolveExamUuid attempted with non-uuid id=${publicId}`);
     }
-
-    const { data } = await client
-      .from("exams")
-      .select("id, legacy_id")
-      .eq("institute_id", instituteId)
-      .eq("legacy_id", publicId)
-      .maybeSingle();
-
-    if (data?.id) {
-      this.idMap.set(publicId, data.id as string);
-      return data.id as string;
-    }
-
-    const newId = crypto.randomUUID();
-    this.idMap.set(publicId, newId);
-    return newId;
+    return publicId;
   }
 
   private async persistExam(exam: ExamDefinition): Promise<void> {
@@ -201,7 +171,7 @@ export class SupabaseExamRepository implements ExamRepository {
       assertInstituteUuid(session.instituteId, "session.instituteId");
 
       const client = requireSupabaseClient("exams.save");
-      const examUuid = await this.resolveExamUuid(exam.id, session.instituteId);
+      const examUuid = assertPersistedUuid(await this.resolveExamUuid(exam.id, session.instituteId), "exams.id");
 
       const { data: existingExam } = await client
         .from("exams")
@@ -287,7 +257,7 @@ export class SupabaseExamRepository implements ExamRepository {
       assertInstituteUuid(session.instituteId, "session.instituteId");
 
       const client = requireSupabaseClient("exams.delete");
-      const examUuid = await this.resolveExamUuid(publicId, session.instituteId);
+      const examUuid = assertPersistedUuid(await this.resolveExamUuid(publicId, session.instituteId), "exams.id");
       const { error } = await client.from("exams").delete().eq("id", examUuid);
       if (error) console.error(`[PERSISTENCE_LOG] table: exams, action: delete, success: false, error: ${error.message}`);
       else console.log(`[PERSISTENCE_LOG] table: exams, action: delete, success: true`);
@@ -299,3 +269,4 @@ export class SupabaseExamRepository implements ExamRepository {
     }
   }
 }
+

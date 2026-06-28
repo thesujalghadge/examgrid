@@ -6,7 +6,6 @@ import { assertBankQuestionForWrite } from "@/lib/validation/bank-question-store
 export function bankQuestionToRow(
   question: BankQuestion,
   resolvedId: string,
-  legacyId: string | null,
   instituteId: string,
 ): Omit<QuestionRow, "created_at" | "updated_at"> & {
   created_at?: string;
@@ -15,7 +14,6 @@ export function bankQuestionToRow(
   const now = new Date().toISOString();
   return {
     id: resolvedId,
-    legacy_id: legacyId,
     institute_id: instituteId,
     subject: question.subject,
     chapter: question.chapter,
@@ -38,10 +36,9 @@ export function bankQuestionToRow(
 }
 
 export function rowToBankQuestion(row: QuestionRow): BankQuestion {
-  const publicId = row.legacy_id ?? row.id;
   const metadata = (row.metadata as Record<string, any>) || {};
   return {
-    id: publicId,
+    id: row.id,
     subject: row.subject,
     chapter: row.chapter,
     topic: row.topic,
@@ -67,12 +64,4 @@ export function validateBankQuestionForWrite(
   return assertBankQuestionForWrite(question, operation);
 }
 
-export function resolveQuestionIds(question: BankQuestion): {
-  id: string;
-  legacyId: string | null;
-} {
-  if (isUuid(question.id)) {
-    return { id: question.id, legacyId: null };
-  }
-  return { id: crypto.randomUUID(), legacyId: question.id };
-}
+

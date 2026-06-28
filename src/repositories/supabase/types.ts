@@ -2,7 +2,6 @@ import type { QuestionType } from "@/types/exam";
 
 export interface QuestionRow {
   id: string;
-  legacy_id: string | null;
   institute_id: string;
   subject: string;
   chapter: string;
@@ -22,7 +21,6 @@ export interface QuestionRow {
 
 export interface ExamRow {
   id: string;
-  legacy_id: string | null;
   institute_id: string;
   title: string;
   subtitle: string;

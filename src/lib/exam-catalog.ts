@@ -39,14 +39,7 @@ export async function getExamByIdServer(examId: string): Promise<ExamDefinition 
 
   try {
     const client = requireSupabaseClient("exam-catalog.getExamByIdServer");
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(examId);
-    
-    let query = client.from("exams").select("*");
-    if (isUuid) {
-      query = query.or(`legacy_id.eq.${examId},id.eq.${examId}`);
-    } else {
-      query = query.eq("legacy_id", examId);
-    }
+    const query = client.from("exams").select("*").eq("id", examId);
     
     const { data: examRow, error: examError } = await query.maybeSingle();
     throwIfSupabaseError(examError, "exams", "getByIdServer");

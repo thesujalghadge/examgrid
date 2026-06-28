@@ -29,7 +29,7 @@ async function main() {
   const { runGeminiWorker } = await import("./src/lib/background-jobs/gemini-worker");
   while (count < 15) { // Just process 15
     const result = await runGeminiWorker();
-    if (!result.success && result.reason === "Queue empty") {
+    if (result.status === "NO_JOB") {
       console.log("Queue empty. Done.");
       break;
     }
@@ -40,3 +40,4 @@ async function main() {
 }
 
 main().catch(console.error);
+

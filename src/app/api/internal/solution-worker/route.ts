@@ -19,7 +19,7 @@ export async function GET(request: Request) {
 
   try {
     const result = await runWorkerTick();
-    return NextResponse.json({ success: true, result });
+    return NextResponse.json({ success: true, result, debug: "runWorkerTick completed" });
   } catch (err: any) {
     console.error('[cron/solution-worker] Error:', err);
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });

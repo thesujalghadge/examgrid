@@ -25,9 +25,11 @@ export async function GET(
     return NextResponse.json({ error: "INVALID_INSTITUTE_ID" }, { status: 400 });
   }
 
-  const { testId } = await context.params;
+  let { testId } = await context.params;
 
   try {
+
+
     const submissions = await listCbtSubmissions(ws.instituteId, testId);
     return NextResponse.json({ submissions });
   } catch (error) {

@@ -74,7 +74,7 @@ export async function GET(
           await supabase
             .from("exams")
             .select("id")
-            .or(`id.eq.${examId},legacy_id.eq.${examId}`)
+            .eq("id", examId)
         ).data?.map((e: any) => e.id) ?? [],
       );
 

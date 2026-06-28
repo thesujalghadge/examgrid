@@ -5,6 +5,7 @@ import {
   logValidationFailure,
 } from "@/lib/logging/runtime-logger";
 import { toNormalizedQuestion, fromNormalizedQuestion } from "@/lib/cbt/normalized-question";
+import { createPersistenceUuid } from "@/lib/identity-boundary";
 import { applySubjectMapping, defaultSubjectMapping } from "@/lib/cbt/subject-mapping";
 import type {
   AnswerKeyReviewItem,
@@ -961,7 +962,7 @@ export function preparedMetaToBankQuestion(
   packageId: string,
 ): BankQuestion {
   const now = Date.now();
-  const bankId = `${packageId}-bank-${meta.questionId}`;
+  const bankId = createPersistenceUuid();
   const normalized = toNormalizedQuestion(meta);
 
   if (normalized.type === "NUMERICAL") {
@@ -1016,3 +1017,5 @@ export function preparedMetaToBankQuestion(
     updatedAt: now,
   };
 }
+
+

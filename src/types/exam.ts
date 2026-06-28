@@ -52,6 +52,7 @@ export interface ExamSection {
 
 export interface ExamDefinition {
   id: string;
+  uuid?: string;
   title: string;
   subtitle: string;
   examType: "JEE_MAIN" | "NEET" | "CET";

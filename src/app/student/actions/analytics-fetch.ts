@@ -6,11 +6,23 @@ import { createClient } from "@supabase/supabase-js";
 export async function fetchStudentExamAnalytics(examId: string) {
   const session = await readVerifiedWorkspaceSession();
   if (!session || session.role !== "student") {
-    throw new Error("Unauthorized");
+    return {
+      result: null,
+      subjects: [],
+      chapters: [],
+      concepts: [],
+      recommendations: [],
+      cumulative: [],
+      answers: [],
+      qAnalytics: [],
+      nodes: []
+    };
   }
 
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
   const studentId = session.userId;
+  const resolvedExamId = examId;
+
 
   // 1. Fetch result & attempt (Validating Ownership)
   const { data: result, error: resultError } = await supabase
@@ -34,13 +46,13 @@ export async function fetchStudentExamAnalytics(examId: string) {
     { data: answers },
     { data: qAnalytics }
   ] = await Promise.all([
-    supabase.from("student_subject_analytics").select("*").eq("student_id", studentId).eq("exam_id", examId),
-    supabase.from("student_chapter_analytics").select("*").eq("student_id", studentId).eq("exam_id", examId),
-    supabase.from("student_concept_analytics").select("*").eq("student_id", studentId).eq("exam_id", examId),
-    supabase.from("student_recommendations").select("*").eq("student_id", studentId).eq("exam_id", examId),
+    supabase.from("student_subject_analytics").select("*").eq("student_id", studentId).eq("exam_id", resolvedExamId),
+    supabase.from("student_chapter_analytics").select("*").eq("student_id", studentId).eq("exam_id", resolvedExamId),
+    supabase.from("student_concept_analytics").select("*").eq("student_id", studentId).eq("exam_id", resolvedExamId),
+    supabase.from("student_recommendations").select("*").eq("student_id", studentId).eq("exam_id", resolvedExamId),
     supabase.from("student_cumulative_subject_analytics").select("*").eq("student_id", studentId),
     supabase.from("cbt_attempt_answers").select("question_id, is_correct, selected_answer, time_taken_seconds").eq("attempt_id", result.cbt_attempts.id),
-    supabase.from("question_analytics").select("*").eq("exam_id", examId)
+    supabase.from("question_analytics").select("*").eq("exam_id", resolvedExamId)
   ]);
 
   const nodeIds = new Set<string>();
@@ -69,7 +81,14 @@ export async function fetchStudentExamAnalytics(examId: string) {
 export async function fetchStudentReports() {
   const session = await readVerifiedWorkspaceSession();
   if (!session || session.role !== "student") {
-    throw new Error("Unauthorized");
+    return {
+      results: [],
+      sub: [],
+      chap: [],
+      con: [],
+      recs: [],
+      nodes: []
+    };
   }
 
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -110,7 +129,7 @@ export async function fetchStudentReports() {
 export async function fetchStudentAttemptedExams() {
   const session = await readVerifiedWorkspaceSession();
   if (!session || session.role !== "student") {
-    throw new Error("Unauthorized");
+    return [];
   }
 
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -136,3 +155,4 @@ export async function fetchStudentAttemptedExams() {
 
   return merged;
 }
+

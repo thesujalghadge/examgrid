@@ -27,8 +27,9 @@ async function main() {
   console.log("  Verifying direct RPC write paths for CBT attempts");
   console.log("═══════════════════════════════════════════════\n");
 
-  const validTestId = `valid-test-rpc-${RUN}`;
-  const fakeTestId = `fake-test-rpc-${RUN}`;
+  const validTestId = crypto.randomUUID();
+  const legacyTestId = `legacy-test-rpc-${RUN}`;
+  const fakeTestId = crypto.randomUUID();
   const instId1 = crypto.randomUUID();
   const instId2 = crypto.randomUUID(); // Different institute
   const studentRoll = `rpc-roll-${RUN}`;
@@ -44,7 +45,7 @@ async function main() {
     roll_number: studentRoll, name: "RPC Test", full_name: "RPC Test", application_number: `app-${RUN}` 
   });
   const { error: examErr } = await adminDb.from("exams").insert({
-    id: crypto.randomUUID(), legacy_id: validTestId, institute_id: instId1,
+    id: validTestId, legacy_id: legacyTestId, institute_id: instId1,
     title: "RPC Exam", exam_type: "JEE_MAIN", duration_minutes: 60, scheduled_at: new Date().toISOString(), is_published: true
   });
   if (examErr) console.error("Exam Insert Error:", examErr);
@@ -65,12 +66,12 @@ async function main() {
   if (err1) console.error("Phase 1 error details:", err1);
   assertEq(err1, null, "service_role call inserted attempt successfully");
 
-  console.log("\nPhase 2: Fake testId rejected (Database Validation)");
+  console.log("\nPhase 2: Fake UUID rejected (Database Validation)");
   const { error: err2 } = await adminDb.rpc("submit_cbt_attempt", payload(fakeTestId, instId1, `sess-2-${RUN}`));
   if (err2 && err2.message.includes("Exam does not exist")) {
-    console.log("  ✅ PASS  Fake testId correctly rejected by DB constraints");
+    console.log("  ✅ PASS  Fake UUID correctly rejected by DB constraints");
   } else {
-    console.error(`  ❌ FAIL  Fake testId not rejected properly. Error: ${err2?.message}`);
+    console.error(`  ❌ FAIL  Fake UUID not rejected properly. Error: ${err2?.message}`);
     failures++;
   }
 
@@ -103,7 +104,7 @@ async function main() {
 
   // Cleanup
   await adminDb.from("cbt_attempts").delete().eq("test_id", validTestId);
-  await adminDb.from("exams").delete().eq("legacy_id", validTestId);
+  await adminDb.from("exams").delete().eq("id", validTestId);
   await adminDb.from("students").delete().eq("roll_number", studentRoll);
   await adminDb.from("batches").delete().eq("id", instId1);
   await adminDb.from("institutes").delete().in("id", [instId1, instId2]);
@@ -122,3 +123,5 @@ main().catch(err => {
   console.error("Test failed to run", err);
   process.exit(1);
 });
+
+

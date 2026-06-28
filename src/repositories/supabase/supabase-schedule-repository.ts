@@ -1,5 +1,6 @@
 import { logRepositoryFailure } from "@/lib/logging/runtime-logger";
 import { assertInstituteUuid } from "@/config/institute";
+import { assertPersistedUuid } from "@/lib/identity-boundary";
 import { getClientWorkspaceSession } from "@/lib/workspace-session";
 import { assertExamSchedule } from "@/lib/validation/institute-ops-schema";
 import type { ScheduleRepository } from "@/repositories/interfaces/schedule-repository";
@@ -132,9 +133,19 @@ export class SupabaseScheduleRepository implements ScheduleRepository {
 
   private async persistOne(schedule: ExamSchedule): Promise<void> {
     const client = requireSupabaseClient("exam_schedules.upsert");
+    
+    const realExamId = assertPersistedUuid(schedule.examId, "exam_schedules.exam_id");
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(realExamId);
+    if (!isUuid) {
+      throw new Error(`Invariant violation: schedule attempted with non-uuid examId=${realExamId}`);
+    }
+
+    const row = scheduleToRow(schedule);
+    row.exam_id = realExamId;
+
     const { error } = await client
       .from("exam_schedules")
-      .upsert(scheduleToRow(schedule), { onConflict: "id" });
+      .upsert(row, { onConflict: "id" });
     throwIfSupabaseError(error, "exam_schedules", "upsert");
 
     const { error: deleteLinksError } = await client
@@ -183,3 +194,4 @@ export class SupabaseScheduleRepository implements ScheduleRepository {
     throwIfSupabaseError(error, "exam_schedules", "delete");
   }
 }
+

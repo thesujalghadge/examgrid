@@ -21,7 +21,10 @@ export async function GET(
     return NextResponse.json({ error: "Missing institute" }, { status: 403 });
   }
 
-  const { testId } = await context.params;
+  let { testId } = await context.params;
+  
+
+
   const submissions = await listCbtSubmissions(ws.instituteId, testId);
   const sessions = submissions.map(submissionToTestSession);
 

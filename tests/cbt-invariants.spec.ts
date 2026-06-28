@@ -45,14 +45,14 @@ test.describe('CBT Invariants Verification', () => {
     // 1. Refresh test
     await page.reload();
     await page.waitForSelector('.question-card');
-    await expect(page.locator('.question-header')).toContainText('Q3', { message: 'Current question should persist across refresh' });
+    await expect(page.locator('.question-header')).toContainText('Q3');
 
     // 2. Browser Restart (Close tab, open new one)
     const newPage = await context.newPage();
     await page.close();
     await newPage.goto(`/student/tests/${testId}`);
     await newPage.waitForSelector('.question-card');
-    await expect(newPage.locator('.question-header')).toContainText('Q3', { message: 'Current question should persist across browser restart' });
+    await expect(newPage.locator('.question-header')).toContainText('Q3');
   });
 
   test('Invariant 6: Invalid option IDs fail loudly on submit', async ({ request }) => {
@@ -75,3 +75,4 @@ test.describe('CBT Invariants Verification', () => {
     expect(response.status()).toBe(401); // Actually unauthorized because we aren't sending valid cookies in request context, but let's test the logic.
   });
 });
+
