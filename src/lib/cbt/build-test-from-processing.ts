@@ -1,5 +1,4 @@
 import { preparedMetaToBankQuestion } from "@/lib/cbt/paper-processing";
-import { createPersistenceUuid } from "@/lib/identity-boundary";
 import type { ProcessedPaperPackage } from "@/types/cbt-paper-processing";
 import type { CBTTest, CBTTestQuestion, CBTTestSection } from "@/types/cbt";
 import type { ExamDefinition } from "@/types/exam";
@@ -19,7 +18,7 @@ export function buildCbtTestFromProcessedPaper(
   let qIndex = 0;
 
   pkg.sections.forEach((section, sectionIndex) => {
-    const sectionId = createPersistenceUuid();
+    const sectionId = `${testId}-${section.id}`;
     sections.push({
       id: sectionId,
       testId,
@@ -30,14 +29,12 @@ export function buildCbtTestFromProcessedPaper(
     section.questions.forEach((meta) => {
       qIndex += 1;
       const bankQ = preparedMetaToBankQuestion(meta, pkg.id);
-      const examQuestionId = createPersistenceUuid();
-      const testQuestionRowId = createPersistenceUuid();
       bankQuestions.push(bankQ);
       questions.push({
-        id: testQuestionRowId,
+        id: `${testId}-row-${qIndex}`,
         testId,
         sectionId,
-        questionId: examQuestionId,
+        questionId: `${testId}-question-${qIndex}`,
         source: "bank",
         bankQuestionId: bankQ.id,
         questionType: bankQ.questionType,

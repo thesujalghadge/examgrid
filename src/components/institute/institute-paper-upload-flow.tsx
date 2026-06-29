@@ -30,12 +30,15 @@ import {
 import { logSecurityEvent, logUploadEvent } from "@/lib/logging/runtime-logger";
 import { awaitRepositoryPersist } from "@/lib/repositories/await-persist";
 import { getRepositories } from "@/lib/repositories/provider";
+import { createPersistenceUuid } from "@/lib/identity-boundary";
 
 import { createScheduleInput } from "@/services/institute-ops-service";
 import { getQuestionBank, saveQuestionBank } from "@/services/question-bank-service";
 import { useWorkspaceAuthStore } from "@/stores/workspace-auth-store";
 import type { ExamDefinition } from "@/types/exam";
+import type { CBTTest } from "@/types/cbt";
 import type { Batch } from "@/types/institute-ops";
+import type { BankQuestion } from "@/types/question-bank";
 import type {
   PaperSubjectMapping,
   PreparedQuestionMeta,
@@ -78,6 +81,41 @@ const PAPER_FILE_TYPES = ["pdf", "doc", "docx", "txt", "csv", "xlsx"] as const;
 const ANSWER_KEY_FILE_TYPES = ["pdf", "doc", "docx", "txt", "csv", "xlsx"] as const;
 const PLANNED_JEE_QUESTIONS = 75;
 const SUBJECT_OPTIONS = ["Physics", "Chemistry", "Mathematics", "Biology", "Custom"] as const;
+const PERSISTED_UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function prepareCbtForPersistence(test: CBTTest, bankQuestions: BankQuestion[]): { test: CBTTest; bankQuestions: BankQuestion[] } {
+  const sectionIds = new Map<string, string>();
+  const bankQuestionIds = new Map<string, string>();
+
+  const persistedBankQuestions = bankQuestions.map((question) => {
+    const id = createPersistenceUuid();
+    bankQuestionIds.set(question.id, id);
+    return { ...question, id };
+  });
+
+  const persistedSections = test.sections.map((section) => {
+    const id = createPersistenceUuid();
+    sectionIds.set(section.id, id);
+    return { ...section, id };
+  });
+
+  const persistedQuestions = test.questions.map((question) => ({
+    ...question,
+    id: createPersistenceUuid(),
+    sectionId: sectionIds.get(question.sectionId) ?? question.sectionId,
+    questionId: createPersistenceUuid(),
+    bankQuestionId: question.bankQuestionId ? (bankQuestionIds.get(question.bankQuestionId) ?? question.bankQuestionId) : undefined,
+  }));
+
+  return {
+    test: {
+      ...test,
+      sections: persistedSections,
+      questions: persistedQuestions,
+    },
+    bankQuestions: persistedBankQuestions,
+  };
+}
 
 export function InstitutePaperUploadFlow() {
   const session = useWorkspaceAuthStore((state) => state.session);
@@ -438,31 +476,33 @@ export function InstitutePaperUploadFlow() {
       examType,
     );
 
-    const bank = getQuestionBank();
+    const persisted = prepareCbtForPersistence(test, bankQuestions);
+
+    const bank = getQuestionBank().filter((question) => PERSISTED_UUID_PATTERN.test(question.id));
     const merged = [...bank];
-    for (const row of bankQuestions) {
+    for (const row of persisted.bankQuestions) {
       if (!merged.some((q) => q.id === row.id)) merged.push(row);
     }
     saveQuestionBank(merged);
 
     const repos = getRepositories();
     const startMs = scheduleStart ? new Date(scheduleStart).getTime() : 0;
-    const endAt = scheduleEnd ? new Date(scheduleEnd).toISOString() : (scheduleStart ? new Date(startMs + test.durationMinutes * 60 * 1000).toISOString() : undefined);
-    const examDef = cbtTestToExamDefinition(test, undefined, endAt);
+    const endAt = scheduleEnd ? new Date(scheduleEnd).toISOString() : (scheduleStart ? new Date(startMs + persisted.test.durationMinutes * 60 * 1000).toISOString() : undefined);
+    const examDef = cbtTestToExamDefinition(persisted.test, persisted.bankQuestions, endAt);
     if (examDef) repos.exams.save(examDef);
 
     if (selectedBatchIds.length > 0 && scheduleStart) {
       const startMs = new Date(scheduleStart).getTime();
       const endAt = scheduleEnd
         ? new Date(scheduleEnd).toISOString()
-        : new Date(startMs + test.durationMinutes * 60 * 1000).toISOString();
+        : new Date(startMs + persisted.test.durationMinutes * 60 * 1000).toISOString();
       repos.schedules.save({
         ...createScheduleInput({
-          examId: test.id,
+          examId: persisted.test.id,
           batchIds: selectedBatchIds,
           startAt: new Date(scheduleStart).toISOString(),
           endAt,
-          durationMinutes: test.durationMinutes,
+          durationMinutes: persisted.test.durationMinutes,
           visibilityRule: "assigned_batches",
         }),
         instituteId,
