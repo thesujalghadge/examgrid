@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "rimraf .next && next dev",
-    "build": "next build",
+    "build": "rimraf .next/dev/types && next build",
     "start": "next start",
     "lint": "eslint src proxy.ts",
     "typecheck": "tsc --noEmit",
