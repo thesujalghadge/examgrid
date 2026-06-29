@@ -489,7 +489,9 @@ export function InstitutePaperUploadFlow() {
     const startMs = scheduleStart ? new Date(scheduleStart).getTime() : 0;
     const endAt = scheduleEnd ? new Date(scheduleEnd).toISOString() : (scheduleStart ? new Date(startMs + persisted.test.durationMinutes * 60 * 1000).toISOString() : undefined);
     const examDef = cbtTestToExamDefinition(persisted.test, persisted.bankQuestions, endAt);
-    if (examDef) repos.exams.save(examDef);
+    if (!examDef) throw new Error("Could not build exam definition for publishing.");
+    repos.exams.save(examDef);
+    await awaitRepositoryPersist();
 
     if (selectedBatchIds.length > 0 && scheduleStart) {
       const startMs = new Date(scheduleStart).getTime();
