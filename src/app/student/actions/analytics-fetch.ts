@@ -133,20 +133,58 @@ export async function fetchStudentAttemptedExams() {
   }
 
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
-  const studentId = session.userId;
+  const studentIdentifier = session.userId;
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(studentIdentifier);
 
-  const { data: results, error } = await supabase
+  const { data: student } = isUuid
+    ? await supabase
+        .from("students")
+        .select("id, roll_number")
+        .eq("id", studentIdentifier)
+        .eq("institute_id", session.instituteId ?? "")
+        .maybeSingle()
+    : await supabase
+        .from("students")
+        .select("id, roll_number")
+        .eq("roll_number", studentIdentifier)
+        .eq("institute_id", session.instituteId ?? "")
+        .maybeSingle();
+
+  let attemptsQuery = supabase
+    .from("cbt_attempts")
+    .select("id, test_id, student_id, student_roll_number")
+    .eq("institute_id", session.instituteId ?? "");
+
+  attemptsQuery = student?.id
+    ? attemptsQuery.eq("student_id", student.id)
+    : attemptsQuery.eq("student_roll_number", studentIdentifier);
+
+  const { data: attempts, error: attemptsError } = await attemptsQuery;
+  if (attemptsError) {
+    console.error("fetchStudentAttemptedExams attempts error:", attemptsError);
+    throw new Error(`Failed to load attempted exams: ${attemptsError.message}`);
+  }
+
+  if (!attempts || attempts.length === 0) return [];
+
+  const attemptsById = new Map(attempts.map((attempt: any) => [attempt.id, attempt]));
+  const { data: resultRows, error } = await supabase
     .from("cbt_results")
-    .select("*, cbt_attempts!inner(id, test_id, student_id)")
-    .eq("cbt_attempts.student_id", studentId)
+    .select("*")
+    .in("attempt_id", attempts.map((attempt: any) => attempt.id))
     .order("generated_at", { ascending: false });
 
   if (error) {
     console.error("fetchStudentAttemptedExams error:", error);
     throw new Error(`Failed to load attempted exams: ${error.message}`);
   }
+
+  const results = (resultRows ?? []).map((result: any) => ({
+    ...result,
+    cbt_attempts: attemptsById.get(result.attempt_id),
+  }));
   
-  if (!results || results.length === 0) return [];
+  if (results.length === 0) return [];
 
   const examIds = [...new Set(results.map((r: any) => r.cbt_attempts?.test_id).filter(Boolean))];
   const { data: exams, error: examsError } = examIds.length > 0

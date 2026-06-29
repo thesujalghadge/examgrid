@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 
 // We use the service role key to bypass RLS for this specific read-only aggregation,
-// but we explicitly enforce security boundaries (auth, institute, attempt, release) in code.
+// but we explicitly enforce security boundaries (auth, institute, schedule, release) in code.
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const supabase = createClient(supabaseUrl, supabaseKey);
@@ -22,7 +22,7 @@ export async function fetchExamSolutions(options: SolutionQueryOptions) {
     // 1. Exam & Institute Check
     const { data: exam, error: examError } = await supabase
       .from("exams")
-      .select("id, end_time")
+      .select("id, solutions_release_time")
       .eq("id", examId)
       .eq("institute_id", instituteId)
       .single();
@@ -31,52 +31,71 @@ export async function fetchExamSolutions(options: SolutionQueryOptions) {
       return { status: 404, payload: { error: "Exam not found or access denied." } };
     }
 
-    // 2. Student Attempt Verification (Only for students)
+    // 2. Student schedule verification and release check (Only for students)
     if (!isTeacherRequest) {
-      const { data: attempt, error: attemptError } = await supabase
-        .from("cbt_attempts")
-        .select("id")
-        .eq("test_id", examId)
-        .eq("institute_id", instituteId)
-        .eq("student_id", studentId)
-        .maybeSingle();
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(studentId);
+      const { data: student } = isUuid
+        ? await supabase
+            .from("students")
+            .select("id, batch_id, is_active")
+            .eq("id", studentId)
+            .eq("institute_id", instituteId)
+            .maybeSingle()
+        : await supabase
+            .from("students")
+            .select("id, batch_id, is_active")
+            .eq("roll_number", studentId)
+            .eq("institute_id", instituteId)
+            .maybeSingle();
 
-      if (attemptError || !attempt) {
-        return { status: 403, payload: { error: "Access denied. Student has no recorded attempt for this exam." } };
+      if (!student || !student.is_active) {
+        return { status: 403, payload: { error: "Access denied. Student is not active in this institute." } };
       }
-    }
 
-    // 3. Release Check (Only for students)
-    if (!isTeacherRequest) {
-      const { data: settings } = await supabase
-        .from("test_solution_settings")
-        .select("release_mode, is_manually_released, scheduled_release_time")
+      const { data: schedules, error: scheduleError } = await supabase
+        .from("exam_schedules")
+        .select("id, end_at, solutions_release_time, visibility_rule")
         .eq("exam_id", examId)
         .eq("institute_id", instituteId)
-        .maybeSingle();
+        .eq("is_active", true);
 
-      let isReleased = false;
-      
-      if (settings) {
-        const now = new Date().getTime();
-        switch (settings.release_mode) {
-          case "AFTER_TEST_END":
-            const endTimeMs = new Date(exam.end_time).getTime();
-            if (now > endTimeMs) isReleased = true;
-            break;
-          case "MANUAL_RELEASE":
-            if (settings.is_manually_released) isReleased = true;
-            break;
-          case "SCHEDULED_RELEASE":
-            if (settings.scheduled_release_time && now > new Date(settings.scheduled_release_time).getTime()) {
-              isReleased = true;
-            }
-            break;
-        }
+      if (scheduleError || !schedules || schedules.length === 0) {
+        return { status: 403, payload: { error: "Access denied. Exam schedule is not available." } };
       }
 
+      const assignedScheduleIds = schedules
+        .filter((schedule: any) => schedule.visibility_rule === "assigned_batches")
+        .map((schedule: any) => schedule.id);
+      const assignedBatchLinks = assignedScheduleIds.length > 0 && student.batch_id
+        ? await supabase
+            .from("exam_schedule_batches")
+            .select("schedule_id")
+            .in("schedule_id", assignedScheduleIds)
+            .eq("batch_id", student.batch_id)
+            .eq("institute_id", instituteId)
+        : { data: [], error: null };
+
+      if (assignedBatchLinks.error) {
+        return { status: 403, payload: { error: "Access denied. Exam schedule is not available." } };
+      }
+
+      const accessibleAssignedSchedules = new Set((assignedBatchLinks.data ?? []).map((row: any) => row.schedule_id));
+      const accessibleSchedules = schedules.filter((schedule: any) =>
+        schedule.visibility_rule === "all_active_students" || accessibleAssignedSchedules.has(schedule.id),
+      );
+
+      if (accessibleSchedules.length === 0) {
+        return { status: 403, payload: { error: "Access denied. Student is not assigned to this exam." } };
+      }
+
+      const now = Date.now();
+      const isReleased = accessibleSchedules.some((schedule: any) => {
+        const endTime = new Date(schedule.end_at).getTime();
+        const releaseTime = new Date(schedule.solutions_release_time ?? exam.solutions_release_time ?? schedule.end_at).getTime();
+        return now >= endTime && now >= releaseTime;
+      });
+
       if (!isReleased) {
-        // Locked responses return NO question payload.
         return { status: 200, payload: { releaseStatus: "LOCKED" } };
       }
     }

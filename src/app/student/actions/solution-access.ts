@@ -6,7 +6,6 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-import { runGeminiWorker } from '@/lib/background-jobs/gemini-worker';
 
 export async function verifyAndFetchSolution(
   instituteId: string,
@@ -20,29 +19,23 @@ export async function verifyAndFetchSolution(
     return { error: "400: Missing required parameters" };
   }
 
-  // Phase 3.5 Test E: Attempted exam verification
-  // Removed hasAttempted check per user request (students who didn't attempt can view solutions after release time)
-
-  // Phase 3.5 Test D & Tenant Isolation: Verify student belongs to institute
   const { data: student } = await supabase
     .from("students")
-    .select("id")
+    .select("id, batch_id, is_active")
     .eq("institute_id", instituteId)
     .eq("roll_number", studentRoll)
     .maybeSingle();
 
-  if (!student) {
+  if (!student || !student.is_active) {
     return { error: "403: Student not found in tenant or tenant mismatch" };
   }
 
-  // Phase 3.5 Test A & B: Release time enforcement
-  const query = supabase
+  const { data: exam, error } = await supabase
     .from("exams")
     .select("id, solutions_release_time")
     .eq("institute_id", instituteId)
-    .eq("id", testId);
-  
-  const { data: exam, error } = await query.maybeSingle();
+    .eq("id", testId)
+    .maybeSingle();
 
   if (error) {
     console.error("Exam lookup error:", error);
@@ -52,17 +45,66 @@ export async function verifyAndFetchSolution(
     return { error: "403: Exam not found in tenant" };
   }
 
-  // Strict Release time enforcement
-  if (!exam.solutions_release_time) {
-    return { error: "403: Solutions release time is not configured for this exam." };
+  const { data: schedules, error: scheduleError } = await supabase
+    .from("exam_schedules")
+    .select("id, end_at, solutions_release_time, visibility_rule")
+    .eq("institute_id", instituteId)
+    .eq("exam_id", exam.id)
+    .eq("is_active", true);
+
+  if (scheduleError) {
+    console.error("Solution schedule lookup error:", scheduleError);
+    return { error: "403: Exam schedule not available" };
   }
 
-  const releaseTime = new Date(exam.solutions_release_time).getTime();
+  if (!schedules || schedules.length === 0) {
+    return { error: "403: Exam schedule not available" };
+  }
+
+  const assignedScheduleIds = schedules
+    .filter((schedule: any) => schedule.visibility_rule === "assigned_batches")
+    .map((schedule: any) => schedule.id);
+  const assignedBatchLinks = assignedScheduleIds.length > 0 && student.batch_id
+    ? await supabase
+        .from("exam_schedule_batches")
+        .select("schedule_id")
+        .in("schedule_id", assignedScheduleIds)
+        .eq("batch_id", student.batch_id)
+        .eq("institute_id", instituteId)
+    : { data: [], error: null };
+
+  if (assignedBatchLinks.error) {
+    console.error("Solution schedule batch lookup error:", assignedBatchLinks.error);
+    return { error: "403: Exam schedule not available" };
+  }
+
+  const accessibleAssignedSchedules = new Set((assignedBatchLinks.data ?? []).map((row: any) => row.schedule_id));
+  const accessibleSchedules = schedules.filter((schedule: any) =>
+    schedule.visibility_rule === "all_active_students" || accessibleAssignedSchedules.has(schedule.id),
+  );
+
+  if (accessibleSchedules.length === 0) {
+    return { error: "403: Student is not assigned to this exam" };
+  }
+
   const now = Date.now();
-  if (now < releaseTime) {
-    return { error: `403: Solutions unavailable. Will be released at ${new Date(releaseTime).toLocaleString()}` };
-  }
+  const releasedSchedule = accessibleSchedules.find((schedule: any) => {
+    const endTime = new Date(schedule.end_at).getTime();
+    const releaseTime = new Date(schedule.solutions_release_time ?? exam.solutions_release_time ?? schedule.end_at).getTime();
+    return now >= endTime && now >= releaseTime;
+  });
 
+  if (!releasedSchedule) {
+    const nextRelease = Math.min(
+      ...accessibleSchedules.map((schedule: any) =>
+        Math.max(
+          new Date(schedule.end_at).getTime(),
+          new Date(schedule.solutions_release_time ?? exam.solutions_release_time ?? schedule.end_at).getTime(),
+        ),
+      ),
+    );
+    return { error: `403: Solutions unavailable. Will be released at ${new Date(nextRelease).toLocaleString()}` };
+  }
   // 1. Get all questions for this exam
   const { data: questions } = await supabase.from("exam_questions").select("id").eq("exam_id", exam.id).order('sort_order', { ascending: true });
   const total = questions?.length || 0;
