@@ -137,7 +137,7 @@ export async function fetchStudentAttemptedExams() {
 
   const { data: results, error } = await supabase
     .from("cbt_results")
-    .select("*, cbt_attempts!inner(student_id, exams!inner(id, title, exam_type))")
+    .select("*, cbt_attempts!inner(id, test_id, student_id)")
     .eq("cbt_attempts.student_id", studentId)
     .order("generated_at", { ascending: false });
 
@@ -148,9 +148,26 @@ export async function fetchStudentAttemptedExams() {
   
   if (!results || results.length === 0) return [];
 
-  const merged = results.map(r => ({
+  const examIds = [...new Set(results.map((r: any) => r.cbt_attempts?.test_id).filter(Boolean))];
+  const { data: exams, error: examsError } = examIds.length > 0
+    ? await supabase.from("exams").select("id, title, exam_type").in("id", examIds)
+    : { data: [], error: null };
+
+  if (examsError) {
+    console.error("fetchStudentAttemptedExams exams error:", examsError);
+    throw new Error(`Failed to load attempted exams: ${examsError.message}`);
+  }
+
+  const examsById = new Map((exams ?? []).map((exam: any) => [exam.id, exam]));
+  const fallbackExam = { title: "Unknown", exam_type: "UNKNOWN" };
+
+  const merged = results.map((r: any) => ({
     ...r,
-    exams: r.cbt_attempts.exams || { title: "Unknown", exam_type: "UNKNOWN" }
+    exams: examsById.get(r.cbt_attempts?.test_id) || fallbackExam,
+    cbt_attempts: {
+      ...r.cbt_attempts,
+      exams: examsById.get(r.cbt_attempts?.test_id) || fallbackExam,
+    },
   }));
 
   return merged;

@@ -94,6 +94,7 @@ function LazySolutionCard({
 
   const meta = solution?.ai_metadata;
   const isV2 = !!meta?.steps;
+  const hasStructuredSolution = Boolean(meta?.steps || meta?.essential_steps || meta?.approach || meta?.quick_approach);
   const qNumMatch = questionText.match(/^Q(\d+)\./);
   const qNum = qNumMatch ? qNumMatch[1] : "";
   const cleanQText = qNumMatch ? questionText.substring(questionText.indexOf('.') + 1).trim() : questionText;
@@ -168,6 +169,16 @@ function LazySolutionCard({
         {solution ? (
           <div className="border-t-4 border-slate-100 p-6 md:p-8 space-y-10 bg-white">
             
+            {solution.content_markdown && !hasStructuredSolution && (
+              <div className="solution-section">
+                <h4 className="text-[15px] font-bold text-slate-900 uppercase tracking-wider mb-4 flex items-center gap-2">Step-by-Step Solution</h4>
+                <div className="prose prose-slate max-w-none text-slate-700 leading-relaxed">
+                  <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+                    {solution.content_markdown}
+                  </ReactMarkdown>
+                </div>
+              </div>
+            )}
             {/* Concept */}
             {(meta?.concept || meta?.primary_concept) && (
               <div className="solution-section">
