@@ -1,6 +1,5 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   allowedDevOrigins: ["127.0.0.1"],
   typedRoutes: false,
   experimental: {
