@@ -1,7 +1,73 @@
-import { createServiceRoleClient } from "@/lib/institute/get-institute-api-key";
+import { createServiceRoleClient, getInstituteGeminiKey } from "@/lib/institute/get-institute-api-key";
 import { LeasedJob, markJobComplete, markJobFailed } from "./queue";
 import { GeminiProvider } from "../ai/providers/gemini-provider";
 import type { SolutionProviderResult } from "../ai/providers/provider";
+import { postProcessSolution } from "./post-processing";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+// ─── Combined Word Budgets (Exam + Learn) ──────────────────────────────────
+const WORD_LIMITS: Record<string, number> = {
+  Easy: 260,   // Exam ≤50 + Learn ≤180 + headroom
+  Medium: 420, // Exam ≤80 + Learn ≤300 + headroom
+  Hard: 580,   // Exam ≤120 + Learn ≤420 + headroom
+};
+
+// ─── Compression Prompt ─────────────────────────────────────────────────────
+const COMPRESSION_PROMPT = `You are a solution editor. Your job is to compress the following JSON solution.
+
+Rules:
+1. Remove every sentence that does not increase understanding.
+2. examMode.fastSteps: Each step must be ≤2 lines. Remove narration. Keep only equations and key reasoning.
+3. learnMode: Keep the insight. Remove padding words. Never add new content.
+4. Do NOT change the answer, concepts, equations, or structure.
+5. Do NOT add new fields or remove required fields.
+6. Return the exact same JSON structure, just compressed.
+
+Input JSON:
+`;
+
+/**
+ * Run a compression pass on the generated solution using the same model.
+ * This removes padding, narration, and unnecessary sentences.
+ */
+async function compressSolution(
+  rawMeta: any,
+  instituteId: string
+): Promise<any> {
+  try {
+    const apiKey = await getInstituteGeminiKey(instituteId);
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({
+      model: "gemini-3.1-flash-lite",
+      generationConfig: {
+        responseMimeType: "application/json",
+      },
+    });
+
+    // Only send the parts that need compression
+    const toCompress = {
+      examMode: rawMeta.examMode,
+      learnMode: rawMeta.learnMode,
+      finalAnswer: rawMeta.finalAnswer,
+    };
+
+    const prompt = COMPRESSION_PROMPT + JSON.stringify(toCompress, null, 2);
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
+    const compressed = JSON.parse(text);
+
+    // Merge compressed content back, keeping all metadata intact
+    return {
+      ...rawMeta,
+      examMode: compressed.examMode || rawMeta.examMode,
+      learnMode: compressed.learnMode || rawMeta.learnMode,
+      // Don't override finalAnswer from compression — keep the original
+    };
+  } catch (err: any) {
+    console.warn("Compression pass failed, using uncompressed output:", err.message);
+    return rawMeta; // Graceful fallback — use uncompressed
+  }
+}
 
 export async function processLeasedJob(job: LeasedJob) {
   const supabase = createServiceRoleClient();
@@ -97,9 +163,9 @@ export async function processLeasedJob(job: LeasedJob) {
       questionType
     };
 
-    // 3. Check exact prompt + provider idempotency
+    // 3. Check exact prompt + provider idempotency — V3 is the canonical prompt
     const provider = new GeminiProvider();
-    let promptVersion = "solution-v1";
+    const promptVersion = "solution-v3";
     
     const { data: existingSameVersion, error: exactErr } = await supabase
       .from("question_solutions")
@@ -118,7 +184,7 @@ export async function processLeasedJob(job: LeasedJob) {
     // 4. Generate the solution via provider
     let result: SolutionProviderResult = await provider.generateSolution(providerInput, promptVersion);
 
-    // Validation Layer
+    // ─── Answer Key Validation ──────────────────────────────────────────────
     const normalize = (s: string) => s.toLowerCase().trim();
     if (!result.finalAnswer) {
       throw new Error("Validation Failed: Final Answer missing.");
@@ -126,57 +192,109 @@ export async function processLeasedJob(job: LeasedJob) {
     let detectedStatus = "pending";
 
     if (correctAnswer && normalize(result.finalAnswer) !== normalize(correctAnswer)) {
-      // Check if correctAnswer is of form "A: A" and result is "A"
       const parts = correctAnswer.split(":");
       const firstPart = parts[0].trim();
       const lastPart = parts.length > 1 ? parts.slice(1).join(":").trim() : firstPart;
 
       if (normalize(result.finalAnswer) !== normalize(firstPart) && normalize(result.finalAnswer) !== normalize(lastPart)) {
-        detectedStatus = "DISPUTED";
+        detectedStatus = "pending";
         console.log(`\n============================`);
         console.log(`WRONG KEY DETECTION TRIGGERED`);
         console.log(`Question Number: ${eqData?.question_number || "Unknown"}`);
         console.log(`Teacher Key: ${correctAnswer}`);
         console.log(`Model Answer: ${result.finalAnswer}`);
-        console.log(`Confidence: Unknown (Using existing schema)`);
-        console.log(`Reasoning: Model final answer mismatched teacher key.`);
-        console.log(`Detected Status: DISPUTED`);
+        console.log(`Detected Status: DISPUTED (saved as pending)`);
         console.log(`============================\n`);
 
         await supabase.from("solution_generation_events").insert([
           { queue_id: job.id, institute_id: job.institute_id, event_type: "answer_key_mismatch", metadata: { teacher_key: correctAnswer, model_answer: result.finalAnswer } }
         ]);
-        // DO NOT throw error. Let the solution be stored.
       }
     }
 
-    const meta = result.aiMetadata;
-    const validation = { passed: true, reason: null };
+    // ─── V3 Structural Validation ───────────────────────────────────────────
+    const meta = result.aiMetadata as any;
+
     if (!meta.subject) throw new Error("Validation Failed: Subject missing.");
     if (!meta.topic) throw new Error("Validation Failed: Topic missing.");
     if (!meta.difficulty) throw new Error("Validation Failed: Difficulty missing.");
-    if (!meta.question_type) throw new Error("Validation Failed: Question Type missing.");
-    if (!meta.primary_concept) throw new Error("Validation Failed: Primary Concept missing.");
-    if (!meta.essential_steps || meta.essential_steps.length === 0) {
-      throw new Error("Validation Failed: Essential Steps missing.");
+    if (!meta.primaryConcept && !meta.primary_concept) throw new Error("Validation Failed: Primary Concept missing.");
+    if (!meta.learnMode?.keyIdea && !meta.essential_steps) throw new Error("Validation Failed: Key Idea / Essential Steps missing.");
+    if (!meta.learnMode?.steps || meta.learnMode.steps.length === 0) {
+      if (!meta.essential_steps || meta.essential_steps.length === 0) {
+        throw new Error("Validation Failed: Steps missing.");
+      }
     }
 
+    // ─── Filler Detection ───────────────────────────────────────────────────
     const allText = JSON.stringify(meta);
-    if (/as an ai|here is|certainly|let me|this means|so,/i.test(allText)) {
+    if (/as an ai|certainly|let me help/i.test(allText)) {
       throw new Error("Validation Failed: Conversational filler detected.");
     }
     if (/in the image|this image shows|the provided image/i.test(allText)) {
       throw new Error("Validation Failed: Image-description filler detected.");
     }
 
+    // ─── Adaptive Word Budget ───────────────────────────────────────────────
+    const difficulty = meta.difficulty || "Medium";
+    const maxWords = WORD_LIMITS[difficulty] || WORD_LIMITS.Medium;
     const wordCount = allText.split(/\s+/).length;
-    if (wordCount > 150) {
-      throw new Error(`Validation Failed: Total output exceeds 150 words (${wordCount} words).`);
+    if (wordCount > maxWords * 1.5) {
+      // Hard fail only if way over budget (1.5x). Post-processor handles soft budget.
+      throw new Error(`Validation Failed: Total output exceeds ${maxWords * 1.5} words (${wordCount} words) for ${difficulty} difficulty.`);
     }
 
     await supabase.from("solution_generation_events").insert({ queue_id: job.id, institute_id: job.institute_id, event_type: "validation_passed" });
 
-    // 5. Store the result
+    // ─── 5. Compression Pass ────────────────────────────────────────────────
+    // Generate → Compress → Validate → Store
+    console.log(`Running compression pass for job ${job.id}...`);
+    const compressedMeta = await compressSolution(meta, job.institute_id);
+
+    // Rate limit: wait after compression call
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+    // ─── 6. Post-Processing Pipeline ────────────────────────────────────────
+    // Deduplicate → Remove filler → Semantic Check → Score quality
+    const postProcessed = postProcessSolution(compressedMeta);
+    const processedMeta = {
+      ...postProcessed.solution,
+      validation_status: "PASSED",
+    };
+
+    if (postProcessed.fillerRemoved) {
+      console.log(`Post-processing: Filler removed for job ${job.id}`);
+    }
+    if (postProcessed.examViolations.length > 0) {
+      console.log(`Post-processing: Exam violations for job ${job.id}:`, postProcessed.examViolations);
+    }
+    if (postProcessed.learnViolations.length > 0) {
+      console.log(`Post-processing: Learn violations for job ${job.id}:`, postProcessed.learnViolations);
+    }
+
+    const qualityScore = postProcessed.qualityScore;
+    console.log(`Quality Score: ${qualityScore.finalScore}/10 (clarity:${qualityScore.clarity} pedagogy:${qualityScore.pedagogy} conciseness:${qualityScore.conciseness} repetition:${qualityScore.repetition} notation:${qualityScore.notationConsistency})`);
+
+    // Auto-regeneration: if score < 8 and we haven't already retried
+    if (postProcessed.shouldRegenerate && job.attempts < 2) {
+      console.log(`Quality score ${qualityScore.finalScore} < 8. Flagging for regeneration (attempt ${job.attempts + 1}).`);
+      await supabase.from("solution_generation_events").insert({
+        queue_id: job.id,
+        institute_id: job.institute_id,
+        event_type: "quality_below_threshold",
+        metadata: {
+          qualityScore,
+          attempt: job.attempts,
+          examViolations: postProcessed.examViolations,
+          learnViolations: postProcessed.learnViolations,
+        }
+      });
+      // Mark as failed to trigger retry with exponential backoff
+      await markJobFailed(job.id, job.institute_id, `Quality score ${qualityScore.finalScore} below threshold 8`, job.attempts);
+      return;
+    }
+
+    // ─── 7. Store the result ────────────────────────────────────────────────
     const { count, error: countErr } = await supabase
       .from("question_solutions")
       .select("*", { count: "exact", head: true })
@@ -184,13 +302,21 @@ export async function processLeasedJob(job: LeasedJob) {
       
     const versionNumber = (count || 0) + 1;
 
+    // Deactivate previous versions
+    if (versionNumber > 1) {
+      await supabase
+        .from("question_solutions")
+        .update({ is_active: false })
+        .eq("question_id", job.question_id);
+    }
+
     const { error: insertErr } = await supabase
       .from("question_solutions")
       .insert({
         question_id: job.question_id,
         institute_id: job.institute_id,
         version: versionNumber,
-        is_active: versionNumber === 1, // Auto-activate the first version generated
+        is_active: true,
         content_markdown: result.markdownSolution,
         final_answer: result.finalAnswer,
         answer_confidence: result.answerConfidence,
@@ -200,7 +326,7 @@ export async function processLeasedJob(job: LeasedJob) {
         token_usage: result.tokenUsage,
         generation_status: "COMPLETED",
         review_status: detectedStatus,
-        ai_metadata: { ...result.aiMetadata, validation_status: "PASSED" },
+        ai_metadata: processedMeta,
         created_by: "system"
       });
 
@@ -208,9 +334,9 @@ export async function processLeasedJob(job: LeasedJob) {
       throw new Error(`Failed to insert solution: ${insertErr.message}`);
     }
 
-    // 6. Mark job complete
+    // 8. Mark job complete
     await markJobComplete(job.id, job.institute_id);
-    console.log(`Successfully processed job ${job.id} for question ${job.question_id}`);
+    console.log(`Successfully processed job ${job.id} for question ${job.question_id} (quality: ${qualityScore.finalScore}/10)`);
 
   } catch (error: any) {
     console.error(`Job ${job.id} failed:`, error.message);

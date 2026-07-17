@@ -23,6 +23,7 @@ export default function StudentAnalyticsPage({ params }: { params: Promise<{ exa
     nodes: any[];
     answers: any[];
     qAnalytics: any[];
+    isGenerating: boolean;
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const role = useWorkspaceAuthStore((s) => s.session?.role);
@@ -46,9 +47,9 @@ export default function StudentAnalyticsPage({ params }: { params: Promise<{ exa
   if (loading) return <div className="p-12 text-center text-muted-foreground animate-pulse">Loading Analytics...</div>;
   if (!data || !data.result) return <div className="p-12 text-center text-destructive">Error loading results. Please verify your attempt.</div>;
 
-  const { result, subjects, chapters, concepts, recommendations, cumulative, nodes, answers, qAnalytics } = data;
+  const { result, subjects, chapters, concepts, recommendations, cumulative, nodes, answers, qAnalytics, isGenerating } = data;
 
-  if (!subjects || subjects.length === 0) {
+  if (isGenerating) {
     return (
       <div className="max-w-4xl mx-auto p-12 mt-12 text-center border-2 border-dashed border-border rounded-2xl bg-muted/20">
         <Clock className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />

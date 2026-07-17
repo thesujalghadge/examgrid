@@ -9,13 +9,10 @@
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `NEXT_PUBLIC_DEFAULT_INSTITUTE_ID`
-4. Run migrations before demo/pilot:
-   - `npm run db:bootstrap`
-   - `npm run db:verify`
-5. Validate deployment config:
-   - `npm run deploy:check`
-6. Build:
-   - `npm run build`
+1. Run migrations: `npm run db:bootstrap`
+2. Run storage bootstrap: `npx tsx --env-file=.env.local scripts/supabase/bootstrap-storage.ts`
+3. Run `npm run doctor`
+4. Deploy: `npm run build` or deploy to Vercel.
 
 ## Demo Preparation
 

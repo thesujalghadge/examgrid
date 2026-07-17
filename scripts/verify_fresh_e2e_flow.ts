@@ -116,8 +116,8 @@ async function main() {
     assert(!res.error, `section created (${res.error?.message ?? "ok"})`);
 
     const questions = [
-      { id: ids.q1, exam_id: ids.exam, institute_id: ids.institute, section_id: ids.section, question_number: 1, question_type: "MCQ_SINGLE", question_text: "What is 2 + 2?", options: [{ id: "A", label: "A", text: "4" }, { id: "B", label: "B", text: "5" }], correct_option_id: "A", marks: 4, negative_marks: 1, sort_order: 1 },
-      { id: ids.q2, exam_id: ids.exam, institute_id: ids.institute, section_id: ids.section, question_number: 2, question_type: "MCQ_SINGLE", question_text: "What is 3 + 3?", options: [{ id: "A", label: "A", text: "5" }, { id: "B", label: "B", text: "6" }], correct_option_id: "B", marks: 4, negative_marks: 1, sort_order: 2 },
+      { id: ids.q1, exam_id: ids.exam, institute_id: ids.institute, section_id: ids.section, question_number: 1, question_type: "MCQ_SINGLE", question_text: "What is 2 + 2?", options: [{ id: "A", label: "A", text: "4" }, { id: "B", label: "B", text: "5" }, { id: "C", label: "C", text: "6" }, { id: "D", label: "D", text: "7" }], correct_option_id: "A", marks: 4, negative_marks: 1, sort_order: 1 },
+      { id: ids.q2, exam_id: ids.exam, institute_id: ids.institute, section_id: ids.section, question_number: 2, question_type: "MCQ_SINGLE", question_text: "What is 3 + 3?", options: [{ id: "A", label: "A", text: "5" }, { id: "B", label: "B", text: "6" }, { id: "C", label: "C", text: "7" }, { id: "D", label: "D", text: "8" }], correct_option_id: "B", marks: 4, negative_marks: 1, sort_order: 2 },
     ];
     res = await supabase.from("exam_questions").insert(questions);
     assert(!res.error, `questions extracted/persisted (${res.error?.message ?? "ok"})`);
@@ -158,7 +158,7 @@ async function main() {
       p_session_id: `fresh-session-${RUN}`,
       p_test_id: ids.exam,
       p_institute_id: ids.institute,
-      p_student_roll_number: `fresh-roll-${RUN}`,
+      p_student_id: ids.student,
       p_status: "submitted",
       p_started_at: now.toISOString(),
       p_submitted_at: new Date(now.getTime() + 60_000).toISOString(),

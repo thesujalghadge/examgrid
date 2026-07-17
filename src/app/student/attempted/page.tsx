@@ -9,8 +9,6 @@ import { useAuthStore } from "@/stores/auth-store";
 import { useWorkspaceAuthStore } from "@/stores/workspace-auth-store";
 import { createClient } from "@supabase/supabase-js";
 import { getRepositories } from "@/lib/repositories/provider";
-import { hydrateSupabaseRepositories } from "@/lib/supabase/hydrate-repositories";
-
 import { fetchStudentAttemptedExams } from "@/app/student/actions/analytics-fetch";
 
 export default function StudentAttemptedTestsPage() {
@@ -19,11 +17,6 @@ export default function StudentAttemptedTestsPage() {
   const role = useWorkspaceAuthStore((s) => s.session?.role);
   const [results, setResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [reposHydrated, setReposHydrated] = useState(false);
-
-  useEffect(() => {
-    hydrateSupabaseRepositories().then(() => setReposHydrated(true));
-  }, []);
 
   useEffect(() => {
     if (!candidate || !instituteId || role !== "student") return;
@@ -41,7 +34,7 @@ export default function StudentAttemptedTestsPage() {
     loadReports();
   }, [candidate, instituteId, role]);
 
-  if (loading || !reposHydrated) return <div className="p-12 text-center text-muted-foreground">Loading attempted tests...</div>;
+  if (loading) return <div className="p-12 text-center text-muted-foreground">Loading attempted tests...</div>;
 
   const exams = getRepositories().exams;
 

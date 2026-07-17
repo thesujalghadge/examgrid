@@ -1,0 +1,1054 @@
+{
+  "job_id": "real_exam_3",
+  "questions": [
+    {
+      "id": "Q1",
+      "q_num": 1,
+      "q_type": "MCQ",
+      "page": 1,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q1_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q1_crop.jpg",
+      "question_text": "Let circle  be the image of \n in the line \n and  be the point on \nsuch that \n is parallel to -axis and  lies on the right hand side of the centre  of . If \n, with \n,\nlies on  such that the length of the are \n is \n of the perimeter of , then \n is equal to",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "C"
+      ]
+    },
+    {
+      "id": "Q2",
+      "q_num": 2,
+      "q_type": "MCQ",
+      "page": 1,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q2_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q2_crop.jpg",
+      "question_text": "Let in a \n, the length of the side \n be 6 , the vertex  be \n and the vertices \n lie on the line\n. Then the area (in sq. units) of \n is:",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "\u25b3ABC"
+      ]
+    },
+    {
+      "id": "Q3",
+      "q_num": 3,
+      "q_type": "MCQ",
+      "page": 1,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q3_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q3_crop.jpg",
+      "question_text": "Let the product of the focal distances of the point \n on the ellipse \n, be \n. Then the\nabsolute difference of the eccentricities of two such ellipses is",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "(\u221a3, 1"
+      ]
+    },
+    {
+      "id": "Q4",
+      "q_num": 4,
+      "q_type": "MCQ",
+      "page": 1,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q4_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q4_crop.jpg",
+      "question_text": "If the system of equations \n has infinitely many solutions, then \n is equal to",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "2x \u2212y + z = 4"
+      ]
+    },
+    {
+      "id": "Q5",
+      "q_num": 5,
+      "q_type": "MCQ",
+      "page": 1,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q5_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q5_crop.jpg",
+      "question_text": "For some \n, let the coefficients of the 5 th, 6 th and 7 th terms in the binomial expansion of \n be\nin A.P. Then the largest coefficient in the expansion of \n is:",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "n \u226010"
+      ]
+    },
+    {
+      "id": "Q6",
+      "q_num": 6,
+      "q_type": "MCQ",
+      "page": 1,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q6_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q6_crop.jpg",
+      "question_text": "The product of all the rational roots of the equation \n, is equal to",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "(x2 \u22129x + 11)2 \u2212(x \u22124)(x \u22125) = 3"
+      ]
+    },
+    {
+      "id": "Q7",
+      "q_num": 7,
+      "q_type": "MCQ",
+      "page": 1,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q7_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q7_crop.jpg",
+      "question_text": "Let the line passing through the points \n and parallel to the line \n intersect the line\n at the point . Then the distance of  from the point \n is",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "(\u22121, 2, 1)"
+      ]
+    },
+    {
+      "id": "Q8",
+      "q_num": 8,
+      "q_type": "MCQ",
+      "page": 1,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q8_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q8_crop.jpg",
+      "question_text": "Let the lines \n, and \n be concurrent. If the image of the\npoint \n in the line \n is \n, then \n is equal to",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "3x \u22124y \u2212\u03b1 = 0, 8x \u221211y \u221233 = 0"
+      ]
+    },
+    {
+      "id": "Q9",
+      "q_num": 9,
+      "q_type": "MCQ",
+      "page": 1,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q9_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q9_crop.jpg",
+      "question_text": "If  and  are the roots of the equation \n, where \n, then\n is equal to\n\u00a0\n\u03b1\n\u03b2\n2z2 \u22123z \u22122i = 0\ni = \u221a\u22121\n16 \u22c5Re ( \u03b119+\u03b219+\u03b111+\u03b211\n\u03b115+\u03b215\n) \u22c5lm ( \u03b119+\u03b219+\u03b111+\u03b211\n\u03b115+\u03b215\n)",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "2025 (24 Jan Shift 1)"
+      ]
+    },
+    {
+      "id": "Q10",
+      "q_num": 10,
+      "q_type": "MCQ",
+      "page": 2,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q10_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q10_crop.jpg",
+      "question_text": "For a statistical data \n of 10 values, a student obtained the mean as 5.5 and \n. He\nlater found that he had noted two values in the data incorrectly as 4 and 5 , instead of the correct values 6 and 8\n, respectively. The variance of the corrected data is",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "x1, x2, \u2026 , x10"
+      ]
+    },
+    {
+      "id": "Q11",
+      "q_num": 11,
+      "q_type": "MCQ",
+      "page": 2,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q11_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q11_crop.jpg",
+      "question_text": "The area of the region \n is equal to",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "{(x, y) : x2 + 4x + 2 \u2264y \u2264|x + 2|}"
+      ]
+    },
+    {
+      "id": "Q12",
+      "q_num": 12,
+      "q_type": "MCQ",
+      "page": 2,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q12_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q12_crop.jpg",
+      "question_text": "Let \n upto  terms. If the sum of the first six terms of an A.P. with first term -p\nand common difference p is \n, then the absolute difference betwen \n and \n terms of the A.P.\nis",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "Sn = 1"
+      ]
+    },
+    {
+      "id": "Q13",
+      "q_num": 13,
+      "q_type": "MCQ",
+      "page": 2,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q13_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q13_crop.jpg",
+      "question_text": "Let \n be a function such that \n. If the\n, then \n is equal to",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "f : R \u2212{0} \u2192R"
+      ]
+    },
+    {
+      "id": "Q14",
+      "q_num": 14,
+      "q_type": "MCQ",
+      "page": 2,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q14_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q14_crop.jpg",
+      "question_text": ", then \n is",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "IfI(m, n) = \u222b1"
+      ]
+    },
+    {
+      "id": "Q15",
+      "q_num": 15,
+      "q_type": "MCQ",
+      "page": 2,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q15_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q15_crop.jpg",
+      "question_text": "and  alternately throw a pair of dice.  wins if he throws a sum of 5 before  throws a sum of 8 , and \nwins if he throws a sum of 8 before  throws a sum of 5 . The probability, that  wins if A makes the first\nthrow, is",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "A"
+      ]
+    },
+    {
+      "id": "Q16",
+      "q_num": 16,
+      "q_type": "MCQ",
+      "page": 2,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q16_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q16_crop.jpg",
+      "question_text": "Let \n. Then the value of \n is equal to",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "f(x) ="
+      ]
+    },
+    {
+      "id": "Q17",
+      "q_num": 17,
+      "q_type": "MCQ",
+      "page": 2,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q17_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q17_crop.jpg",
+      "question_text": "Let \n be the solution of the differential equation \n.\nThen \n is equal to",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "y = y(x)"
+      ]
+    },
+    {
+      "id": "Q18",
+      "q_num": 18,
+      "q_type": "MCQ",
+      "page": 2,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q18_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q18_crop.jpg",
+      "question_text": "is:\n\u00a0\nlimx\u21920 cosec x (\u221a2 cos2 x + 3 cos x \u2212\u221acos2 x + sin x + 4)",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "2025 (24 Jan Shift 1)"
+      ]
+    },
+    {
+      "id": "Q19",
+      "q_num": 19,
+      "q_type": "MCQ",
+      "page": 3,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q19_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q19_crop.jpg",
+      "question_text": "Consider the region \n. The area, of the largest rectangle of sides\nparallel to the coordinate axes and inscribed in R , is:",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "R = {(x, y) : x \u2264y \u22649 \u221211"
+      ]
+    },
+    {
+      "id": "Q20",
+      "q_num": 20,
+      "q_type": "MCQ",
+      "page": 3,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q20_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q20_crop.jpg",
+      "question_text": "Let \n and  be three vectors such that  is coplanar with  and . If the vector \nis perpendicular to  and \n, then \n is equal to",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "a = ^i + 2^j + 3^k,b = 3^i + ^j \u2212^k"
+      ]
+    },
+    {
+      "id": "Q21",
+      "q_num": 21,
+      "q_type": "NAT",
+      "page": 3,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q21_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q21_crop.jpg",
+      "question_text": "Let \n be the set of first ten prime numbers. Let \n, where  is the set of all\npossible products of distinct elements of . Then the number of all ordered pairs ( \n ), \n, \n, such\nthat  divides , is ______.\nS = {p1, p2 \u2026 . , p10}\nA = S \u222aP\nP\nS\nx, y\nx \u2208S y \u2208A\nx\ny\n\u23a2\u23a5\n\u23a2\u23a5\u23a2\u23a5\u23a2\u23a5\u23a2\u23a5",
+      "options": []
+    },
+    {
+      "id": "Q22",
+      "q_num": 22,
+      "q_type": "NAT",
+      "page": 3,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q22_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q22_crop.jpg",
+      "question_text": "If for some \n and \n, then \n is_______.\n\u03b1, \u03b2; \u03b1 \u2264\u03b2, \u03b1 + \u03b2 \u22128\nsec2 (tan\u22121 \u03b1) + cosec2 (cot\u22121 \u03b2) \u221236\n\u03b12 + \u03b2\n\u23a2\u23a5\n\u23a2\u23a5\u23a2\u23a5\u23a2\u23a5\u23a2\u23a5",
+      "options": []
+    },
+    {
+      "id": "Q23",
+      "q_num": 23,
+      "q_type": "NAT",
+      "page": 3,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q23_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q23_crop.jpg",
+      "question_text": "Let  be a \n matrix such that \n for all nonzero \n matrices \n. If\n, and \n, then \nis_____.\nA\n3 \u00d7 3\nX TAX = O\n3 \u00d7 1\nX =\n\u23a1\n\u23a2\n\u23a3\nx\ny\nz\n\u23a4\n\u23a5\n\u23a6\nA\n=\n, A\n=\n\u23a1\n\u23a2\n\u23a3\n1\n1\n1\n\u23a4\n\u23a5\n\u23a6\n\u23a1\n\u23a2\n\u23a3\n1\n4\n\u22125\n\u23a4\n\u23a5\n\u23a6\n\u23a1\n\u23a2\n\u23a3\n1\n2\n1\n\u23a4\n\u23a5\n\u23a6\n\u23a1\n\u23a2\n\u23a3\n0\n4\n\u22128\n\u23a4\n\u23a5\n\u23a6\ndet(adj(2(A + 1))) \u22122\u03b13\u03b25\u03b3, \u03b1, \u03b2, \u03b3 \u2208N\n\u03b12 + \u03b22 + \u03b3 2",
+      "options": []
+    },
+    {
+      "id": "Q24",
+      "q_num": 24,
+      "q_type": "NAT",
+      "page": 3,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q24_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q24_crop.jpg",
+      "question_text": "Let  be a differentiable function such that \n. Then\n is equal to ______.\n\u23a2\u23a5\n\u23a2\u23a5\u23a2\u23a5\u23a2\u23a5\u23a2\u23a5\nf\n2(x + 2)2f(x) \u22123(x + 2)2 = 10 \u222bx\n0 (t + 2)f(t)dt, x \u22650\nf(2)",
+      "options": []
+    },
+    {
+      "id": "Q25",
+      "q_num": 25,
+      "q_type": "NAT",
+      "page": 3,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q25_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q25_crop.jpg",
+      "question_text": "The number of 3 -digit numbers, that are divisible by 2 and 3 , but not divisible by 4 and 9 , is______.\n\u23a2\u23a5\n\u23a2\u23a5\u23a2\u23a5\u23a2\u23a5\u23a2\u23a5",
+      "options": []
+    },
+    {
+      "id": "Q26",
+      "q_num": 26,
+      "q_type": "MCQ",
+      "page": 3,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q26_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q26_crop.jpg",
+      "question_text": "During the transition of electron from state A to state C of a Bohr atom, the wavelength of emitted radiation is\n and it becomes \n when the electron jumps from state B to state C. Then the wavelength of the\nradiation emitted during the transition of electrons from state A to state B is",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4) \u23a2\u23a5",
+        "\u23a2\u23a5"
+      ]
+    },
+    {
+      "id": "Q27",
+      "q_num": 27,
+      "q_type": "MCQ",
+      "page": 3,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q27_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q27_crop.jpg",
+      "question_text": "Consider the following statements: A. The junction area of solar cell is made very narrow compared to a photo\ndiode. B. Solar cells are not connected with any external bias. C. LED is made of lightly doped p-n junction.\nD. Increase of forward current results in continuous increase of LED light intensity. E. LEDs have to be\nconnected in forward bias for emission of light. Choose the correct answer from the options given below:",
+      "options": [
+        "B, E Only",
+        "B, D, E Only",
+        "A, C Only",
+        "A, C, E Only \u23a2\u23a5"
+      ]
+    },
+    {
+      "id": "Q28",
+      "q_num": 28,
+      "q_type": "MCQ",
+      "page": 3,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q28_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q28_crop.jpg",
+      "question_text": "An alternating current is given by \n. The r.m.s current will be\n\u00a0\n\u23a2\u23a5\n\u23a2\u23a5\u23a2\u23a5\u23a2\u23a5\u23a2\u23a5\nI = IA sin \u03c9t + IB cos \u03c9t",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "2025 (24 Jan Shift 1)"
+      ]
+    },
+    {
+      "id": "Q29",
+      "q_num": 29,
+      "q_type": "MCQ",
+      "page": 4,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q29_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q29_crop.jpg",
+      "question_text": "A car of mass ' \n ' moves on a banked road having radius '  ' and banking angle . To avoid slipping from\nbanked road, the maximum permissible speed of the car is \n. The coefficient of friction  between the wheels\nof the car and the banked road is",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "m"
+      ]
+    },
+    {
+      "id": "Q30",
+      "q_num": 30,
+      "q_type": "MCQ",
+      "page": 4,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q30_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q30_crop.jpg",
+      "question_text": "A satellite is launched into a circular orbit of radius ' R ' around the earth. A second satellite is launched into an\norbit of radius 1.03 R . The time period of revolution of the second satellite is larger than the first one\napproximately by",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "9%"
+      ]
+    },
+    {
+      "id": "Q31",
+      "q_num": 31,
+      "q_type": "MCQ",
+      "page": 4,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q31_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q31_crop.jpg",
+      "question_text": "An ideal gas goes from an initial state to final state. During the process, the pressure of gas increases linearly\nwith temperature. A. The work done by gas during the process is zero. B. The heat added to gas is different\nfrom change in its internal energy. C. The volume of the gas is increased. D. The internal energy of the gas is\nincreased. E. The process is isochoric (constant volume process) Choose the correct answer from the options\ngiven below:",
+      "options": [
+        "E Only",
+        "A, B, C, D Only",
+        "A, D, E Only",
+        "A, C Only"
+      ]
+    },
+    {
+      "id": "Q32",
+      "q_num": 32,
+      "q_type": "MCQ",
+      "page": 4,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q32_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q32_crop.jpg",
+      "question_text": "An electron of mass ' m ' with an initial velocity \n enters an electric field \n. If the\ninitial de Broglie wavelength is \n, the value after time t would be",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "\u2192v = v0^i (v0 > 0)"
+      ]
+    },
+    {
+      "id": "Q33",
+      "q_num": 33,
+      "q_type": "MCQ",
+      "page": 4,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q33_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q33_crop.jpg",
+      "question_text": "What is the relative decrease in focal length of a lens for an increase in optical power by 0.1 D from 2.5D ?\n['D' stands for dioptre]",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "0.01"
+      ]
+    },
+    {
+      "id": "Q34",
+      "q_num": 34,
+      "q_type": "MCQ",
+      "page": 4,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q34_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q34_crop.jpg",
+      "question_text": "A force \n acts on an object in the x -direction. The work done by the force is 5 J when the object is\ndisplaced by 1 m . If the constant \n then  will be",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "F = \u03b1 + \u03b2x2"
+      ]
+    },
+    {
+      "id": "Q35",
+      "q_num": 35,
+      "q_type": "MCQ",
+      "page": 4,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q35_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q35_crop.jpg",
+      "question_text": "A thin plano convex lens made of glass of refractive index 1.5 is immersed in a liquid of refractive index 1.2.\nWhen the plane side of the lens is silver coated for complete reflection, the lens immersed in the liquid\n\u00a0\n\n\u00a0\nbehaves like a concave mirror of focal length 0.2 m . The radius of curvature of the curved surface of the lens\nis",
+      "options": [
+        "0.20 m",
+        "0.25 m",
+        "0.15 m",
+        "0.10 m"
+      ]
+    },
+    {
+      "id": "Q36",
+      "q_num": 36,
+      "q_type": "MCQ",
+      "page": 5,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q36_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q36_crop.jpg",
+      "question_text": "A particle is executing simple harmonic motion with time period 2 s and amplitude 1 cm . If D and d are the\ntotal distance and displacement covered by the particle in 12.5 s , then \n is",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "D"
+      ]
+    },
+    {
+      "id": "Q37",
+      "q_num": 37,
+      "q_type": "MCQ",
+      "page": 5,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q37_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q37_crop.jpg",
+      "question_text": "The amount of work done to break a big water drop of radius '  ' into 27 small drops of equal radius is 10 J .\nThe work done required to break the same big drop into 64 small drops of equal radius will be",
+      "options": [
+        "15 J",
+        "5 J",
+        "20 J",
+        "10 J"
+      ]
+    },
+    {
+      "id": "Q38",
+      "q_num": 38,
+      "q_type": "MCQ",
+      "page": 5,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q38_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q38_crop.jpg",
+      "question_text": "A plano-convex lens having radius of curvature of first surface 2 cm exhibits focal length of \n in air. Another\nplano-convex lens with first surface radius of curvature 3 cm has focal length of  when it is immersed in a\nliquid of refractive index 1.2 . If both the lenses are made of same glass of refractive index 1.5 , the ratio of \nand \n will be",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "f1"
+      ]
+    },
+    {
+      "id": "Q39",
+      "q_num": 39,
+      "q_type": "MCQ",
+      "page": 5,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q39_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q39_crop.jpg",
+      "question_text": "An air bubble of radius 0.1 cm lies at a depth of 20 cm below the free surface of a liquid of density\n. If the pressure inside the bubble is \n greater than the atmospheric pressure, then the\nsurface tension of the liquid in SI unit is (use \n )",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "1000\u00a0kg/m3"
+      ]
+    },
+    {
+      "id": "Q40",
+      "q_num": 40,
+      "q_type": "MCQ",
+      "page": 5,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q40_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q40_crop.jpg",
+      "question_text": "A uniform solid cylinder of mass ' \n ' and radius '  ' rolls along an inclined rough plane of inclination \n. If\nit starts to roll from rest from the top of the plane then the linear acceleration of the cylinder's axis will be",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "m"
+      ]
+    },
+    {
+      "id": "Q41",
+      "q_num": 41,
+      "q_type": "MCQ",
+      "page": 5,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q41_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q41_crop.jpg",
+      "question_text": "The Young's double slit interference experiment is performed using light consisting of 480 nm and 600 nm\nwavelengths to form interference patterns. The least number of the bright fringes of 480 nm light that are\nrequired for the first coincidence with the bright fringes formed by 600 nm light is",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "5"
+      ]
+    },
+    {
+      "id": "Q42",
+      "q_num": 42,
+      "q_type": "MCQ",
+      "page": 5,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q42_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q42_crop.jpg",
+      "question_text": "A parallel plate capacitor was made with two rectangular plates, each with a length of \n and breath of\n. The distance between the plates is \n. Out of the following, which are the ways to increase the\ncapacitance by a factor of 10 ? A. \n B. \n C.\n D. \n E. \nChoose the correct answer from the options given below:\n\u00a0\nl = 3\u00a0cm\nb = 1\u00a0cm\n3\u03bc\u00a0m\nl = 30\u00a0cm, \u00a0b = 1\u00a0cm, \u00a0d = 1\u03bc\u00a0m\nl = 3\u00a0cm, \u00a0b = 1\u00a0cm, \u00a0d = 30\u03bc\u00a0m\nl = 6\u00a0cm, \u00a0b = 5\u00a0cm, \u00a0d = 3\u03bc\u00a0m\nl = 1\u00a0cm, \u00a0b = 1\u00a0cm, \u00a0d = 10\u03bc\u00a0m\nl = 5\u00a0cm, \u00a0b = 2\u00a0cm, \u00a0d = 1\u03bc\u00a0m",
+      "options": [
+        "A only",
+        "C only",
+        "B and D only",
+        "and  only"
+      ]
+    },
+    {
+      "id": "Q43",
+      "q_num": 43,
+      "q_type": "MCQ",
+      "page": 6,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q43_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q43_crop.jpg",
+      "question_text": "Consider a parallel plate capacitor of area A (of each plate) and separation 'd' between the plates. If  is the\nelectric field and \n is the permittivity of free space between the plates, then potential energy stored in the\ncapacitor is",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "E"
+      ]
+    },
+    {
+      "id": "Q44",
+      "q_num": 44,
+      "q_type": "MCQ",
+      "page": 6,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q44_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q44_crop.jpg",
+      "question_text": "An object of mass ' m ' is projected from origin in a vertical \n plane at an angle \n with the x axis with an\ninitial velocity \n. The magnitude and direction of the angular momentum of the object with respect to origin,\nwhen it reaches at the maximum height, will be [ g is acceleration due to gravity]",
+      "options": [
+        "along negative -axis",
+        "along positive -axis",
+        "along negative -axis",
+        "along positive -axis"
+      ]
+    },
+    {
+      "id": "Q45",
+      "q_num": 45,
+      "q_type": "MCQ",
+      "page": 6,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q45_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q45_crop.jpg",
+      "question_text": "For an experimental expression \n, where all the digits are significant. Then to report the value of \nwe should write",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "y = 32.3\u00d71125"
+      ]
+    },
+    {
+      "id": "Q46",
+      "q_num": 46,
+      "q_type": "NAT",
+      "page": 6,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q46_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q46_crop.jpg",
+      "question_text": "A current of 5A exists in a square loop of side \n. Then the magnitude of the magnetic field  at the centre\nof the square loop will be \n. where, value of p is _____ .  Take \n.\n1\n\u221a2 \u00a0m\nB\np \u00d7 10\u22126\u00a0T\n[\n\u03bc0 = 4\u03c0 \u00d7 10\u22127TmA\u22121]",
+      "options": []
+    },
+    {
+      "id": "Q47",
+      "q_num": 47,
+      "q_type": "NAT",
+      "page": 6,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q47_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q47_crop.jpg",
+      "question_text": "A square loop of sides \n is held normally in front of a point charge \n. The flux of the electric\nfield through the shaded region is \n, where the value of p is _____.\na = 1\u00a0m\nq = 1C\n5\np \u00d7\n1\n\u03b50\nNm2\nC",
+      "options": []
+    },
+    {
+      "id": "Q48",
+      "q_num": 48,
+      "q_type": "NAT",
+      "page": 6,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q48_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q48_crop.jpg",
+      "question_text": "The temperature of 1 mole of an ideal monoatomic gas is increased by \n at constant pressure. The total\nheat added and change in internal energy are \n and \n, respectively. If \n then the value of  is _____\n50\u2218C\nE1\nE2\nE1\nE2 = x\n9\nx",
+      "options": []
+    },
+    {
+      "id": "Q49",
+      "q_num": 49,
+      "q_type": "NAT",
+      "page": 6,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q49_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q49_crop.jpg",
+      "question_text": "The least count of a screw guage is 0.01 mm . If the pitch is increased by \n and number of divisions on the\ncircular scale is reduced by \n, the new least count will be _____ \n75%\n50%\n\u00d710\u22123\u00a0mm",
+      "options": []
+    },
+    {
+      "id": "Q50",
+      "q_num": 50,
+      "q_type": "NAT",
+      "page": 6,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q50_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q50_crop.jpg",
+      "question_text": "A wire of resistance \n is bent to form an equilateral triangle. Then the equivalent resistance across any two\nvertices will be _____ ohm.\n9\u03a9",
+      "options": []
+    },
+    {
+      "id": "Q51",
+      "q_num": 51,
+      "q_type": "MCQ",
+      "page": 6,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q51_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q51_crop.jpg",
+      "question_text": "The carbohydrate \"Ribose\" present in DNA, is A. A pentose sugar B. present in pyranose from C. in \"D\"\nconfiguration D. a reducing sugar, when free E. in -anomeric form Choose the correct answer from the\n\u00a0\n\u221d\n\n\u00a0\noptions given below:",
+      "options": [
+        "A, D and E Only",
+        "A, C and D Only",
+        "A, B and E Only",
+        "B, D and E Only"
+      ]
+    },
+    {
+      "id": "Q52",
+      "q_num": 52,
+      "q_type": "MCQ",
+      "page": 7,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q52_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q52_crop.jpg",
+      "question_text": "Given below are two statements: Statement I: The conversion proceeds well in the less polar medium.\n Statement II: The\nconversion proceeds well in the more polar medium.\nIn the light of the above statements, choose the correct answer from the options given below",
+      "options": [
+        "Both Statement I and Statement II are true",
+        "Statement I is true but Statement II is false",
+        "Statement I is false but Statement II is true",
+        "Both Statement I and Statement II are false"
+      ]
+    },
+    {
+      "id": "Q53",
+      "q_num": 53,
+      "q_type": "MCQ",
+      "page": 7,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q53_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q53_crop.jpg",
+      "question_text": "The product",
+      "options": [
+        "formed in the following reaction sequence is",
+        "(3)",
+        "(4)"
+      ]
+    },
+    {
+      "id": "Q54",
+      "q_num": 54,
+      "q_type": "MCQ",
+      "page": 7,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q54_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q54_crop.jpg",
+      "question_text": "Aman has been asked to synthesise the molecule\n(x).He thought of preparing the molecule using an aldol condensation reaction. He found a few cyclic alkenes\nin his laboratory. He thought of performing ozonolysis reaction on alkene to produce a dicarbonyl compound\nfollowed by aldol reaction to prepare \" x \". Predict the suitable alkene that can lead to the formation of \"  \".\n\u00a0\nx",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "2025 (24 Jan Shift 1)"
+      ]
+    },
+    {
+      "id": "Q55",
+      "q_num": 55,
+      "q_type": "MCQ",
+      "page": 8,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q55_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q55_crop.jpg",
+      "question_text": "Which of the following arrangements with respect to their reactivity in nucleophilic addition reaction is\ncorrect?",
+      "options": [
+        "acetophenone  benzaldehyde  p-tolualdehyde",
+        "benzaldehyde  acetophenone  p-",
+        "p- nitrobenzaldehyde  benzaldehyde  p-",
+        "acetophenone  p-tolualdehyde  benzaldehyde"
+      ]
+    },
+    {
+      "id": "Q56",
+      "q_num": 56,
+      "q_type": "MCQ",
+      "page": 8,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q56_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q56_crop.jpg",
+      "question_text": "Let us consider an endothermic reaction which is non-spontaneous at the freezing point of water. However, the\nreaction is spontaneous at boiling point of water. Choose the correct option.",
+      "options": [
+        "Both",
+        "is (-ve) but",
+        "is",
+        "Both"
+      ]
+    },
+    {
+      "id": "Q57",
+      "q_num": 57,
+      "q_type": "MCQ",
+      "page": 8,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q57_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q57_crop.jpg",
+      "question_text": "Preparation of potassium permanganate from \n involves two step process in which the 1st step is a\nreaction with KOH and \n to produce",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "MnO2"
+      ]
+    },
+    {
+      "id": "Q58",
+      "q_num": 58,
+      "q_type": "MCQ",
+      "page": 8,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q58_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q58_crop.jpg",
+      "question_text": "For a reaction, \n in a constant volume container, no products were present\ninitially. The final pressure of the system when \n of reaction gets completed is",
+      "options": [
+        "5 times of initial pressure",
+        "times of initial pressure",
+        "times of initial pressure",
+        "times of initial pressure"
+      ]
+    },
+    {
+      "id": "Q59",
+      "q_num": 59,
+      "q_type": "MCQ",
+      "page": 8,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q59_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q59_crop.jpg",
+      "question_text": "One mole of the octahedral complex compound \n gives 3 moles of ions on dissolution in water.\nOne mole of the same complex reacts with excess of \n solution to yield two moles of \n. The\nstructure of the complex is:",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "Co(NH3)5Cl3"
+      ]
+    },
+    {
+      "id": "Q60",
+      "q_num": 60,
+      "q_type": "MCQ",
+      "page": 8,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q60_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q60_crop.jpg",
+      "question_text": "Which of the following ions is the strongest oxidizing agent? (Atomic Number of\n )\n\u00a0\nCe = 58, Eu = 63, \u00a0Tb = 65, Lu = 71",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "2025 (24 Jan Shift 1)"
+      ]
+    },
+    {
+      "id": "Q61",
+      "q_num": 61,
+      "q_type": "MCQ",
+      "page": 9,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q61_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q61_crop.jpg",
+      "question_text": "for \n is \n. What is the molar solubility of this salt in water?",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "Ksp"
+      ]
+    },
+    {
+      "id": "Q62",
+      "q_num": 62,
+      "q_type": "MCQ",
+      "page": 9,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q62_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q62_crop.jpg",
+      "question_text": "Which of the following statements are NOT true about the periodic table? A. The properties of elements are\nfunction of atomic weights. B. The properties of elements are function of atomic numbers. C. Elements having\nsimilar outer electronic configurations are arranged in same period. D. An element's location reflects the\nquantum numbers of the last filled orbital. E. The number of elements in a period is same as the number of\natomic orbitals available in energy level that is being filled. Choose the correct answer from the options given\nbelow:",
+      "options": [
+        "and E Only",
+        "A and E Only",
+        "and E Only",
+        "D and E Only"
+      ]
+    },
+    {
+      "id": "Q63",
+      "q_num": 63,
+      "q_type": "MCQ",
+      "page": 9,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q63_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q63_crop.jpg",
+      "question_text": "Given below are two statements I and II. Statement I: Dumas method is used for estimation of \"Nitrogen\" in an\norganic compound. Statement II: Dumas method involves the formation of ammonium sulphate by heating the\norganic compound with conc \n. In the light of the above statements, choose the correct answer from the\noptions given below",
+      "options": [
+        "Statement I is true but Statement II is false",
+        "Both Statement I and Statement II are false",
+        "Statement I is false but Statement II is true",
+        "Both Statement I and Statement II are true"
+      ]
+    },
+    {
+      "id": "Q64",
+      "q_num": 64,
+      "q_type": "MCQ",
+      "page": 9,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q64_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q64_crop.jpg",
+      "question_text": "Which of the following statement is true with respect to \n and \n ? A. The central atoms of all the\nmolecules are \n hybridized. B. The \n and \n angles in the above molecules\nare \n and \n, respectively. C. The increasing order of dipole moment is \n.\nD. Both \n and \n are Lewis acids and \n is a Lewis base. E. A solution of \n in \n is basic. In this\nsolution \n and \n act as Lowry-Bronsted acid and base respectively. Choose the correct answer from the\noptions given below:",
+      "options": [
+        "A, B and C Only",
+        "A, D and E Only",
+        "C, D and E Only",
+        "A, B, C and E Only"
+      ]
+    },
+    {
+      "id": "Q65",
+      "q_num": 65,
+      "q_type": "MCQ",
+      "page": 9,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q65_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q65_crop.jpg",
+      "question_text": "Which one of the carbocations from the following is most stable?",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "2025 (24 Jan Shift 1)"
+      ]
+    },
+    {
+      "id": "Q66",
+      "q_num": 66,
+      "q_type": "MCQ",
+      "page": 10,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q66_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q66_crop.jpg",
+      "question_text": "Following are the four molecules \"P\", \"Q\", \"R\" and \"S\". Which one among the four molecules will react with\n at the fastest rate?",
+      "options": [
+        "R",
+        "P",
+        "Q",
+        "S"
+      ]
+    },
+    {
+      "id": "Q67",
+      "q_num": 67,
+      "q_type": "MCQ",
+      "page": 10,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q67_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q67_crop.jpg",
+      "question_text": "For the given cell \n The standard cell potential of the above reaction is\nGiven:",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "Fe2+"
+      ]
+    },
+    {
+      "id": "Q68",
+      "q_num": 68,
+      "q_type": "MCQ",
+      "page": 10,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q68_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q68_crop.jpg",
+      "question_text": "The large difference between the melting and boiling points of oxygen and sulphur may be explained on the\nbasis of",
+      "options": [
+        "Atomicity",
+        "Electron gain enthalpy",
+        "Electronegativity",
+        "Atomic size"
+      ]
+    },
+    {
+      "id": "Q69",
+      "q_num": 69,
+      "q_type": "MCQ",
+      "page": 10,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q69_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q69_crop.jpg",
+      "question_text": "Consider the given plots of vapour pressure (VP) vs temperature(T/K). Which amongst the following options\nis correct graphical representation showing \n, depression in the freezing point of a solvent in a solution?",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "\u0394Tf"
+      ]
+    },
+    {
+      "id": "Q70",
+      "q_num": 70,
+      "q_type": "MCQ",
+      "page": 10,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q70_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q70_crop.jpg",
+      "question_text": "Which of the following linear combination of atomic orbitals will lead to formation of molecular orbitals in\nhomonuclear diatomic molecules [internuclear axis in -direction] ? A. \n and \n B. 2 s and \n C. \n\u00a0\nz\n2pz\n2px\n2px\n3\u00a0dxy\n\n\u00a0\nand \n D. 2 s and \n E. \n and \n Choose the correct answer from the options given below:",
+      "options": [
+        "A and B Only",
+        "D Only",
+        "E Only",
+        "C and D Only"
+      ]
+    },
+    {
+      "id": "Q71",
+      "q_num": 71,
+      "q_type": "NAT",
+      "page": 11,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q71_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q71_crop.jpg",
+      "question_text": "Xg of benzoic acid on reaction with aq \n released \n that occupied 11.2 L volume at STP. X is\n_____ g.\nNaHCO3\nCO2",
+      "options": []
+    },
+    {
+      "id": "Q72",
+      "q_num": 72,
+      "q_type": "NAT",
+      "page": 11,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q72_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q72_crop.jpg",
+      "question_text": "Consider the following reaction occurring in the blast furnace: \n '  '\nkg of iron is produced when \n and \n are brought together in the furnace.\nThe value of '  ' is _____. (nearest integer) Given: molar mass of \n molar mass of\n molar mass of \nFe3O4(\u00a0s) + 4CO(g) \u21923Fe(l) + 4CO2(\u00a0g) x\n2.32 \u00d7 103\u00a0kgFe3O4\n2.8 \u00d7 102\u00a0kgCO\nx\nFe3O4 = 232\u00a0g\u00a0mol\u22121\nCO = 28\u00a0g\u00a0mol\u22121\nFe = 56\u00a0g\u00a0mol\u22121}",
+      "options": []
+    },
+    {
+      "id": "Q73",
+      "q_num": 73,
+      "q_type": "NAT",
+      "page": 11,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q73_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q73_crop.jpg",
+      "question_text": "was taken in a 1 L reaction vessel and allowed to undergo the following reaction at 500 K\n The total pressure at equilibrium was found to be 18.65 bar. Then, \n______ \n [nearest integer] Assume \n to behave ideally under these conditions. Given: \n bar\n37.8\u00a0g\u00a0N2O5\n2\u00a0N2O5(\u00a0g) \u21cc2\u00a0N2O4(\u00a0g) + O2(\u00a0g)\nKp =\n\u00d710\u22122\nN2O5\nR = 0.082\nLmol\u22121\u00a0K\u22121",
+      "options": []
+    },
+    {
+      "id": "Q74",
+      "q_num": 74,
+      "q_type": "NAT",
+      "page": 11,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q74_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q74_crop.jpg",
+      "question_text": "Among the following cations, the number of cations which will give characteristic precipitate in their\nidentification tests with \n is _____. \nK4 [Fe(CN)6]\nCu2+, Fe3+, Ba2+, Ca2+, NH+\n4 , Mg2+, Zn2+",
+      "options": []
+    },
+    {
+      "id": "Q75",
+      "q_num": 75,
+      "q_type": "NAT",
+      "page": 11,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_3\\vision_crops\\Q75_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_3/vision_crops/Q75_crop.jpg",
+      "question_text": "Standard entropies of \n and \n are 70,50 and \n respectively. The temperature in\nKelvin at which the reaction \n will be at equilibrium is_______.\n(Nearest integer)\n\u00a0\nX2, Y2\nXY5\n110\u00a0J\u00a0K\u22121\u00a0mol\u22121\n1\n2 X2 + 5\n2 Y2 \u21ccXY5\u0394H\u0398 = \u221235\u00a0kJ\u00a0mol\u22121",
+      "options": []
+    }
+  ]
+}

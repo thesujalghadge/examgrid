@@ -1,0 +1,1057 @@
+{
+  "job_id": "real_exam_2",
+  "questions": [
+    {
+      "id": "Q1",
+      "q_num": 1,
+      "q_type": "MCQ",
+      "page": 1,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q1_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q1_crop.jpg",
+      "question_text": "If the first term of an A.P. is 3 and the sum of its first four terms is equal to one-fifth of the sum of the next four\nterms, then the sum of the first 20 terms is equal to",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "\u22121080"
+      ]
+    },
+    {
+      "id": "Q2",
+      "q_num": 2,
+      "q_type": "MCQ",
+      "page": 1,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q2_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q2_crop.jpg",
+      "question_text": "One die has two faces marked 1 , two faces marked 2 , one face marked 3 and one face marked 4 . Another die\nhas one face marked 1 , two faces marked 2 , two faces marked 3 and one face marked 4. The probability of\ngetting the sum of numbers to be 4 or 5 , when both the dice are thrown together, is",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "2"
+      ]
+    },
+    {
+      "id": "Q3",
+      "q_num": 3,
+      "q_type": "MCQ",
+      "page": 1,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q3_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q3_crop.jpg",
+      "question_text": "Let the position vectors of the vertices \n and  of a tetrahedron \n be \n and\n respectively. The altitude from the vertex \n to the opposite face \n meets the median line\nsegment through  of the triangle \n at the point . If the length of \n is \n and the volume of the\ntetrahedron is \n, then the position vector of  is",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "A, B"
+      ]
+    },
+    {
+      "id": "Q4",
+      "q_num": 4,
+      "q_type": "MCQ",
+      "page": 1,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q4_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q4_crop.jpg",
+      "question_text": "If \n, and \n are non-singular matrices of same order, then the inverse of\n, is equal to",
+      "options": [
+        ")",
+        "+ adj(A))",
+        "(4)",
+        "A, B"
+      ]
+    },
+    {
+      "id": "Q5",
+      "q_num": 5,
+      "q_type": "MCQ",
+      "page": 1,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q5_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q5_crop.jpg",
+      "question_text": "Marks obtains by all the students of class 12 are presented in a freqency distribution with classes of equal width.\nLet the median of this grouped data be 14 with median class interval 12-18 and median class frequency 12 . If\nthe number of students whose marks are less than 12 is 18 , then the total number of students is",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "52"
+      ]
+    },
+    {
+      "id": "Q6",
+      "q_num": 6,
+      "q_type": "MCQ",
+      "page": 1,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q6_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q6_crop.jpg",
+      "question_text": "Let a curve \n pass through the points \n and \n. If the curve satisfies the differential equation\n, then  is equal to",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "y = f(x)"
+      ]
+    },
+    {
+      "id": "Q7",
+      "q_num": 7,
+      "q_type": "MCQ",
+      "page": 1,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q7_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q7_crop.jpg",
+      "question_text": "If the function \n is continuous at \n, then \n is\nequal to",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "f(x) ="
+      ]
+    },
+    {
+      "id": "Q8",
+      "q_num": 8,
+      "q_type": "MCQ",
+      "page": 1,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q8_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q8_crop.jpg",
+      "question_text": "If the line \n intersects the parabola \n at the points  and , then at the vertex of the\nparabola, the line segment \n subtends an angle equal to\n\u00a0\n\u23aa\u23aa\n3x \u22122y + 12 = 0\n4y = 3x2\nA\nB\nAB",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "2025 (23 Jan Shift 1)"
+      ]
+    },
+    {
+      "id": "Q9",
+      "q_num": 9,
+      "q_type": "MCQ",
+      "page": 2,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q9_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q9_crop.jpg",
+      "question_text": "Let  be the foot of the perpendicular from the point \n on the line \n. Then the\narea of the right angled triangle \n, where  is the point \n, is",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "P"
+      ]
+    },
+    {
+      "id": "Q10",
+      "q_num": 10,
+      "q_type": "MCQ",
+      "page": 2,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q10_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q10_crop.jpg",
+      "question_text": "Let the arc \n of a circle subtend a right angle at the centre . If the point  on the arc \n, divides the arc\n such that \n, and \n, then \n is equal to",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "AC"
+      ]
+    },
+    {
+      "id": "Q11",
+      "q_num": 11,
+      "q_type": "MCQ",
+      "page": 2,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q11_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q11_crop.jpg",
+      "question_text": "Let \n and \n. Then the domain of \n is",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "f(x) = loge x"
+      ]
+    },
+    {
+      "id": "Q12",
+      "q_num": 12,
+      "q_type": "MCQ",
+      "page": 2,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q12_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q12_crop.jpg",
+      "question_text": "If the system of equations \n has infinitely many solutions, then \n is\nequal to",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "(\u03bb \u22121)x + (\u03bb \u22124)y + \u03bbz = 5"
+      ]
+    },
+    {
+      "id": "Q13",
+      "q_num": 13,
+      "q_type": "MCQ",
+      "page": 2,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q13_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q13_crop.jpg",
+      "question_text": "The number of words, which can be formed using all the letters of the word \"DAUGHTER\", so that all the\nvowels never come together, is",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "36000"
+      ]
+    },
+    {
+      "id": "Q14",
+      "q_num": 14,
+      "q_type": "MCQ",
+      "page": 2,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q14_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q14_crop.jpg",
+      "question_text": "Let \n be a relation defined on the set \n. Then the minimum number of\nelements, needed to be added in R so that R becomes an equivalence relation, is:",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "R = {(1, 2), (2, 3), (3, 3)}"
+      ]
+    },
+    {
+      "id": "Q15",
+      "q_num": 15,
+      "q_type": "MCQ",
+      "page": 2,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q15_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q15_crop.jpg",
+      "question_text": "Let the area of a \n with vertices \n and \n be 35 square units. If its orthocenter and\ncentroid are \n and \n respectively, then \n is equal to",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "\u25b3PQR"
+      ]
+    },
+    {
+      "id": "Q16",
+      "q_num": 16,
+      "q_type": "MCQ",
+      "page": 2,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q16_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q16_crop.jpg",
+      "question_text": "The value of \n is",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "\u222be4"
+      ]
+    },
+    {
+      "id": "Q17",
+      "q_num": 17,
+      "q_type": "MCQ",
+      "page": 3,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q17_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q17_crop.jpg",
+      "question_text": "Let \n, be the equation of a circle with center at . If the area of the triangle, whose vertices\nare at the points \n and \n is 11 square units, then \n equals:",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "\u00afz\u2212i"
+      ]
+    },
+    {
+      "id": "Q18",
+      "q_num": 18,
+      "q_type": "MCQ",
+      "page": 3,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q18_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q18_crop.jpg",
+      "question_text": "The value of \n is",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "\u2223\u2223"
+      ]
+    },
+    {
+      "id": "Q19",
+      "q_num": 19,
+      "q_type": "MCQ",
+      "page": 3,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q19_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q19_crop.jpg",
+      "question_text": "Let \n. If \n, then \n is equal to",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "\u2223\u2223"
+      ]
+    },
+    {
+      "id": "Q20",
+      "q_num": 20,
+      "q_type": "MCQ",
+      "page": 3,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q20_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q20_crop.jpg",
+      "question_text": "If \n, then \n is equal to",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "\u2223\u2223"
+      ]
+    },
+    {
+      "id": "Q21",
+      "q_num": 21,
+      "q_type": "NAT",
+      "page": 3,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q21_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q21_crop.jpg",
+      "question_text": "Let the circle  touch the line \n, have the centre on the positive x -axis, and cut off a chord of\nlength \n along the line \n. Let H be the hyperbola \n, whose one of the foci is the\ncentre of  and the length of the transverse axis is the diameter of . Then \n is equal to ______\n\u2223\u2223\nC\nx \u2212y + 1 = 0\n4\n\u221a13\n\u22123x + 2y = 1\nx2\n\u03b12 \u2212y2\n\u03b22 = 1\nC\nC\n2\u03b12 + 3\u03b22",
+      "options": []
+    },
+    {
+      "id": "Q22",
+      "q_num": 22,
+      "q_type": "NAT",
+      "page": 3,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q22_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q22_crop.jpg",
+      "question_text": "If the equation \n has equal roots, where \n and \n, then\n is equal to\u2223\u2223\na(b \u2212c)x2 + b(c \u2212a)x + c(a \u2212b) = 0\na + c = 15\nb = 36\n5\na2 + c2",
+      "options": []
+    },
+    {
+      "id": "Q23",
+      "q_num": 23,
+      "q_type": "NAT",
+      "page": 3,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q23_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q23_crop.jpg",
+      "question_text": "If the set of all values of a, for which the equation \n has three distinct real roots, is the\ninterval \n, then \n is equal to ______\u2223\u2223\n5x3 \u221215x \u2212a = 0\n(\u03b1, \u03b2)\n\u03b2 \u22122\u03b1",
+      "options": []
+    },
+    {
+      "id": "Q24",
+      "q_num": 24,
+      "q_type": "NAT",
+      "page": 3,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q24_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q24_crop.jpg",
+      "question_text": "The sum of all rational terms in the expansion of \n is equal to\n\u2223\u2223\n(1 + 21/2 + 31/2)\n6",
+      "options": []
+    },
+    {
+      "id": "Q25",
+      "q_num": 25,
+      "q_type": "NAT",
+      "page": 3,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q25_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q25_crop.jpg",
+      "question_text": "If the area of the larger portion bounded between the curves \n and \n is\n, then \n is equal to\u2223\u2223\nx2 + y2 = 25\ny = |x \u22121|\n1\n4 (b\u03c0 + c), b, c \u2208N\nb + c",
+      "options": []
+    },
+    {
+      "id": "Q26",
+      "q_num": 26,
+      "q_type": "MCQ",
+      "page": 3,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q26_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q26_crop.jpg",
+      "question_text": "A point particle of charge \n is located at  along the axis of an electric dipole 1 at a distance  as shown in the\nfigure. The point P is also on the equatorial plane of a second electric dipole 2 at a distance r . The dipoles are\n\u00a0\n\u2223\u2223\nQ\nP\nr\n\n\u00a0\nmade of opposite charge q separated by a distance \n. For the charge particle at P not to experience any net\nforce, which of the following correctly describes the situation?",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "2025 (23 Jan Shift 1)"
+      ]
+    },
+    {
+      "id": "Q27",
+      "q_num": 27,
+      "q_type": "MCQ",
+      "page": 4,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q27_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q27_crop.jpg",
+      "question_text": "A spherical surface of radius of curvature , separates air from glass (refractive index \n ). The centre of\ncurvature is in the glass medium. A point object '  ' placed in air on the optic axis of the surface, so that its\nreal image is formed at '  ' inside glass. The line OI intersects the spherical surface at P and \n. The\ndistance PO equals to",
+      "options": [
+        "5 R",
+        "3 R",
+        "1.5 R",
+        "2 R"
+      ]
+    },
+    {
+      "id": "Q28",
+      "q_num": 28,
+      "q_type": "MCQ",
+      "page": 4,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q28_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q28_crop.jpg",
+      "question_text": "The position of a particle moving on -axis is given by \n, where  is time.\nThe dimension of \n is",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "x"
+      ]
+    },
+    {
+      "id": "Q29",
+      "q_num": 29,
+      "q_type": "MCQ",
+      "page": 4,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q29_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q29_crop.jpg",
+      "question_text": "Given a thin convex lens (refractive index \n ), kept in a liquid (refractive index \n ) having radii of\ncurvatures \n and \n. Its second surface is silver polished. Where should an object be placed on the optic\naxis so that a real and inverted image is formed at the same place?",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "\u03bc2"
+      ]
+    },
+    {
+      "id": "Q30",
+      "q_num": 30,
+      "q_type": "MCQ",
+      "page": 4,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q30_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q30_crop.jpg",
+      "question_text": "Refer to the circuit diagram given in the figure. which of the following observations are correct? A. Total\nresistance of circuit is \n B. Current in Ammeter is 1 A C. Potential across \n is 4 Volts. D. Potential across\n\u00a0\n6\u03a9\nAB\n\n\u00a0\nCD is 4 Volts E. Total resistance of the circuit is \n. Choose the correct answer from the options given below:",
+      "options": [
+        "A, B and D Only",
+        "A, B and C Only",
+        "A, C and D Only",
+        "B, C and E Only"
+      ]
+    },
+    {
+      "id": "Q31",
+      "q_num": 31,
+      "q_type": "MCQ",
+      "page": 5,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q31_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q31_crop.jpg",
+      "question_text": "Given below are two statements: Statement I: The hot water flows faster than cold water Statement II: Soap\nwater has higher surface tension as compared to fresh water. In the light above statements, choose the correct\nanswer from the options given below",
+      "options": [
+        "Statement I is true but Statement II is false",
+        "Statement I is false but Statement II is true",
+        "Both Statement I and Statement II are false",
+        "Both Statement I and Statement II are true"
+      ]
+    },
+    {
+      "id": "Q32",
+      "q_num": 32,
+      "q_type": "MCQ",
+      "page": 5,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q32_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q32_crop.jpg",
+      "question_text": "Consider a circular disc of radius 20 cm with centre located at the origin. A circular hole of radius 5 cm is cut\nfrom this disc in such a way that the edge of the hole touches the edge of the disc. The distance of centre of\nmass of residual or remaining disc from the origin will be",
+      "options": [
+        "2.0 cm",
+        "1.5 cm",
+        "1.0 cm",
+        "0.5 cm"
+      ]
+    },
+    {
+      "id": "Q33",
+      "q_num": 33,
+      "q_type": "MCQ",
+      "page": 5,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q33_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q33_crop.jpg",
+      "question_text": "The electric flux is \n where  and  are linear and surface charge density, respectively. \nrepresents",
+      "options": [
+        "electric field",
+        "area",
+        "charge",
+        "displacement"
+      ]
+    },
+    {
+      "id": "Q34",
+      "q_num": 34,
+      "q_type": "MCQ",
+      "page": 5,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q34_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q34_crop.jpg",
+      "question_text": "A sub-atomic particle of mass \n is moving with a velocity \n. Under the matter wave\nconsideration, the particle will behave closely like",
+      "options": [
+        "Visible radiation",
+        "Gamma rays",
+        "Infra-red radiation",
+        "X-rays"
+      ]
+    },
+    {
+      "id": "Q35",
+      "q_num": 35,
+      "q_type": "MCQ",
+      "page": 5,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q35_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q35_crop.jpg",
+      "question_text": "Consider a moving coil galvanomenter (MCG): A. The torsional constant in moving coil galvanometer has\ndimentions \n B. Increasing the current sensitivity may not necessarily increase the voltage\nsensitivity. C. If we increase number of turns \n to its double \n, then the voltage sensitivity doubles. D.\nMCG can be converted into an ammeter by introducing a shunt resistance of large value in parallel with\ngalvanometer. E. Current sensitivity of MCG depends inversely on number of turns of coil. Choose the correct\nanswer from the options given below:\n\u00a0\n[ML2\u00a0T\u22122]\n(N)\n(2\u00a0N)",
+      "options": [
+        "A, D Only",
+        "A, B, E Only",
+        "B, D, E Only",
+        "A, B Only"
+      ]
+    },
+    {
+      "id": "Q36",
+      "q_num": 36,
+      "q_type": "MCQ",
+      "page": 6,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q36_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q36_crop.jpg",
+      "question_text": "",
+      "options": [
+        "A-III, B-IV, C-I, D-II",
+        "A-I, B-IV, C-II, D-III",
+        "A-III, B-I, C-IV, D-II",
+        "A-I, B-III, C-II, D-IV"
+      ]
+    },
+    {
+      "id": "Q37",
+      "q_num": 37,
+      "q_type": "MCQ",
+      "page": 6,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q37_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q37_crop.jpg",
+      "question_text": "The electric field of an electromagnetic wave in free space is\n. The associated magnetic field in Tesla is",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "\u2192"
+      ]
+    },
+    {
+      "id": "Q38",
+      "q_num": 38,
+      "q_type": "MCQ",
+      "page": 6,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q38_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q38_crop.jpg",
+      "question_text": "A gun fires a lead bullet of temperature 300 K into a wooden block. The bullet having melting temperature of\n600 K penetrates into the block and melts down. If the total heat required for the process is 625 J , then the\nmass of the bullet is \n grams. (Latent heat of fusion of lead \n and specific heat capacity\nof lead",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "= 2.5 \u00d7 104JKg\u22121"
+      ]
+    },
+    {
+      "id": "Q39",
+      "q_num": 39,
+      "q_type": "MCQ",
+      "page": 6,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q39_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q39_crop.jpg",
+      "question_text": "What is the lateral shift of a ray refracted through a parallel-sided glass slab of thickness '  ' in terms of the\nangle of incidence '  ' and angle of refraction '  ', if the glass slab is placed in air medium?",
+      "options": [
+        "(2)",
+        "(3) h",
+        "h",
+        "h"
+      ]
+    },
+    {
+      "id": "Q40",
+      "q_num": 40,
+      "q_type": "MCQ",
+      "page": 6,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q40_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q40_crop.jpg",
+      "question_text": "A radioactive nucleus \n has 3 times the decay constant as compared to the decay constant of another\nradioactive nucleus \n. If initial number of both nuclei are the same, what is the ratio of number of nuclei of\n to the number of nuclei of \n, after one half-life of \n ?",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "n2"
+      ]
+    },
+    {
+      "id": "Q41",
+      "q_num": 41,
+      "q_type": "MCQ",
+      "page": 6,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q41_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q41_crop.jpg",
+      "question_text": "A light hollow cube of side length 10 cm and mass 10 g , is floating in water. It is pushed down and released to\nexecute simple harmonic oscillations. The time period of oscillations is \n, where the value of  is\n(Acceleration due to gravity, \n, density of water \n )\n\u00a0\ny\u03c0 \u00d7 10\u22122\u00a0s\ny\ng = 10\u00a0m/s2\n= 103\u00a0kg/m3",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "2025 (23 Jan Shift 1)"
+      ]
+    },
+    {
+      "id": "Q42",
+      "q_num": 42,
+      "q_type": "MCQ",
+      "page": 7,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q42_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q42_crop.jpg",
+      "question_text": "Regarding self-inductance: A. The self-inductance of the coil depends on its geometry. B. Self-inductance does\nnot depend on the permeability of the medium. C. Self-induced e.m.f. opposes any change in the current in a\ncircuit. D. Self-inductance is electromagnetic analogue of mass in mechanics. E. Work needs to be done\nagainst self-induced e.m.f. in establishing the current. Choose the correct answer from the options given\nbelow:",
+      "options": [
+        "only",
+        "B, C, D, E only",
+        "only",
+        "A, B, C, D only"
+      ]
+    },
+    {
+      "id": "Q43",
+      "q_num": 43,
+      "q_type": "MCQ",
+      "page": 7,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q43_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q43_crop.jpg",
+      "question_text": "The motion of an airplane is represented by velocity-time graph as shown below. The distance covered by\nairplane in the first 30.5 second is _______ km .",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "12"
+      ]
+    },
+    {
+      "id": "Q44",
+      "q_num": 44,
+      "q_type": "MCQ",
+      "page": 7,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q44_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q44_crop.jpg",
+      "question_text": "Identify the valid statements relevant to the given circuit at the instant when the key is closed.\nA. There will be no current through resistor . B. There will be maximum current in the connecting wires. C.\nPotential difference between the capacitor plates A and B is minimum. D. Charge on the capacitor plates is\nminimum. Choose the correct answer from the options given below:",
+      "options": [
+        "A, C Only",
+        "A, B, D Only",
+        "C, D Only",
+        "B, C, D Only"
+      ]
+    },
+    {
+      "id": "Q45",
+      "q_num": 45,
+      "q_type": "MCQ",
+      "page": 7,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q45_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q45_crop.jpg",
+      "question_text": "A solid sphere of mass ' \n ' and radius '  ' is allowed to roll without slipping from the highest point of an\ninclined plane of length '  ' and makes an angle \n with the horizontal. The speed of the particle at the\nbottom of the plane is \n. If the angle of inclination is increased to \n while keeping  constant. Then the\nnew speed of the sphere at the bottom of the plane is \n. The ratio \n is",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "m"
+      ]
+    },
+    {
+      "id": "Q46",
+      "q_num": 46,
+      "q_type": "NAT",
+      "page": 8,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q46_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q46_crop.jpg",
+      "question_text": "A positive ion  and a negative ion  has charges \n and \n, and masses\n and \n respectively. At an instant, the ions are separated by a certain distance r. At\nthat instant the ratio of the magnitudes of electrostatic force to gravitational force is \n, where the value\nof 10  is \n (Take \n and universal gravitational constant as \n)\nAssume that charge may not be an integral multiple of electrons.\nA\nB\n6.67 \u00d7 10\u221219C\n9.6 \u00d7 10\u221210C\n19.2 \u00d7 10\u221227\u00a0kg\n9 \u00d7 10\u221227\u00a0kg\nP \u00d7 1045\nP\n1\n4\u03c0\u03b50 = 9 \u00d7 109Nm2C\u22121\n6.67 \u00d7 10\u221211Nm2\u00a0kg\u22122",
+      "options": []
+    },
+    {
+      "id": "Q47",
+      "q_num": 47,
+      "q_type": "NAT",
+      "page": 8,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q47_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q47_crop.jpg",
+      "question_text": "In the given circuit the sliding contact is pulled outwards such that electric current in the circuit changes at the\nrate of \n. At an instant when R is \n, the value of the current in the circuit will be ______ A.\n8\u00a0A/s\n12\u03a9",
+      "options": []
+    },
+    {
+      "id": "Q48",
+      "q_num": 48,
+      "q_type": "NAT",
+      "page": 8,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q48_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q48_crop.jpg",
+      "question_text": "Two particles are located at equal distance from origin. The position vectors of those are represented by\n and \n, respectively. If both the vectors are at right angle to each other,\nthe value of \n is _____ .\n\u00afA = 2^i + 3n^j + 2^k\n\u00afB = 2^i \u22122^j + 4p^k\nn\u22121",
+      "options": []
+    },
+    {
+      "id": "Q49",
+      "q_num": 49,
+      "q_type": "NAT",
+      "page": 8,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q49_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q49_crop.jpg",
+      "question_text": "An ideal gas initially at \n temperature, is compressed suddenly to one fourth of its volume. If the ratio of\nspecific heat at constant pressure to that at constant volume is \n, the change in temperature due to the\nthermodynamic process is _____ K.\n0\u2218C\n3/2",
+      "options": []
+    },
+    {
+      "id": "Q50",
+      "q_num": 50,
+      "q_type": "NAT",
+      "page": 8,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q50_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q50_crop.jpg",
+      "question_text": "A force \n acts on a particle in a plane \n. The work done by this force during a\ndisplacement from \n to \n is \n Joule (round off to the nearest integer)\nf = x2y^i + y2^j\nx + y = 10\n(0, 0)\n(4\u00a0m, 2\u00a0m)",
+      "options": []
+    },
+    {
+      "id": "Q51",
+      "q_num": 51,
+      "q_type": "MCQ",
+      "page": 8,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q51_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q51_crop.jpg",
+      "question_text": "Given below are two statements: Statement I: Fructose does not contain an aldehydic group but still reduces\nTollen's reagent Statement II: In the presence of base, fructose undergoes rearrangement to give glucose. In the\nlight of the above statements, choose the correct answer from the options given below",
+      "options": [
+        "Both Statement I and Statement II are true",
+        "Both Statement I and Statement II are false",
+        "Statement I is true but Statement II is false",
+        "Statement I is true but Statement II is false"
+      ]
+    },
+    {
+      "id": "Q52",
+      "q_num": 52,
+      "q_type": "MCQ",
+      "page": 8,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q52_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q52_crop.jpg",
+      "question_text": "The complex that shows Facial - Meridional isomerism is:",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "1.[Co(en)2Cl2]+"
+      ]
+    },
+    {
+      "id": "Q53",
+      "q_num": 53,
+      "q_type": "MCQ",
+      "page": 8,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q53_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q53_crop.jpg",
+      "question_text": "In the above diagram, the standard electrode potentials are given in\nvolts (over the arrow). The value of \n is",
+      "options": [
+        "2.1 V",
+        "1 .7 V",
+        "1 .4 V",
+        "1 .2 V"
+      ]
+    },
+    {
+      "id": "Q54",
+      "q_num": 54,
+      "q_type": "MCQ",
+      "page": 8,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q54_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q54_crop.jpg",
+      "question_text": "The element that does not belong to the same period of the remaining elements (modern periodic table) is:",
+      "options": [
+        "Iridium",
+        "Platinum",
+        "Osmium",
+        "Palladium"
+      ]
+    },
+    {
+      "id": "Q55",
+      "q_num": 55,
+      "q_type": "MCQ",
+      "page": 9,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q55_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q55_crop.jpg",
+      "question_text": "Match the LIST-I with LIST-II\nChoose the correct answer from the options given below:",
+      "options": [
+        "A-IV, B-I, C-III, D-II",
+        "A-IV, B-II, C-I, D-III",
+        "A-II, B-IV, C-III, D-I",
+        "A-III, B-II, C-I, D-IV"
+      ]
+    },
+    {
+      "id": "Q56",
+      "q_num": 56,
+      "q_type": "MCQ",
+      "page": 9,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q56_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q56_crop.jpg",
+      "question_text": "What amount of bromine will be required to convert 2 g of phenol into 2,4,6-tribromophenol? (Given molar\nmass in \n of \n are \n respectively )",
+      "options": [
+        "20 .44 g",
+        "4.0 g",
+        "6.0 g",
+        "10.22"
+      ]
+    },
+    {
+      "id": "Q57",
+      "q_num": 57,
+      "q_type": "MCQ",
+      "page": 9,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q57_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q57_crop.jpg",
+      "question_text": "Which among the following react with Hinsberg's reagent? \nChoose the correct answer from the options given below:",
+      "options": [
+        "A, B and E Only",
+        "A, C and E Only",
+        "C and D Only",
+        "B and D Only"
+      ]
+    },
+    {
+      "id": "Q58",
+      "q_num": 58,
+      "q_type": "MCQ",
+      "page": 9,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q58_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q58_crop.jpg",
+      "question_text": "The correct set of ions (aqueous solution) with same colour from the following is:",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "2025 (23 Jan Shift 1)"
+      ]
+    },
+    {
+      "id": "Q59",
+      "q_num": 59,
+      "q_type": "MCQ",
+      "page": 10,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q59_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q59_crop.jpg",
+      "question_text": "Given below are two statements: Statement I: In Lassaigne's test, the covalent organic molecules are\ntransformed into ionic compounds. Statement II: The sodium fusion extract of an organic compound having N\nand S gives prussian blue colour with \n and \n In the light of the above statements, choose\nthe correct answer from the options given below.",
+      "options": [
+        "Statement I is true but Statement II is false",
+        "Both Statement I and Statement II are false",
+        "Both Statement I and Statement II are true",
+        "Statement I is false but Statement II is true"
+      ]
+    },
+    {
+      "id": "Q60",
+      "q_num": 60,
+      "q_type": "MCQ",
+      "page": 10,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q60_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q60_crop.jpg",
+      "question_text": "Propane molecule on chlorination under photochemical condition gives two di-chloro products, \" x \" and \" y \".\nAmongst \" x \" and \" y \", \" x \" is an optically active molecule. How many tri-chloro products (consider only\nstructural isomers) will be obtained from \" x \" when it is further treated with chlorine under the photochemical\ncondition?",
+      "options": [
+        "2",
+        "5",
+        "4",
+        "3"
+      ]
+    },
+    {
+      "id": "Q61",
+      "q_num": 61,
+      "q_type": "MCQ",
+      "page": 10,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q61_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q61_crop.jpg",
+      "question_text": "can exist as a complex. 0.1 molal aqueous solution of this complex shows a depression in\nfreezing point of \n. Assuming \n ionisation of this complex and coordination number of Cr is 6 , the\ncomplex will be (Given \n )",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "CrCl3 \u22c5xNH3"
+      ]
+    },
+    {
+      "id": "Q62",
+      "q_num": 62,
+      "q_type": "MCQ",
+      "page": 10,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q62_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q62_crop.jpg",
+      "question_text": "Which of the following happens when \n is added gradually to the solution containing 1 M \n and\n ions? Given : \n and \n at 298 K .",
+      "options": [
+        "Both",
+        "will precipitate before",
+        "will precipitate before",
+        "and"
+      ]
+    },
+    {
+      "id": "Q63",
+      "q_num": 63,
+      "q_type": "MCQ",
+      "page": 10,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q63_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q63_crop.jpg",
+      "question_text": "The major product of the following reaction is: \n ?",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "CH3CH2CH = O"
+      ]
+    },
+    {
+      "id": "Q64",
+      "q_num": 64,
+      "q_type": "MCQ",
+      "page": 10,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q64_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q64_crop.jpg",
+      "question_text": "Ice at \n is heated to become vapor with temperature of \n at atmospheric pressure. The entropy\nchange associated with this process can be obtained from\n\u00a0\n\u22125\u2218C\n110\u2218C",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "2025 (23 Jan Shift 1)"
+      ]
+    },
+    {
+      "id": "Q65",
+      "q_num": 65,
+      "q_type": "MCQ",
+      "page": 11,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q65_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q65_crop.jpg",
+      "question_text": "The incorrect statement among the following is options .",
+      "options": [
+        "shows lower proton affinity than",
+        "can act as an oxidizing agent, but not as a",
+        "exists but",
+        "can dimerise easily."
+      ]
+    },
+    {
+      "id": "Q66",
+      "q_num": 66,
+      "q_type": "MCQ",
+      "page": 11,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q66_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q66_crop.jpg",
+      "question_text": "of \n is left after removing \n molecules from its '  ' mg sample. The mass of \n taken\ninitially is Given:",
+      "options": [
+        "98 .3 mg",
+        "48.2 mg",
+        "196 .2 mg",
+        "150 .4 mg"
+      ]
+    },
+    {
+      "id": "Q67",
+      "q_num": 67,
+      "q_type": "MCQ",
+      "page": 11,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q67_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q67_crop.jpg",
+      "question_text": "Match the LIST-I with LIST-II\nChoose the correct answer from the options given below:",
+      "options": [
+        "A-II, B-I, C-III, D-IV",
+        "A-II, B-III, C-I, D-IV",
+        "A-IV, B-I, C-III, D-II",
+        "A-IV, B-III, C-I, D-II"
+      ]
+    },
+    {
+      "id": "Q68",
+      "q_num": 68,
+      "q_type": "MCQ",
+      "page": 11,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q68_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q68_crop.jpg",
+      "question_text": "Heat treatment of muscular pain involves radiation of wavelength of about 900 nm . Which spectral line of H\natom is suitable for this? Given : Rydberg constant \n )",
+      "options": [
+        "Balmer series,",
+        "Lyman series,",
+        "Paschen series,",
+        "Paschen series,"
+      ]
+    },
+    {
+      "id": "Q69",
+      "q_num": 69,
+      "q_type": "MCQ",
+      "page": 11,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q69_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q69_crop.jpg",
+      "question_text": "The d- electronic configuration of an octahedral Co(II) complex having magnetic moment of 3.95 BM is:",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "t2\u00a0g3eg0"
+      ]
+    },
+    {
+      "id": "Q70",
+      "q_num": 70,
+      "q_type": "MCQ",
+      "page": 12,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q70_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q70_crop.jpg",
+      "question_text": "The correct stability order of the following species/molecules is:",
+      "options": [
+        "(2)",
+        "(3)",
+        "(4)",
+        "q > r > p"
+      ]
+    },
+    {
+      "id": "Q71",
+      "q_num": 71,
+      "q_type": "NAT",
+      "page": 12,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q71_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q71_crop.jpg",
+      "question_text": "The standard enthalpy and standard entropy of decomposition of \n to \n are \n and\n respectively. The standard free energy change for this reaction at \n in J \n is ______\n(Nearest integer)\n1\nN2O4\nNO2\n55.0\u00a0kJ\u00a0mol\u22121\n175.0\u00a0J/K/mol\n25\u2218C\nmol\u22121",
+      "options": []
+    },
+    {
+      "id": "Q72",
+      "q_num": 72,
+      "q_type": "NAT",
+      "page": 12,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q72_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q72_crop.jpg",
+      "question_text": "For the thermal decomposition of \n at constant volume, the following table can be formed, for the\nreaction mentioned below. \n \n Given : Rate constant for the reaction is \n.\nN2O5(\u00a0g)\n2\u00a0N2O5(\u00a0g) \u21922\u00a0N2O4(\u00a0g) + O2(\u00a0g)\nx = \u2026 \u00d7 10\u22123\u00a0atm\u00a0[nearest integer]\u00a0\n4.606 \u00d7 10\u22122\u00a0s\u22121",
+      "options": []
+    },
+    {
+      "id": "Q73",
+      "q_num": 73,
+      "q_type": "NAT",
+      "page": 12,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q73_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q73_crop.jpg",
+      "question_text": "During \" S \" estimation, 160 mg of an organic compound gives 466 mg of barium sulphate. The percentage of\nSulphur in the given compound is _______ %. (Given molar mass in \n of \n )\ngmol\u22121\nBa : 137, \u00a0S : 32, O : 16\n\u2013",
+      "options": []
+    },
+    {
+      "id": "Q74",
+      "q_num": 74,
+      "q_type": "NAT",
+      "page": 12,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q74_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q74_crop.jpg",
+      "question_text": "If 1 mM solution of ethylamine produces \n, then the ionization constant \n of ethylamine is \n.\nThe value of  is ______ (nearest integer). [The degree of ionization of ethylamine can be neglected with\nrespect to unity.]\npH = 9\n(Kb)\n10\u2212x\nx",
+      "options": []
+    },
+    {
+      "id": "Q75",
+      "q_num": 75,
+      "q_type": "NAT",
+      "page": 12,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\real_exam_2\\vision_crops\\Q75_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/real_exam_2/vision_crops/Q75_crop.jpg",
+      "question_text": "Consider the following sequence of reactions to produce major product",
+      "options": [
+        "Molar mass of product"
+      ]
+    }
+  ]
+}

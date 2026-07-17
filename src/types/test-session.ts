@@ -23,12 +23,15 @@ export interface TestAnswerKeyEntry {
   correctNumericalAnswer?: string;
   marks: number;
   negativeMarks: number;
+  bankQuestionId?: string;
 }
 
 export type TestAnswerKey = Record<string, TestAnswerKeyEntry>;
 
 export interface TestQuestionResult {
   questionId: string;
+  bankQuestionId: string | null;
+  legacyClientKey?: string;
   selected: string | null;
   correct: boolean;
   marksAwarded: number;
@@ -47,6 +50,7 @@ export interface TestResultBreakdown {
   attempted: number;
   maxScore: number;
   rawScore: number;
+  negativeMarks: number;
   integrityPenalty: number;
   finalScore: number;
   durationSeconds: number;

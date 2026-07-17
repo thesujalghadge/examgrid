@@ -88,6 +88,7 @@ export class SupabaseBatchRepository implements BatchRepository {
         .select("*")
         .eq("institute_id", session.instituteId)
         .order("name", { ascending: true });
+      console.log(`[SupabaseBatchRepository] Fetched batches for ${session.instituteId}:`, data?.length);
       throwIfSupabaseError(error, "batches", "list");
       this.cache = ((data ?? []) as BatchRow[]).map(rowToBatch);
       this.hydrated = true;
@@ -109,13 +110,25 @@ export class SupabaseBatchRepository implements BatchRepository {
       .maybeSingle();
     throwIfSupabaseError(lookupError, "batches", "lookup");
 
-    const { error } = await client
-      .from("batches")
-      .upsert(
-        batchToRow({ ...batch, id: existing?.id ?? batch.id }),
-        { onConflict: "institute_id,name,academic_year" },
-      );
-    throwIfSupabaseError(error, "batches", "upsert");
+    if (!existing) {
+      const { error } = await client
+        .from("batches")
+        .insert({
+          id: batch.id,
+          institute_id: batch.instituteId,
+          name: batch.name,
+          course_type: batch.courseType,
+          academic_year: batch.academicYear,
+          is_active: batch.active,
+        });
+      throwIfSupabaseError(error, "batches", "insert");
+    } else {
+      const { error } = await client
+        .from("batches")
+        .update({ is_active: batch.active })
+        .eq("id", existing.id);
+      throwIfSupabaseError(error, "batches", "update");
+    }
   }
 
   private async removeOne(id: string): Promise<void> {

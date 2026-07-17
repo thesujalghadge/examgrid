@@ -21,6 +21,18 @@ export async function readVerifiedWorkspaceSession(): Promise<WorkspaceSession |
     });
     return null;
   }
+  
+  if (session.role === "student") {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(session.userId);
+    if (!isUuid) {
+      logSessionWarning("workspace session rejected", {
+        reason: "legacy_non_uuid_identifier",
+        userId: session.userId,
+      });
+      return null;
+    }
+  }
+
   return session;
 }
 

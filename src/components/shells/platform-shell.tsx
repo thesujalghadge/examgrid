@@ -9,7 +9,9 @@ import { useWorkspaceAuthStore } from "@/stores/workspace-auth-store";
 const NAV = [
   { href: "/platform", label: "Overview" },
   { href: "/platform/institutes", label: "Institutes" },
+  { href: "/platform/curricula", label: "Curricula" },
   { href: "/platform/monitoring", label: "Monitoring" },
+  { href: "/platform/settings", label: "Settings" },
 ];
 
 export function PlatformShell({ children }: { children: React.ReactNode }) {

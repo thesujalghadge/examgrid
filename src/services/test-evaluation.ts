@@ -43,6 +43,7 @@ export function evaluateTestSession(input: {
   let unattempted = 0;
   let rawScore = 0;
   let maxScore = 0;
+  let negativeMarksTotal = 0;
   const perQuestion = questionIds.map((questionId) => {
     const key = input.answerKey[questionId];
     const selected = input.answers[questionId] ?? null;
@@ -52,6 +53,8 @@ export function evaluateTestSession(input: {
       unattempted += 1;
       return {
         questionId,
+        bankQuestionId: key.bankQuestionId ?? null,
+        legacyClientKey: questionId,
         selected,
         correct: false,
         marksAwarded: 0,
@@ -86,11 +89,16 @@ export function evaluateTestSession(input: {
     } else {
       incorrect += 1;
       marksAwarded = key.negativeMarks > 0 ? -key.negativeMarks : 0;
+      if (marksAwarded < 0) {
+        negativeMarksTotal += Math.abs(marksAwarded);
+      }
       rawScore += marksAwarded;
     }
 
     return {
       questionId,
+      bankQuestionId: key.bankQuestionId ?? null,
+      legacyClientKey: questionId,
       selected,
       correct: isCorrect,
       marksAwarded,
@@ -121,6 +129,7 @@ export function evaluateTestSession(input: {
     attempted: correct + incorrect,
     maxScore,
     rawScore: Math.round(rawScore * 100) / 100,
+    negativeMarks: Math.round(negativeMarksTotal * 100) / 100,
     integrityPenalty: penalty,
     finalScore,
     durationSeconds,

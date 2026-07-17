@@ -1,5 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { solutionMetadataSchema } from "@/lib/solutions/solution-schema";
+import { mapQuestionsToSyllabus } from "@/lib/syllabus/mapper";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -53,6 +55,45 @@ async function refreshSolutionStatus(examQuestionId: string, instituteId: string
     const { data: examRow } = await supabase.from("exams").select("id").eq("id", eq.exam_id).maybeSingle();
     if (!examRow) return;
     await supabase.rpc("refresh_exam_solution_status", { p_exam_id: examRow.id, p_institute_id: instituteId });
+
+    // --- SYLLABUS MAPPING AUTO-TRIGGER ---
+    // STEP 2: Check if all questions are finished generating (terminal queue status)
+    const examId = examRow.id;
+    const { data: questions } = await supabase.from("exam_questions").select("id").eq("exam_id", examId);
+    if (!questions || questions.length === 0) return;
+    
+    const questionIds = questions.map(q => q.id);
+    const { data: queueRows } = await supabase.from("solution_generation_queue")
+      .select("status")
+      .in("question_id", questionIds);
+
+    if (!queueRows || queueRows.length === 0) return;
+
+    const isAllTerminal = queueRows.every(r => r.status === "COMPLETED" || r.status === "FAILED");
+    if (!isAllTerminal) return;
+
+    // STEP 3: If all terminal, check if mapping already exists (STEP 4 Idempotent)
+    const { data: batches } = await supabase.from("exam_schedule_batches")
+      .select("batch_id, exam_schedules!inner(exam_id)")
+      .eq("exam_schedules.exam_id", examId);
+      
+    if (!batches || batches.length === 0) return;
+
+    const uniqueBatchIds = [...new Set(batches.map(b => b.batch_id))];
+
+    for (const batchId of uniqueBatchIds) {
+      const { count: existingMappings } = await supabase.from("question_syllabus_mappings")
+        .select("*", { count: "exact", head: true })
+        .in("question_id", questionIds)
+        .eq("batch_id", batchId);
+
+      if (existingMappings && existingMappings > 0) continue; // Already mapped!
+
+      // Trigger mapper non-blocking
+      log("TRIGGERING_AUTO_MAPPER", { examId, batchId });
+      mapQuestionsToSyllabus(instituteId, batchId).catch(err => log("MAPPER_TRIGGER_ERROR", { error: String(err) }));
+    }
+
   } catch (err) {
     log("REFRESH_STATUS_ERROR", { error: String(err) });
   }
@@ -135,7 +176,43 @@ export async function runGeminiWorker(workerId: string = "unknown"): Promise<Wor
       .map((o: any) => `${o.label}: ${o.text ?? ""}`)
       .join("\n");
 
-    const understandingPrompt = `You are an expert exam question parser and solver.\nAnalyze the provided question.\n1. Identify the subject, chapter, subchapter, and key concepts.\n2. Provide a short summary of the question.\n3. Solve the question completely independently. Provide your step-by-step reasoning.\n4. Output the exact derived mathematical or text answer in 'derived_answer'. DO NOT output A/B/C/D as the answer.\n5. Extract the four options EXACTLY as written into 'extracted_options'. If NAT, leave null.\n6. Provide a confidence score (0-100) for your understanding and solution.\n\nDO NOT hallucinate. Do not guess. If incomplete, set confidence to 0.\n\nRespond strictly in valid JSON:\n{\n  "subject": "string",\n  "chapter": "string",\n  "subchapter": "string",\n  "concepts": ["string"],\n  "summary": "string",\n  "confidence": number,\n  "reasoning": "string",\n  "derived_answer": "string",\n  "extracted_options": { "A": "string", "B": "string", "C": "string", "D": "string" }\n}`;
+    const understandingPrompt = `You are an expert exam question parser and solver.
+Analyze the provided question.
+1. Identify the subject, chapter, subchapter, and key concepts.
+2. Provide a short summary of the question.
+3. Solve the question completely independently. Provide your step-by-step reasoning in 'reasoning', and break it down into explicit steps in the 'steps' array. Each step should have a 'title', 'explanation', and optional 'equation' (in LaTeX without $$).
+4. Output the exact derived mathematical or text answer in 'derived_answer' and 'finalAnswer.value'. DO NOT output A/B/C/D as the answer.
+5. Extract the four options EXACTLY as written into 'extracted_options'. If NAT, leave null. Provide 'optionAnalysis' for each option, explaining why it is correct or wrong. If NAT, omit 'optionAnalysis'.
+6. Provide a confidence score (0-100) for your understanding and solution.
+7. Include a 'shortcut' if applicable, a 'commonMistake' students make, 'formulas' used, difficulty (EASY, MEDIUM, HARD), and 'estimatedSolveTime' (e.g. "2 mins").
+
+DO NOT hallucinate. Do not guess. If incomplete, set confidence to 0.
+
+Respond strictly in valid JSON:
+{
+  "subject": "string",
+  "chapter": "string",
+  "subchapter": "string",
+  "concepts": ["string"],
+  "summary": "string",
+  "formulas": ["string"],
+  "steps": [{"title": "string", "explanation": "string", "equation": "string | null"}],
+  "shortcut": "string | null",
+  "commonMistake": "string | null",
+  "difficulty": "EASY | MEDIUM | HARD",
+  "estimatedSolveTime": "string",
+  "confidence": number,
+  "reasoning": "string",
+  "derived_answer": "string",
+  "finalAnswer": {"value": "string", "option": "string | null"},
+  "extracted_options": { "A": "string", "B": "string", "C": "string", "D": "string" },
+  "optionAnalysis": [
+    { "option": "A", "whyCorrect": "string | null", "whyWrong": "string | null" },
+    { "option": "B", "whyCorrect": "string | null", "whyWrong": "string | null" },
+    { "option": "C", "whyCorrect": "string | null", "whyWrong": "string | null" },
+    { "option": "D", "whyCorrect": "string | null", "whyWrong": "string | null" }
+  ]
+}`;
     const promptText = `Question:\n${examQuestion.published_question_text ?? "Solve the following problem"}\n\nOptions:\n${formattedOptions}\n\n${understandingPrompt}`;
 
     const genAI = new GoogleGenerativeAI(apiKey);
@@ -145,12 +222,38 @@ export async function runGeminiWorker(workerId: string = "unknown"): Promise<Wor
     if (fileBuffer) geminiPayload.push({ inlineData: { data: fileBuffer.toString("base64"), mimeType } });
     geminiPayload.push(promptText);
 
-    log("GEMINI_CALL_START", { question_id: examQuestionId, model: MODEL_NAME, call: 1 });
-    const result1 = await model.generateContent(geminiPayload);
-    const analysis = JSON.parse(result1.response.text());
+    let analysis: any;
+    let validAnalysis = false;
+    let validationError = "";
 
-    if (!analysis.subject || !analysis.chapter || !analysis.concepts || analysis.confidence < 70) {
-      throw new Error("[VALIDATION] Understanding validation failed (low confidence or missing concepts)");
+    for (let retry = 0; retry < 2; retry++) {
+      log("GEMINI_CALL_START", { question_id: examQuestionId, model: MODEL_NAME, call: 1, attempt: retry + 1 });
+      const result1 = await model.generateContent(geminiPayload);
+      try {
+        const rawText = result1.response.text();
+        console.log("GEMINI RAW:", rawText);
+        analysis = JSON.parse(rawText);
+        const parsed = solutionMetadataSchema.safeParse(analysis);
+        if (!parsed.success) {
+          validationError = "Schema validation failed: " + parsed.error.message;
+          throw new Error(validationError);
+        }
+        if (!analysis.subject || !analysis.chapter) {
+          validationError = "Understanding validation failed (missing subject or chapter)";
+          throw new Error(validationError);
+        }
+        validAnalysis = true;
+        break; // Success
+      } catch (err) {
+        log("GEMINI_VALIDATION_ERROR", { attempt: retry + 1, error: String(err) });
+        if (retry === 1) { // Final retry failed
+          throw new Error(`[VALIDATION] JSON Parse or Validation failed after retries: ${String(err)}`);
+        }
+      }
+    }
+    
+    if (!validAnalysis) {
+      throw new Error(`[VALIDATION] ${validationError}`);
     }
 
     let finalModelAnswer = analysis.derived_answer ?? analysis.model_answer ?? "";
@@ -177,6 +280,14 @@ export async function runGeminiWorker(workerId: string = "unknown"): Promise<Wor
       p_model_name: MODEL_NAME, p_prompt_version: PROMPT_VERSION,
       p_token_usage: { estimated: 1200 }, p_ai_metadata: analysis, p_tokens_used: 1200
     });
+
+    // Belt-and-suspenders: commit_solution_and_job RPC does not set generation_status.
+    // Patch it directly so any legacy code filtering by generation_status=COMPLETED still works.
+    await supabase
+      .from("question_solutions")
+      .update({ generation_status: "COMPLETED" })
+      .eq("question_id", examQuestionId)
+      .eq("institute_id", job.institute_id);
 
     await refreshSolutionStatus(examQuestionId, job.institute_id);
     return { status: "COMPLETED", durationMs: Date.now() - startTime };
@@ -222,13 +333,25 @@ export async function runWorkerTick(): Promise<{ total: number; succeeded: numbe
   let total = 0, succeeded = 0, failed = 0;
   // mathematically 15 RPM limit -> 7 jobs max per minute since 2 requests per job
   const maxJobs = 7; 
+  const startTime = Date.now();
+  const TIME_LIMIT_MS = 45000; // 45 seconds to leave a 15s buffer before the 60s lock expires
 
   try {
     for (let i = 0; i < maxJobs; i++) {
+      if (Date.now() - startTime > TIME_LIMIT_MS) {
+        console.log(`[GeminiWorker] Time bound reached. Breaking early to prevent lock expiration.`);
+        break;
+      }
+      
       if (i > 0) {
         // Enforce a strict 8000ms interval between questions to maintain 15 RPM limit
         // (1 job = 2 requests, so 8s per job = 15 requests per minute exactly spread out)
         await new Promise(resolve => setTimeout(resolve, 8000));
+      }
+
+      // Check time limit again after sleep
+      if (Date.now() - startTime > TIME_LIMIT_MS) {
+        break;
       }
 
       const result = await runGeminiWorker(workerId);

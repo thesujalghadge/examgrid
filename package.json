@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "prebuild": "npm run doctor",
     "dev": "rimraf .next && next dev",
     "build": "rimraf .next/dev/types && next build",
     "start": "next start",
@@ -22,13 +23,18 @@
     "queue:status": "npx tsx scripts/system_health.ts",
     "unlock:worker": "npx tsx scripts/unlock_worker.ts",
     "reset:demo": "npx tsx scripts/reset_demo.ts",
+    "demo:generate": "npx tsx --env-file=.env.local scripts/demo-factory/cli.ts generate",
+    "demo:validate": "npx tsx --env-file=.env.local scripts/demo-factory/cli.ts validate",
+    "demo:reset": "npm run reset:demo && npm run demo:generate && npm run demo:validate",
     "verify:demo": "npx tsx --env-file=.env.local scripts/verify_demo.ts",
-    "demo:prepare": "npm run reset:demo && npm run verify:demo",
+    "demo:prepare": "npm run demo:reset && npm run verify:demo",
     "verify:security": "npx tsx --env-file=.env.local scripts/verify_test_id_integrity.ts && npx tsx --env-file=.env.local scripts/verify_rpc_integrity.ts && npx tsx --env-file=.env.local scripts/verify_rank_engine.ts",
     "verify:analytics": "npx tsx --env-file=.env.local scripts/verify_analytics_pipeline.ts",
     "load-test": "npx tsx --env-file=.env.local scripts/load_test_suite.ts",
-    "verify:predeploy": "npm run verify:security && npm run verify:analytics && npm run test",
-    "verify:production": "npx tsx --env-file=.env.local scripts/verify_production_health.ts"
+    "verify:predeploy": "npm run doctor && npm run verify:security && npm run verify:analytics && npm run test",
+    "verify:production": "npx tsx --env-file=.env.local scripts/verify_production_health.ts",
+    "regenerate:solutions": "npx tsx --env-file=.env.local scripts/regenerate_solutions.ts",
+    "doctor": "npx tsx --env-file=.env.local scripts/doctor.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",

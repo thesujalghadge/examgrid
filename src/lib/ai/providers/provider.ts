@@ -10,7 +10,10 @@ export interface SolutionGenerationInput {
   questionType?: string;
 }
 
-export interface AiMetadata {
+/**
+ * V1 Metadata shape (legacy — read-only rendering support).
+ */
+export interface AiMetadataV1 {
   subject: string;
   topic: string;
   subtopic: string;
@@ -24,6 +27,56 @@ export interface AiMetadata {
   prompt_version: string;
   validation_status: string;
 }
+
+/**
+ * V3 Metadata shape (canonical — all new solutions).
+ * Matches the SolutionV3 Zod schema.
+ */
+export interface AiMetadataV3 {
+  keyIdea: string;
+  conceptChips: string[];
+  notations: { symbol: string; meaning: string }[];
+  steps: {
+    title: string;
+    reasoning: string;
+    equation?: string | null;
+    result?: string | null;
+  }[];
+  finalAnswer: { value: string; option?: string | null };
+  importantObservation?: string | null;
+  commonMistakes?: string[] | null;
+  shortcut?: string | null;
+  takeaway: string;
+  assumptions?: { assumption: string; validity: string; failure: string }[] | null;
+  diagrams?: string[];
+  graphs?: string[];
+  tables?: string[];
+  isTeacherReviewed?: boolean;
+  teacherEdits?: { field: string; original: string; edited: string; editedBy: string; editedAt: string }[];
+  subject: string;
+  topic: string;
+  subtopic: string;
+  difficulty: string;
+  questionType: string;
+  primaryConcept: string;
+  estimatedSolveTime: string;
+  qualityScore?: {
+    clarity: number;
+    pedagogy: number;
+    conciseness: number;
+    repetition: number;
+    notationConsistency: number;
+    finalScore: number;
+  };
+  promptVersion: string;
+  validationStatus: string;
+}
+
+/**
+ * Union type for all AI metadata versions.
+ * The renderer uses prompt_version / promptVersion to detect which shape to use.
+ */
+export type AiMetadata = AiMetadataV1 | AiMetadataV3 | Record<string, any>;
 
 export interface TokenUsage {
   prompt: number;

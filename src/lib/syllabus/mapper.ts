@@ -199,12 +199,67 @@ export async function mapQuestionsToSyllabus(instituteId: string, batchId: strin
     const chunkSize = 500;
     for (let i = 0; i < mappingsToUpsert.length; i += chunkSize) {
       const chunk = mappingsToUpsert.slice(i, i + chunkSize);
+      
+      // 1. Legacy Syllabus Mappings
       const { error } = await supabase
         .from("question_syllabus_mappings")
         .upsert(chunk, { onConflict: "batch_id,question_id" });
         
       if (error) {
-        console.error(`[MAPPER] Error upserting mappings:`, error.message);
+        console.error(`[MAPPER] Error upserting legacy mappings:`, error.message);
+      }
+      
+      // 2. Canonical Node Mappings & Retroactive Analytics (Phase 1 Pipeline)
+      const nodeMappings = chunk.map(m => ({
+        question_id: m.question_id,
+        subject_id: m.syllabus_subject_id,
+        chapter_id: m.syllabus_chapter_id,
+        topic_id: m.syllabus_topic_id,
+        subtopic_id: null, // Legacy mapper didn't have subtopics
+        confidence: m.mapping_confidence,
+        status: m.is_unmapped ? 'PENDING_REVIEW' : 'AI_CLASSIFIED',
+        classification_provider: m.mapping_method,
+        is_primary: true,
+        is_active: true
+      }));
+
+      // Insert into the append-only ledger (ignoring exact duplicates is fine, but we'll insert a new observation)
+      const { data: insertedNodes, error: nodeError } = await supabase
+        .from("question_node_mappings")
+        .insert(nodeMappings)
+        .select('*');
+        
+      if (nodeError) {
+        console.error(`[MAPPER] Error inserting to question_node_mappings:`, nodeError.message);
+      }
+
+      // 3. Queue Retroactive QUESTION_CLASSIFIED jobs for new mappings
+      if (insertedNodes && insertedNodes.length > 0) {
+        const jobs = insertedNodes.map(m => ({
+          institute_id: instituteId,
+          job_type: 'QUESTION_CLASSIFIED',
+          status: 'PENDING',
+          payload: {
+            questionId: m.question_id,
+            oldMapping: null, // Treat as brand new mapping
+            newMapping: {
+              subject_id: m.subject_id,
+              chapter_id: m.chapter_id,
+              topic_id: m.topic_id,
+              subtopic_id: m.subtopic_id
+            }
+          }
+        }));
+        
+        await supabase.from("background_jobs").insert(jobs);
+        
+        // Non-blocking trigger to process these mapping jobs
+        fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/internal/analytics/trigger-worker`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${process.env.CRON_SECRET || ""}`
+          }
+        }).catch(() => {});
       }
     }
   }

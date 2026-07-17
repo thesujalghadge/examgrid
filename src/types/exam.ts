@@ -40,6 +40,7 @@ export interface ExamQuestion {
   correctNumericalAnswer?: string;
   marks: number;
   negativeMarks: number;
+  bankQuestionId?: string;
   _debug_source?: string;
   _debug_assets?: string[];
 }

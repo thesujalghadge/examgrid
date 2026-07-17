@@ -222,10 +222,11 @@ $$;
 -- 6. Update the view to include new columns
 -- ─────────────────────────────────────────────────────────
 
+DROP VIEW IF EXISTS public.v_exam_solution_status;
 CREATE OR REPLACE VIEW public.v_exam_solution_status AS
 SELECT
   ess.*,
   e.title AS exam_title
 FROM public.exam_solution_status ess
 LEFT JOIN public.exams e
-  ON e.id::text = ess.exam_id OR e.legacy_id = ess.exam_id;
+  ON e.id::text = ess.exam_id::text OR e.legacy_id::text = ess.exam_id::text;

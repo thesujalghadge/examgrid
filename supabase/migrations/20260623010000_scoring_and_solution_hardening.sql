@@ -68,17 +68,6 @@ CREATE TABLE IF NOT EXISTS public.exam_solution_status (
 -- Row-level security consistent with existing patterns
 ALTER TABLE public.exam_solution_status ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "institute_can_read_solution_status"
-  ON public.exam_solution_status
-  FOR SELECT
-  USING (
-    institute_id = (
-      SELECT institute_id FROM public.workspace_sessions
-      WHERE user_id = auth.uid()
-      LIMIT 1
-    )
-  );
-
 CREATE POLICY "service_role_full_access_solution_status"
   ON public.exam_solution_status
   FOR ALL
@@ -164,4 +153,4 @@ SELECT
   e.title AS exam_title
 FROM public.exam_solution_status ess
 LEFT JOIN public.exams e
-  ON e.id::text = ess.exam_id OR e.legacy_id = ess.exam_id;
+  ON e.id::text = ess.exam_id::text OR e.legacy_id::text = ess.exam_id::text;

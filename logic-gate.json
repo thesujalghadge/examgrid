@@ -1,0 +1,94 @@
+{
+  "examMode": {
+    "concepts": [
+      "Boolean Algebra",
+      "Logic Gate Identities"
+    ],
+    "keyEquations": [
+      "OR operation: A + B",
+      "NOT operation: Y'"
+    ],
+    "fastSteps": [
+      "Step 1: Identify A + B as the OR gate operation.",
+      "Step 2: Identify the prime (') as the NOT gate inversion.",
+      "Step 3: Combine OR + NOT to yield the NOR gate definition."
+    ],
+    "estimatedSolveTime": "10 sec",
+    "confidenceScore": 1,
+    "examTricks": [
+      "Inversion symbol (') always implies a preceding logic gate's inverse.",
+      "OR is addition, AND is multiplication."
+    ],
+    "finalAnswerSummary": "The expression (A+B)' represents the NOR gate."
+  },
+  "learnMode": {
+    "keyIdea": "Logic gates process binary inputs through specific truth table relationships. The NOR gate is defined as an OR gate followed by an inversion (NOT) stage, mathematically represented by the complement of the sum.",
+    "conceptChips": [
+      "Boolean Algebra",
+      "Logic Gates",
+      "Complementary Logic"
+    ],
+    "steps": [
+      {
+        "title": "Analyze the sum component",
+        "reasoning": "The expression (A+B) represents the OR operation, where the output is high if any input is high.",
+        "equation": "Z = A + B"
+      },
+      {
+        "title": "Apply the inversion",
+        "reasoning": "The prime symbol (') denotes the NOT operation, which flips high states to low and vice-versa.",
+        "equation": "Y = Z' = (A + B)'"
+      },
+      {
+        "title": "Identify the logic family",
+        "reasoning": "An OR operation followed by an inverter is universally defined as a NOR gate.",
+        "equation": "Y = \\text{NOR}(A, B)"
+      }
+    ],
+    "takeaway": "OR gate followed by an inverter equals a NOR gate.",
+    "assumptions": [
+      {
+        "assumption": "Ideal logic gates",
+        "validity": "Signals are strictly high (1) or low (0)",
+        "failure": "Real-world circuits exhibit propagation delay and voltage threshold ambiguity"
+      }
+    ],
+    "commonMistakes": [
+      "Confusing NOR (A+B)' with NAND (AB)'",
+      "Neglecting the inversion prime sign"
+    ],
+    "importantObservation": "The expression (A+B)' can be transformed via De Morgan's Law into A' \\cdot B', which represents an AND gate with inverted inputs.",
+    "notations": [
+      {
+        "symbol": "A, B",
+        "meaning": "Binary input variables"
+      },
+      {
+        "symbol": "Y",
+        "meaning": "Binary output variable"
+      },
+      {
+        "symbol": "+",
+        "meaning": "OR boolean operator"
+      },
+      {
+        "symbol": "'",
+        "meaning": "NOT boolean operator"
+      }
+    ]
+  },
+  "finalAnswer": {
+    "value": "NOR",
+    "option": "D"
+  },
+  "availableModes": [
+    "EXAM",
+    "LEARN"
+  ],
+  "subject": "Physics",
+  "topic": "Semiconductors",
+  "subtopic": "Logic Gates",
+  "difficulty": "Easy",
+  "questionType": "MCQ",
+  "primaryConcept": "Boolean algebra logic"
+}

@@ -7,10 +7,10 @@ import { promises as fs } from 'node:fs';
 const execFileAsync = promisify(execFile);
 
 function getPythonCandidates(): string[] {
-  const home = os.homedir();
   return [
     process.env.EXAMGRID_BUNDLED_PYTHON ?? "",
-    path.join(home, ".cache", "codex-runtimes", "codex-primary-runtime", "dependencies", "python", "python.exe"),
+    path.join(process.cwd(), ".venv", "Scripts", "python.exe"),
+    path.join(process.cwd(), "venv", "Scripts", "python.exe"),
     "python",
   ].filter(Boolean);
 }

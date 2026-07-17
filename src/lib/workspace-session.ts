@@ -81,7 +81,8 @@ function syncSessionToClientStorage(session: WorkspaceSession): void {
   if (typeof window === "undefined") return;
   try {
     sessionStorage.setItem(STORAGE_KEYS.workspaceSession, JSON.stringify(session));
-  } catch {
+  } catch (error) {
+    console.error("[ExamGrid] sessionStorage error:", error);
     logSessionWarning("workspace sessionStorage write failed");
   }
 }
@@ -160,7 +161,8 @@ export function getClientWorkspaceSession(): WorkspaceSession | null {
       const parsed = safeParseSession(raw);
       if (parsed && !isSessionExpired(parsed)) return parsed;
     }
-  } catch {
+  } catch (error) {
+    console.error("[ExamGrid] sessionStorage read error:", error);
     logSessionWarning("workspace sessionStorage read failed");
   }
   const token = readCookieToken();

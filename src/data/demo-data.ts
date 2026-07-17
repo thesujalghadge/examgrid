@@ -601,6 +601,8 @@ function buildTestSubmission(
     });
     perQuestion.push({
       questionId: row.questionId,
+      bankQuestionId: bankQuestion.id,
+      legacyClientKey: row.questionId,
       selected,
       correct: isCorrect,
       marksAwarded,
@@ -617,6 +619,7 @@ function buildTestSubmission(
     attempted,
     maxScore,
     rawScore,
+    negativeMarks: 0,
     integrityPenalty: 0,
     finalScore: rawScore,
     durationSeconds,

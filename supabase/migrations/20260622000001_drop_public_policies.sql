@@ -18,9 +18,9 @@
 -- Drop all open "dev" policies on analytics tables
 DROP POLICY IF EXISTS "dev_analytics_jobs_all" ON public.analytics_jobs;
 DROP POLICY IF EXISTS "dev_analytics_snapshots_all" ON public.analytics_snapshots;
-DROP POLICY IF EXISTS "dev_student_subject_analytics_all" ON public.student_subject_analytics;
-DROP POLICY IF EXISTS "dev_student_chapter_analytics_all" ON public.student_chapter_analytics;
-DROP POLICY IF EXISTS "dev_student_concept_analytics_all" ON public.student_concept_analytics;
+DROP POLICY IF EXISTS "dev_student_subject_analytics_all" ON public.student_exam_subject_analytics;
+DROP POLICY IF EXISTS "dev_student_chapter_analytics_all" ON public.student_exam_chapter_analytics;
+DROP POLICY IF EXISTS "dev_student_concept_analytics_all" ON public.student_exam_concept_analytics;
 DROP POLICY IF EXISTS "dev_student_recommendations_all" ON public.student_recommendations;
 DROP POLICY IF EXISTS "dev_cumulative_subject_all" ON public.student_cumulative_subject_analytics;
 DROP POLICY IF EXISTS "dev_cumulative_chapter_all" ON public.student_cumulative_chapter_analytics;
@@ -40,9 +40,9 @@ DROP POLICY IF EXISTS "dev_syllabus_mapping_rules_all" ON public.syllabus_mappin
 -- Ensure RLS is still ENABLED on these tables so that without policies, access is DENIED
 ALTER TABLE public.analytics_jobs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.analytics_snapshots ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.student_subject_analytics ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.student_chapter_analytics ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.student_concept_analytics ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.student_exam_subject_analytics ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.student_exam_chapter_analytics ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.student_exam_concept_analytics ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.student_recommendations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.student_cumulative_subject_analytics ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.student_cumulative_chapter_analytics ENABLE ROW LEVEL SECURITY;

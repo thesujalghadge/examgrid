@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useWorkspaceAuthStore } from "@/stores/workspace-auth-store";
+import { hydrateSupabaseRepositories } from "@/lib/supabase/hydrate-repositories";
 
 export function SessionHydrationGate({
   children,
@@ -14,6 +15,7 @@ export function SessionHydrationGate({
   const isHydrated = useWorkspaceAuthStore((s) => s.isHydrated);
   const session = useWorkspaceAuthStore((s) => s.session);
   const checkExpiry = useWorkspaceAuthStore((s) => s.checkExpiry);
+  const [reposHydrated, setReposHydrated] = useState(false);
 
   useEffect(() => {
     if (isHydrated) return;
@@ -23,9 +25,15 @@ export function SessionHydrationGate({
   useEffect(() => {
     if (!isHydrated) return;
     checkExpiry();
+    if (session?.instituteId) {
+      setReposHydrated(false);
+      hydrateSupabaseRepositories().then(() => setReposHydrated(true));
+    } else {
+      setReposHydrated(true); // If no institute session, just let it pass
+    }
   }, [checkExpiry, isHydrated, session]);
 
-  if (!isHydrated) {
+  if (!isHydrated || !reposHydrated) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#f5f1e8] text-sm text-[#5e5a52]">
         Validating session...

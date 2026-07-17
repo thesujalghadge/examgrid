@@ -3,11 +3,13 @@
  * Phase 4B can swap implementations to real async while services keep await.
  */
 import { getRepositories } from "@/lib/repositories/provider";
+import { hydrateSupabaseQuestions } from "@/lib/supabase/hydrate-repositories";
 import type { BankQuestion } from "@/types/question-bank";
 import type { ExamDefinition, PersistedExamAttempt } from "@/types/exam";
 import type { StudentRecord } from "@/types/student";
 
 export async function readQuestionBank(): Promise<BankQuestion[]> {
+  await hydrateSupabaseQuestions();
   return Promise.resolve(getRepositories().questions.list());
 }
 

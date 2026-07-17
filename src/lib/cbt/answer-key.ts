@@ -13,6 +13,7 @@ export function buildAnswerKeyFromExam(exam: ExamDefinition): TestAnswerKey {
       correctNumericalAnswer: q.correctNumericalAnswer,
       marks: q.marks,
       negativeMarks: q.negativeMarks,
+      bankQuestionId: q.bankQuestionId,
     };
   }
   return key;

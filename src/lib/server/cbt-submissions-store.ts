@@ -7,10 +7,17 @@ import type { TestResultBreakdown, TestSession } from "@/types/test-session";
 
 const questionResultSchema = z.object({
   questionId: z.string(),
+  bankQuestionId: z.string().uuid().nullable(),
+  legacyClientKey: z.string().optional(),
   selected: z.string().nullable(),
   correct: z.boolean(),
   marksAwarded: z.number(),
   maxMarks: z.number(),
+  timeSpentSeconds: z.number().optional(),
+  visitedCount: z.number().optional(),
+  answerChangedCount: z.number().optional(),
+  firstAnswer: z.string().nullable().optional(),
+  markedForReview: z.boolean().optional(),
 });
 
 const resultBreakdownSchema = z.object({
@@ -20,6 +27,7 @@ const resultBreakdownSchema = z.object({
   attempted: z.number(),
   maxScore: z.number(),
   rawScore: z.number(),
+  negativeMarks: z.number().optional(),
   integrityPenalty: z.number(),
   finalScore: z.number(),
   durationSeconds: z.number(),
@@ -31,6 +39,7 @@ export const persistedCbtSubmissionSchema = z.object({
   testId: z.string(),
   instituteId: z.string(),
   studentId: z.string(),
+  studentRollNumber: z.string().optional(),
   status: z.enum(["submitted", "auto_submitted"]),
   startedAt: z.number(),
   submittedAt: z.number(),
@@ -41,6 +50,8 @@ export const persistedCbtSubmissionSchema = z.object({
   integrityScore: z.number(),
   answers: z.record(z.string(), z.string().nullable()),
   resultBreakdown: resultBreakdownSchema,
+  rank: z.number().nullable().optional(),
+  percentile: z.number().nullable().optional(),
 });
 
 export type PersistedCbtSubmission = z.infer<typeof persistedCbtSubmissionSchema>;
@@ -49,6 +60,7 @@ const cbtAttemptRowSchema = z.object({
   session_id: z.string(),
   test_id: z.string(),
   institute_id: z.string(),
+  student_id: z.string().uuid(),
   student_roll_number: z.string(),
   status: z.enum(["submitted", "auto_submitted"]),
   started_at: z.string(),
@@ -64,6 +76,10 @@ const cbtSubmissionRpcSchema = z.object({
   attempt: cbtAttemptRowSchema,
   result: z.object({
     score: z.union([z.number(), z.string()]),
+    percentage: z.union([z.number(), z.string()]).optional(),
+    accuracy: z.union([z.number(), z.string()]).optional(),
+    rank: z.union([z.number(), z.string(), z.null()]).optional(),
+    percentile: z.union([z.number(), z.string(), z.null()]).optional(),
   }),
   answers: z.array(z.unknown()).default([]),
   idempotent: z.boolean(),
@@ -104,7 +120,8 @@ function parseRpcSubmission(raw: unknown): PersistedCbtSubmission {
     sessionId: parsed.attempt.session_id,
     testId: parsed.attempt.test_id,
     instituteId: parsed.attempt.institute_id,
-    studentId: parsed.attempt.student_roll_number,
+    studentId: parsed.attempt.student_id,
+    studentRollNumber: parsed.attempt.student_roll_number,
     status: parsed.attempt.status,
     startedAt: toMillis(parsed.attempt.started_at),
     submittedAt: toMillis(parsed.attempt.submitted_at),
@@ -115,6 +132,8 @@ function parseRpcSubmission(raw: unknown): PersistedCbtSubmission {
     integrityScore: numeric(parsed.attempt.integrity_score),
     answers: parsed.attempt.answers,
     resultBreakdown: breakdown,
+    rank: parsed.result.rank ? numeric(parsed.result.rank) : null,
+    percentile: parsed.result.percentile ? numeric(parsed.result.percentile) : null,
   };
 }
 
@@ -127,7 +146,7 @@ export async function saveCbtSubmission(
     p_session_id: parsed.sessionId,
     p_test_id: parsed.testId,
     p_institute_id: parsed.instituteId,
-    p_student_roll_number: parsed.studentId,
+    p_student_id: parsed.studentId,
     p_status: parsed.status,
     p_started_at: new Date(parsed.startedAt).toISOString(),
     p_submitted_at: new Date(parsed.submittedAt).toISOString(),
@@ -150,7 +169,7 @@ export async function getCbtSubmission(
   const { data, error } = await client.rpc("get_cbt_submission", {
     p_institute_id: instituteId,
     p_test_id: testId,
-    p_student_roll_number: studentId,
+    p_student_id: studentId,
   });
 
   if (error) throw new Error(error.message);

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { listPlatformInstitutes } from "@/lib/platform-institute-registry";
 import { getRepositories } from "@/lib/repositories/provider";
@@ -9,8 +9,13 @@ import { getScheduleStatus } from "@/services/institute-ops-service";
 import { listSessionsLocal } from "@/services/test-session-engine";
 
 export default function PlatformOverviewPage() {
+  const [institutes, setInstitutes] = useState<any[]>([]);
+
+  useEffect(() => {
+    listPlatformInstitutes().then(setInstitutes).catch(console.error);
+  }, []);
+
   const stats = useMemo(() => {
-    const institutes = listPlatformInstitutes();
     const repos = getRepositories();
     const active = institutes.filter((i) => i.status === "active").length;
     const liveTests = repos.schedules.list().filter((s) => getScheduleStatus(s) === "active").length;
@@ -23,7 +28,7 @@ export default function PlatformOverviewPage() {
       liveTests,
       submissions,
     };
-  }, []);
+  }, [institutes]);
 
   return (
     <div className="space-y-6">

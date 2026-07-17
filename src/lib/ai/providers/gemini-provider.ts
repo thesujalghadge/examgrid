@@ -2,8 +2,10 @@ import { GoogleGenerativeAI, Schema, SchemaType } from "@google/generative-ai";
 import type { SolutionProvider, SolutionGenerationInput, SolutionProviderResult } from "./provider";
 import { SOLUTION_PROMPT_V1 } from "../prompts/solution-v1";
 import { SOLUTION_PROMPT_V2_STRICT } from "../prompts/solution-v2-strict";
+import { SOLUTION_PROMPT_V3 } from "../prompts/solution-v3";
 import { getInstituteGeminiKey } from "@/lib/institute/get-institute-api-key";
 
+// ─── Legacy V1 Schema (read-only — kept for backward compat) ────────────────
 const responseSchemaV1: Schema = {
   type: SchemaType.OBJECT,
   properties: {
@@ -25,6 +27,7 @@ const responseSchemaV1: Schema = {
   ]
 };
 
+// ─── Legacy V2-Strict Schema (read-only — kept for backward compat) ─────────
 const responseSchemaV2: Schema = {
   type: SchemaType.OBJECT,
   properties: {
@@ -72,28 +75,125 @@ const responseSchemaV2: Schema = {
   ]
 };
 
+// ─── V3 Schema (canonical — all new solutions) ─────────────────────────────
+const responseSchemaV3: Schema = {
+  type: SchemaType.OBJECT,
+  properties: {
+    examMode: {
+      type: SchemaType.OBJECT,
+      properties: {
+        concepts: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+        keyEquations: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+        fastSteps: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+        examTricks: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+        estimatedSolveTime: { type: SchemaType.STRING },
+        finalAnswerSummary: { type: SchemaType.STRING }
+      },
+      required: ["concepts", "keyEquations", "fastSteps", "estimatedSolveTime"]
+    },
+    learnMode: {
+      type: SchemaType.OBJECT,
+      properties: {
+        keyIdea: { type: SchemaType.STRING },
+        conceptChips: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+        notations: {
+          type: SchemaType.ARRAY,
+          items: {
+            type: SchemaType.OBJECT,
+            properties: {
+              symbol: { type: SchemaType.STRING },
+              meaning: { type: SchemaType.STRING }
+            },
+            required: ["symbol", "meaning"]
+          }
+        },
+        steps: {
+          type: SchemaType.ARRAY,
+          items: {
+            type: SchemaType.OBJECT,
+            properties: {
+              title: { type: SchemaType.STRING },
+              reasoning: { type: SchemaType.STRING },
+              equation: { type: SchemaType.STRING },
+              result: { type: SchemaType.STRING }
+            },
+            required: ["title", "reasoning"]
+          }
+        },
+        importantObservation: { type: SchemaType.STRING },
+        commonMistakes: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+        takeaway: { type: SchemaType.STRING },
+        assumptions: {
+          type: SchemaType.ARRAY,
+          items: {
+            type: SchemaType.OBJECT,
+            properties: {
+              assumption: { type: SchemaType.STRING },
+              validity: { type: SchemaType.STRING },
+              failure: { type: SchemaType.STRING }
+            },
+            required: ["assumption", "validity", "failure"]
+          }
+        }
+      },
+      required: ["keyIdea", "steps", "takeaway"]
+    },
+    finalAnswer: {
+      type: SchemaType.OBJECT,
+      properties: {
+        value: { type: SchemaType.STRING },
+        option: { type: SchemaType.STRING }
+      },
+      required: ["value"]
+    },
+    availableModes: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+    subject: { type: SchemaType.STRING },
+    topic: { type: SchemaType.STRING },
+    subtopic: { type: SchemaType.STRING },
+    difficulty: { type: SchemaType.STRING },
+    questionType: { type: SchemaType.STRING },
+    primaryConcept: { type: SchemaType.STRING }
+  },
+  required: [
+    "examMode", "learnMode", "finalAnswer", "availableModes",
+    "subject", "topic", "subtopic", "difficulty", "questionType", "primaryConcept"
+  ]
+};
+
 export class GeminiProvider implements SolutionProvider {
   name = "gemini";
-  modelName = "gemini-2.5-flash";
+  modelName = "gemini-3.1-flash-lite";
 
   async generateSolution(
     input: SolutionGenerationInput,
-    promptVersion: string = "solution-v1"
+    promptVersion: string = "solution-v3"
   ): Promise<SolutionProviderResult> {
     const startTime = Date.now();
 
     // ── Institute key is mandatory. No .env fallback. ──────────────────────────
-    // If the institute has no Gemini key configured, getInstituteGeminiKey()
-    // throws with name="NO_KEY". This propagates to processLeasedJob() which
-    // calls markJobFailed() with error_code "NO_KEY".
-    // This prevents one institute from silently consuming a global quota.
     const apiKey = await getInstituteGeminiKey(input.instituteId);
 
     console.log(`MODEL_SELECTED: ${this.modelName}`);
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const schemaToUse = promptVersion === "solution-v2-strict" ? responseSchemaV2 : responseSchemaV1;
-    
+
+    // Select schema and prompt based on version
+    let schemaToUse: Schema;
+    let promptTemplate: string;
+
+    if (promptVersion === "solution-v3") {
+      schemaToUse = responseSchemaV3;
+      promptTemplate = SOLUTION_PROMPT_V3;
+    } else if (promptVersion === "solution-v2-strict") {
+      schemaToUse = responseSchemaV2;
+      promptTemplate = SOLUTION_PROMPT_V2_STRICT;
+    } else if (promptVersion === "solution-v1") {
+      schemaToUse = responseSchemaV1;
+      promptTemplate = SOLUTION_PROMPT_V1;
+    } else {
+      throw new Error(`Unsupported prompt version: ${promptVersion}`);
+    }
+
     const model = genAI.getGenerativeModel({
       model: "gemini-3.1-flash-lite",
       generationConfig: {
@@ -101,15 +201,6 @@ export class GeminiProvider implements SolutionProvider {
         responseSchema: schemaToUse,
       }
     });
-
-    let promptTemplate = "";
-    if (promptVersion === "solution-v1") {
-      promptTemplate = SOLUTION_PROMPT_V1;
-    } else if (promptVersion === "solution-v2-strict") {
-      promptTemplate = SOLUTION_PROMPT_V2_STRICT;
-    } else {
-      throw new Error(`Unsupported prompt version: ${promptVersion}`);
-    }
 
     const prompt = promptTemplate
       .replace("{{questionId}}", input.questionId)
@@ -143,7 +234,7 @@ export class GeminiProvider implements SolutionProvider {
     }
 
     const result = await model.generateContent(promptParts);
-    console.log(`MODEL_RESPONSE_RECEIVED: ${this.modelName}`);
+    console.log(`MODEL_RESPONSE_RECEIVED: ${this.modelName} (${Date.now() - startTime}ms)`);
     const text = result.response.text();
     
     let parsed: any;
@@ -155,26 +246,86 @@ export class GeminiProvider implements SolutionProvider {
 
     const usage = result.response.usageMetadata;
     
-    // For markdown Solution (fallback / compatibility)
-    let markdownSolution = "";
-    if (promptVersion === "solution-v2-strict") {
-      const stepsText = (parsed.steps || []).map((s: any) => `* **${s.title}**: ${s.explanation} ${s.equation ? `($${s.equation}$)` : ""}`).join('\n');
-      markdownSolution = `**Approach:**\n${parsed.approach}\n\n**Calculation:**\n${stepsText}\n\n**Final Answer:**\n${parsed.finalAnswer?.value}`;
+    // ─── Build provider result based on version ─────────────────────────────
+    if (promptVersion === "solution-v3") {
+      return this.buildV3Result(parsed, usage);
+    } else if (promptVersion === "solution-v2-strict") {
+      return this.buildV2Result(parsed, usage);
     } else {
-      const stepsText = (parsed.essential_steps || []).map((s: string) => `* ${s}`).join('\n');
-      markdownSolution = `**Approach:**\n${parsed.quick_approach}\n\n**Calculation:**\n${stepsText}\n\n**Final Answer:**\n${parsed.final_answer}`;
+      return this.buildV1Result(parsed, usage);
     }
+  }
 
-    // Merge whatever parsed gave us directly into aiMetadata to be stored in DB
-    const finalAnswerValue = promptVersion === "solution-v2-strict" ? parsed.finalAnswer?.value : parsed.final_answer;
+  private buildV3Result(parsed: any, usage: any): SolutionProviderResult {
+    // Build a compact markdown fallback for content_markdown column
+    const learn = parsed.learnMode || {};
+    const exam = parsed.examMode || {};
+    
+    const stepsText = (learn.steps || [])
+      .map((s: any, i: number) => `**Step ${i + 1}: ${s.title}**\n${s.reasoning}${s.equation ? `\n$$${s.equation}$$` : ""}${s.result ? `\n→ ${s.result}` : ""}`)
+      .join("\n\n");
+
+    const markdownSolution = [
+      `**Key Idea:** ${learn.keyIdea || ""}`,
+      "",
+      stepsText,
+      "",
+      `**Answer:** ${parsed.finalAnswer?.value || ""}`,
+      learn.takeaway ? `\n**Takeaway:** ${learn.takeaway}` : "",
+    ].filter(Boolean).join("\n");
 
     return {
-      promptVersion,
+      promptVersion: "solution-v3",
       markdownSolution,
-      finalAnswer: finalAnswerValue,
+      finalAnswer: parsed.finalAnswer?.value || "",
       aiMetadata: {
-        ...parsed, // Just store the entire raw JSON from the model in aiMetadata
-        prompt_version: promptVersion,
+        ...parsed,
+        schemaVersion: 3,
+        promptVersion: "solution-v3",
+        generatedAt: new Date().toISOString(),
+        generatorModel: "gemini-3.1-flash-lite",
+        validationStatus: "pending",
+      },
+      tokenUsage: {
+        prompt: usage?.promptTokenCount || 0,
+        completion: usage?.candidatesTokenCount || 0,
+        total: usage?.totalTokenCount || 0,
+      },
+    };
+  }
+
+  private buildV2Result(parsed: any, usage: any): SolutionProviderResult {
+    const stepsText = (parsed.steps || []).map((s: any) => `* **${s.title}**: ${s.explanation} ${s.equation ? `($${s.equation}$)` : ""}`).join('\n');
+    const markdownSolution = `**Approach:**\n${parsed.approach}\n\n**Calculation:**\n${stepsText}\n\n**Final Answer:**\n${parsed.finalAnswer?.value}`;
+
+    return {
+      promptVersion: "solution-v2-strict",
+      markdownSolution,
+      finalAnswer: parsed.finalAnswer?.value || "",
+      aiMetadata: {
+        ...parsed,
+        prompt_version: "solution-v2-strict",
+        validation_status: "pending"
+      },
+      tokenUsage: {
+        prompt: usage?.promptTokenCount || 0,
+        completion: usage?.candidatesTokenCount || 0,
+        total: usage?.totalTokenCount || 0,
+      }
+    };
+  }
+
+  private buildV1Result(parsed: any, usage: any): SolutionProviderResult {
+    const stepsText = (parsed.essential_steps || []).map((s: string) => `* ${s}`).join('\n');
+    const markdownSolution = `**Approach:**\n${parsed.quick_approach}\n\n**Calculation:**\n${stepsText}\n\n**Final Answer:**\n${parsed.final_answer}`;
+
+    return {
+      promptVersion: "solution-v1",
+      markdownSolution,
+      finalAnswer: parsed.final_answer || "",
+      aiMetadata: {
+        ...parsed,
+        prompt_version: "solution-v1",
         validation_status: "pending"
       },
       tokenUsage: {

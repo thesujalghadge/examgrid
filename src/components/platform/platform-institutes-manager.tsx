@@ -25,7 +25,7 @@ export function PlatformInstitutesManager() {
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const refresh = useCallback(() => {
-    setRows(listPlatformInstitutes());
+    listPlatformInstitutes().then(setRows).catch(e => console.error(e));
   }, []);
 
   useEffect(() => {

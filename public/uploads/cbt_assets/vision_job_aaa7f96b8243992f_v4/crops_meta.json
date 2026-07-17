@@ -1,0 +1,30 @@
+{
+  "job_id": "vision_job_aaa7f96b8243992f_v4",
+  "questions": [
+    {
+      "id": "Q1",
+      "q_num": 1,
+      "q_type": "MCQ",
+      "page": 1,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_aaa7f96b8243992f_v4\\vision_crops\\Q1_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_aaa7f96b8243992f_v4/vision_crops/Q1_crop.jpg",
+      "question_text": "Find the correct combination of A, B, C and D inputs which can cause the LED to glow.",
+      "options": [
+        "0100",
+        "1000",
+        "0011",
+        "1101"
+      ]
+    },
+    {
+      "id": "Q2",
+      "q_num": 2,
+      "q_type": "NAT",
+      "page": 1,
+      "crop_path": "C:\\AI\\examgrid\\public\\uploads\\cbt_assets\\vision_job_aaa7f96b8243992f_v4\\vision_crops\\Q2_crop.jpg",
+      "asset_path": "/uploads/cbt_assets/vision_job_aaa7f96b8243992f_v4/vision_crops/Q2_crop.jpg",
+      "question_text": "Two loudspeakers (L1 and L2) are placed with a separation of 10m, as shown in the \nfigure. Both speakers are fed with an audio input signal of the same frequency with \nconstant volume. A voice recorder, initially at point A, at equidistance to both \nloudspeakers, is moved by 25m along the line AB while monitoring the audio \nsignal. The measured signal was found to undergo 10 cycles of minima and maxima \nduring the movement. The frequency of the input signal is _______ Hz. \n \n(Speed of sound in air is 324m/s and \u221a5=2.23)",
+      "options": []
+    }
+  ]
+}

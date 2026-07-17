@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { listPlatformInstitutes } from "@/lib/platform-institute-registry";
 import { getRepositoryMode, getRepositories } from "@/lib/repositories/provider";
@@ -8,9 +8,14 @@ import { getScheduleStatus } from "@/services/institute-ops-service";
 import { listSessionsLocal } from "@/services/test-session-engine";
 
 export default function PlatformMonitoringPage() {
+  const [institutes, setInstitutes] = useState<any[]>([]);
+
+  useEffect(() => {
+    listPlatformInstitutes().then(setInstitutes).catch(console.error);
+  }, []);
+
   const monitoring = useMemo(() => {
     const repos = getRepositories();
-    const institutes = listPlatformInstitutes();
     const schedules = repos.schedules.list();
     const activeSchedules = schedules.filter((s) => getScheduleStatus(s) === "active");
     const sessions = listSessionsLocal();
@@ -26,7 +31,7 @@ export default function PlatformMonitoringPage() {
       flagged,
       students,
     };
-  }, []);
+  }, [institutes]);
 
   return (
     <div className="space-y-6">

@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -12,7 +11,8 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { listPlatformInstitutes } from "@/lib/platform-institute-registry";
+import { getActiveInstitutes } from "@/app/actions/institute-registry";
+import { PlatformInstitute } from "@/types/platform-institute";
 import { getRepositories } from "@/lib/repositories/provider";
 import { useAuthStore } from "@/stores/auth-store";
 import { useWorkspaceAuthStore } from "@/stores/workspace-auth-store";
@@ -27,10 +27,15 @@ export default function StudentLoginPage() {
   const [instituteId, setInstituteId] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const institutes = useMemo(
-    () => listPlatformInstitutes().filter((institute) => institute.status === "active"),
-    [],
-  );
+  const [institutes, setInstitutes] = useState<PlatformInstitute[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getActiveInstitutes().then((data) => {
+      setInstitutes(data);
+      setLoading(false);
+    });
+  }, []);
 
   useEffect(() => {
     if (institutes.length > 0 && !instituteId) setInstituteId(institutes[0].id);
@@ -47,8 +52,26 @@ export default function StudentLoginPage() {
 
     let workspaceOk = false;
     try {
+      const { createClient } = await import("@supabase/supabase-js");
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+
+      const { data: matchedStudent } = await supabase
+        .from("students")
+        .select("id")
+        .eq("roll_number", roll)
+        .eq("institute_id", instituteId)
+        .maybeSingle();
+
+      if (!matchedStudent) {
+        setError("No active student found for this roll in the selected institute.");
+        return;
+      }
+
       workspaceOk = await workspaceLogin({
-        userId: roll,
+        userId: matchedStudent.id,
         role: "student",
         password: "dev",
         instituteId,
@@ -56,7 +79,7 @@ export default function StudentLoginPage() {
     } catch (e: any) {
       if (e.message === "GHOST_INSTITUTE") {
         import("@/lib/platform-institute-registry").then((m) => {
-          m.deletePlatformInstitute(instituteId);
+          m.deletePlatformInstituteRemote(instituteId).catch(console.error);
         });
         setError("This institute no longer exists. Please refresh and select another.");
         return;
@@ -91,21 +114,23 @@ export default function StudentLoginPage() {
     router.push("/student/tests");
   };
 
+
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[linear-gradient(180deg,#f5f1e8_0%,#fbf9f4_100%)] p-4">
-      <Card className="w-full max-w-md border-[#d8d2c7] bg-white">
-        <CardHeader className="border-b border-[#ece6da] bg-[#fbf9f4]">
-          <CardTitle className="text-2xl text-[#14213d]">Student access</CardTitle>
-          <CardDescription className="text-[#5e5a52]">
+    <div className="flex min-h-screen items-center justify-center bg-[var(--eg-surface-soft)] p-4">
+      <Card className="w-full max-w-md rounded-[32px] border-[1px] border-[rgba(0,0,0,0.06)] bg-white shadow-[var(--eg-shadow-rest)]">
+        <CardHeader className="rounded-t-[32px] border-b border-[var(--eg-border)] bg-[#fafbfa] px-8 pb-8 pt-8">
+          <CardTitle className="text-[28px] font-bold tracking-tight text-[var(--eg-text-primary)]">Student access</CardTitle>
+          <CardDescription className="mt-2 text-[14px] leading-relaxed text-[var(--eg-text-secondary)]">
             Use roll number from institute records. Password not required during workflow testing.
           </CardDescription>
         </CardHeader>
-        <CardContent className="pt-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <CardContent className="px-8 pt-8 pb-8">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
-              <Label>Institute</Label>
+              <Label className="text-[13px] font-bold uppercase tracking-wider text-[var(--eg-text-tertiary)]">Institute</Label>
               <select
-                className="w-full rounded-md border border-[#ece6da] px-3 py-2 text-sm"
+                className="w-full rounded-xl border border-[var(--eg-border)] px-4 py-3 text-[15px] outline-none focus:border-[var(--eg-accent)] focus:ring-1 focus:ring-[var(--eg-accent)]"
                 value={instituteId}
                 onChange={(e) => setInstituteId(e.target.value)}
                 disabled={institutes.length === 0}
@@ -116,24 +141,45 @@ export default function StudentLoginPage() {
                   </option>
                 ))}
               </select>
-              {institutes.length === 0 ? (
-                <p className="text-sm text-amber-800">
-                  No active institute is available for student login.
+              {loading ? (
+                <p className="text-[13px] font-semibold text-[var(--eg-text-secondary)]">
+                  Loading institutes...
+                </p>
+              ) : institutes.length === 0 ? (
+                <p className="text-[13px] font-semibold text-[var(--eg-danger)]">
+                  No institutes registered. Wait for admin configuration.
                 </p>
               ) : null}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="roll">Roll number</Label>
-              <Input id="roll" value={rollNumber} onChange={(e) => setRollNumber(e.target.value)} required />
+              <Label htmlFor="roll" className="text-[13px] font-bold uppercase tracking-wider text-[var(--eg-text-tertiary)]">Roll number</Label>
+              <Input 
+                id="roll" 
+                value={rollNumber} 
+                onChange={(e) => setRollNumber(e.target.value)} 
+                required 
+                className="rounded-xl border-[var(--eg-border)] px-4 py-6 text-[15px] focus-visible:ring-[var(--eg-accent)]"
+              />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="app">Application number (optional)</Label>
-              <Input id="app" value={applicationNumber} onChange={(e) => setApplicationNumber(e.target.value)} />
+              <Label htmlFor="app" className="text-[13px] font-bold uppercase tracking-wider text-[var(--eg-text-tertiary)]">Application number (optional)</Label>
+              <Input 
+                id="app" 
+                value={applicationNumber} 
+                onChange={(e) => setApplicationNumber(e.target.value)} 
+                className="rounded-xl border-[var(--eg-border)] px-4 py-6 text-[15px] focus-visible:ring-[var(--eg-accent)]"
+              />
             </div>
-            {error ? <p className="text-sm text-red-700">{error}</p> : null}
-            <Button type="submit" className="w-full bg-[#14213d]" disabled={institutes.length === 0}>
-              Enter tests
-            </Button>
+            {error ? <p className="text-[13px] font-semibold text-[var(--eg-danger)]">{error}</p> : null}
+            <div className="pt-2">
+              <button 
+                type="submit" 
+                className="w-full inline-flex min-h-[52px] items-center justify-center gap-2 rounded-[16px] bg-[var(--eg-accent)] px-4 text-[15px] font-semibold text-white shadow-[0_14px_30px_rgba(81,71,232,0.24)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[var(--eg-accent-strong)] hover:shadow-[0_18px_38px_rgba(81,71,232,0.30)] disabled:opacity-50 disabled:pointer-events-none" 
+                disabled={institutes.length === 0}
+              >
+                Enter Student Portal
+              </button>
+            </div>
           </form>
         </CardContent>
       </Card>

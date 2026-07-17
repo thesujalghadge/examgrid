@@ -25,7 +25,8 @@ export async function enqueueSolutionsForExam(
   const { data: questions, error: questionsError } = await supabase
     .from("exam_questions")
     .select("id")
-    .eq("exam_id", examId);
+    .eq("exam_id", examId)
+    .not("published_at", "is", null);
 
   if (questionsError || !questions) {
     throw new Error(`Failed to fetch exam questions for exam ${examId}`);

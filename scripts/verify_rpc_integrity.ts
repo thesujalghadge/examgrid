@@ -40,8 +40,9 @@ async function main() {
     { id: instId2, name: "Inst 2", slug: `inst2-${RUN}` }
   ]);
   await adminDb.from("batches").insert({ id: instId1, institute_id: instId1, name: "Batch", course_type: "JEE", academic_year: "2026", is_active: true });
+  const studentId = crypto.randomUUID();
   await adminDb.from("students").insert({ 
-    id: crypto.randomUUID(), institute_id: instId1, batch_id: instId1,
+    id: studentId, institute_id: instId1, batch_id: instId1,
     roll_number: studentRoll, name: "RPC Test", full_name: "RPC Test", application_number: `app-${RUN}` 
   });
   const { error: examErr } = await adminDb.from("exams").insert({
@@ -54,7 +55,7 @@ async function main() {
     p_session_id: sessionId,
     p_test_id: testId,
     p_institute_id: instId,
-    p_student_roll_number: studentRoll,
+    p_student_id: studentId,
     p_status: "submitted",
     p_started_at: new Date().toISOString(),
     p_submitted_at: new Date().toISOString(),
@@ -77,7 +78,7 @@ async function main() {
 
   console.log("\nPhase 3: Cross-institute rejected (Database Validation)");
   const { error: err3 } = await adminDb.rpc("submit_cbt_attempt", payload(validTestId, instId2, `sess-3-${RUN}`));
-  if (err3 && (err3.message.includes("Exam does not exist") || err3.message.includes("Student roll number is not registered"))) {
+  if (err3 && (err3.message.includes("Exam does not exist") || err3.message.includes("Student is not registered for this institute"))) {
     console.log("  ✅ PASS  Cross-institute call correctly rejected by DB constraints");
   } else {
     console.error(`  ❌ FAIL  Cross-institute call not rejected properly. Error: ${err3?.message}`);

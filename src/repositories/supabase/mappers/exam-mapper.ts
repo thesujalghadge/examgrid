@@ -83,16 +83,11 @@ function examQuestionToRow(
     correct_numerical_answer: q.correctNumericalAnswer ?? null,
     marks: q.marks,
     negative_marks: q.negativeMarks,
-    bank_question_id: extractBankQuestionUuid(q.id),
+    bank_question_id: q.bankQuestionId || (() => { throw new Error(`Missing bankQuestionId for exam question: ${q.id}`) })(),
     sort_order: sortOrder,
   };
 }
 
-function extractBankQuestionUuid(examQuestionId: string): string | null {
-  const parts = examQuestionId.split("-");
-  const last = parts[parts.length - 1];
-  return isUuid(last) ? last : null;
-}
 
 export function rowsToExamDefinition(
   examRow: ExamRow,
@@ -172,6 +167,7 @@ function rowToExamQuestion(row: ExamQuestionRow, bankData?: any): ExamQuestion {
     correctNumericalAnswer: row.correct_numerical_answer ?? undefined,
     marks: Number(row.marks),
     negativeMarks: Number(row.negative_marks),
+    bankQuestionId: row.bank_question_id ?? undefined,
     stemImage,
     images,
     hasImage,

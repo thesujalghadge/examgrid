@@ -1,46 +1,62 @@
 "use client";
 
-import Link from "next/link";
+import { CalendarClock, CheckCircle2, CircleDashed, Clock3 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { buttonVariants } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import { createClient } from "@supabase/supabase-js";
+
+import { CTAButton } from "@/components/ui/student/cta-button";
+import { SectionHeader } from "@/components/ui/student/section-header";
+import { UpcomingTestCard, FeaturedTestCard, CompletedTestCard } from "@/components/ui/student/test-card";
+import { loadExamAttempt } from "@/lib/persistence";
 import { getRepositories } from "@/lib/repositories/provider";
-import { listAssignedExams } from "@/services/cbt-test-service";
-import {
-  findStudentForCandidate,
-  isOperationalSchedulingActive,
-} from "@/services/institute-ops-service";
 import { logCbtGuard } from "@/lib/logging/runtime-logger";
+import { hydrateSupabaseRepositories } from "@/lib/supabase/hydrate-repositories";
+import { cn } from "@/lib/utils";
+import { listAssignedExams } from "@/services/cbt-test-service";
+import { findStudentForCandidate, isOperationalSchedulingActive } from "@/services/institute-ops-service";
+import { listSessionsLocal } from "@/services/test-session-engine";
 import { useAuthStore } from "@/stores/auth-store";
 import { useWorkspaceAuthStore } from "@/stores/workspace-auth-store";
-import { hydrateSupabaseRepositories } from "@/lib/supabase/hydrate-repositories";
-import { listSessionsLocal } from "@/services/test-session-engine";
-import { createClient } from "@supabase/supabase-js";
-import { loadExamAttempt } from "@/lib/persistence";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
 );
+
+const TABS = [
+  { label: "Upcoming", icon: CalendarClock },
+  { label: "In Progress", icon: CircleDashed },
+  { label: "Completed", icon: CheckCircle2 },
+  { label: "All Tests", icon: Clock3 },
+] as const;
+
+type TestTab = (typeof TABS)[number]["label"];
+
+function dateBox(startAt: string) {
+  const date = new Date(startAt);
+  return {
+    month: date.toLocaleString("en-US", { month: "short" }),
+    day: date.getDate().toString().padStart(2, "0"),
+    weekday: date.toLocaleString("en-US", { weekday: "short" }),
+  };
+}
+
+function startsInLabel(startAt: string) {
+  const diffMs = new Date(startAt).getTime() - Date.now();
+  if (diffMs <= 0) return undefined;
+  const days = Math.ceil(diffMs / (24 * 60 * 60 * 1000));
+  if (days <= 1) return "1 day";
+  if (days < 7) return `${days} days`;
+  return undefined;
+}
 
 export function StudentCbtTestList() {
   const candidate = useAuthStore((s) => s.candidate);
   const ws = useWorkspaceAuthStore((s) => s.session);
   const instituteId = ws?.instituteId;
-  const hydrateWs = useWorkspaceAuthStore((s) => s.hydrate);
   const [tick, setTick] = useState(0);
   const [submittedTestIds, setSubmittedTestIds] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    hydrateWs();
-  }, [hydrateWs]);
+  const [activeTab, setActiveTab] = useState<TestTab>("Upcoming");
 
   useEffect(() => {
     hydrateSupabaseRepositories().finally(() => {
@@ -63,20 +79,30 @@ export function StudentCbtTestList() {
     };
   }, []);
 
+  const [recentTestsData, setRecentTestsData] = useState<any[]>([]);
+
   useEffect(() => {
     if (!candidate) return;
     async function loadAttempts() {
       try {
-        const { data } = await supabase
-          .from("cbt_attempts")
-          .select("exam_id, submitted_at")
-          .eq("student_id", candidate?.rollNumber)
-          .not("submitted_at", "is", null);
+        if (!candidate?.studentId) return;
         
-        if (data) {
-          setSubmittedTestIds(new Set(data.map((r) => r.exam_id)));
+        const [attemptsRes, recentRes] = await Promise.all([
+          supabase
+            .from("cbt_attempts")
+            .select("test_id, submitted_at")
+            .eq("student_id", candidate.studentId)
+            .not("submitted_at", "is", null),
+          import("@/app/student/actions/analytics-fetch").then(m => m.fetchStudentAttemptedExams())
+        ]);
+
+        if (attemptsRes.data) {
+          setSubmittedTestIds(new Set(attemptsRes.data.map((r) => r.test_id)));
         }
-      } catch (err) {}
+        if (recentRes) {
+          setRecentTestsData(recentRes);
+        }
+      } catch {}
     }
     loadAttempts();
   }, [candidate, tick]);
@@ -89,16 +115,29 @@ export function StudentCbtTestList() {
     const schedules = repos.schedules.list();
     const assigned = listAssignedExams(student, exams, schedules).filter(
       ({ schedule }) =>
-        (!schedule.instituteId || !instituteId || schedule.instituteId === instituteId),
+        !schedule.instituteId || !instituteId || schedule.instituteId === instituteId,
     );
 
-    const activeLocalSessions = listSessionsLocal().filter(s => s.status === "in_progress" && s.studentId === candidate.rollNumber);
+    const activeLocalSessions = listSessionsLocal().filter(
+      (s) => s.status === "in_progress" && s.studentId === candidate.rollNumber,
+    );
 
     return assigned.map((row) => {
-      const hasSubmitted = submittedTestIds.has(row.exam.id) || listSessionsLocal().some(s => (s.status === "submitted" || s.status === "auto_submitted") && s.testId === row.exam.id && s.studentId === candidate.rollNumber);
+      const hasSubmitted =
+        submittedTestIds.has(row.exam.id) ||
+        listSessionsLocal().some(
+          (s) =>
+            (s.status === "submitted" || s.status === "auto_submitted") &&
+            s.testId === row.exam.id &&
+            s.studentId === candidate.rollNumber,
+        );
       const hasInProgress =
-        !hasSubmitted && (activeLocalSessions.some(s => s.testId === row.exam.id) || Boolean(loadExamAttempt(row.exam.id, candidate.rollNumber)));
-      
+        !hasSubmitted &&
+        (activeLocalSessions.some((s) => s.testId === row.exam.id) ||
+          Boolean(loadExamAttempt(row.exam.id, candidate.rollNumber)));
+
+      const recentResult = recentTestsData.find((r) => r.cbt_attempts?.test_id === row.exam.id);
+
       const testProxy = {
         id: row.exam.id,
         title: row.exam.title,
@@ -106,9 +145,18 @@ export function StudentCbtTestList() {
         questions: Object.keys(row.exam.questions),
       };
 
-      return { ...row, test: testProxy, hasSubmitted, hasInProgress };
+      return { 
+        ...row, 
+        test: testProxy, 
+        hasSubmitted, 
+        hasInProgress,
+        score: recentResult?.score,
+        rank: recentResult?.rank,
+        resultDateStr: recentResult?.generated_at ? new Date(recentResult.generated_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : undefined,
+        resultId: recentResult?.id
+      };
     });
-  }, [candidate, instituteId, tick, submittedTestIds]);
+  }, [candidate, instituteId, submittedTestIds, recentTestsData]);
 
   useEffect(() => {
     if (!candidate) return;
@@ -121,94 +169,166 @@ export function StudentCbtTestList() {
 
   if (!candidate) return null;
 
+  const filteredRows = rows.filter((r) => {
+    if (activeTab === "All Tests") return true;
+    if (activeTab === "Upcoming") {
+      return r.status === "upcoming" || (r.status === "active" && !r.hasSubmitted && !r.hasInProgress);
+    }
+    if (activeTab === "In Progress") return r.hasInProgress;
+    if (activeTab === "Completed") return r.hasSubmitted || (r.status === "completed" && !r.hasSubmitted);
+    return true;
+  });
+
+  const nextUp = activeTab === "Upcoming" ? filteredRows.find((r) => r.status === "active") || filteredRows[0] : null;
+  const listRows = activeTab === "Upcoming" && nextUp ? filteredRows.filter((r) => r.test.id !== nextUp.test.id) : filteredRows;
+  const liveCount = rows.filter((r) => r.status === "active" && !r.hasSubmitted).length;
+  const upcomingCount = rows.filter((r) => r.status === "upcoming").length;
+  const completedCount = rows.filter((r) => r.hasSubmitted || r.status === "completed").length;
+
   return (
-    <div className="space-y-6">
-      <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-        <h2 className="font-heading text-2xl font-bold tracking-tight text-foreground">Upcoming tests</h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Start live tests, resume unfinished attempts, or wait for upcoming windows to open.
-        </p>
+    <div className="mx-auto max-w-[900px] pb-16">
+      {/* Hero */}
+      <section className="mb-10 mt-6 text-center sm:text-left px-2">
+        <h1 className="text-[32px] sm:text-[40px] font-bold leading-tight tracking-tight text-[var(--eg-text-primary)]">
+          Ready for your next paper?
+        </h1>
+      </section>
+
+      {/* Sticky Tabs */}
+      <div 
+        className="sticky top-0 z-20 flex gap-2 overflow-x-auto bg-[#fafbfa] py-4 px-2 -mx-2 mb-8" 
+        style={{ borderBottom: "1px solid rgba(0,0,0,0.06)" }}
+      >
+        {TABS.map((tab) => {
+          const Icon = tab.icon;
+          const selected = activeTab === tab.label;
+          return (
+            <button
+              key={tab.label}
+              onClick={() => setActiveTab(tab.label)}
+              className={cn(
+                "inline-flex min-h-11 shrink-0 items-center gap-2 rounded-[14px] px-5 text-[14px] font-semibold transition-colors duration-200",
+                selected ? "text-[#ffffff] bg-[var(--eg-accent)]" : "text-[var(--eg-text-secondary)] hover:text-[var(--eg-text-primary)] bg-transparent hover:bg-[rgba(0,0,0,0.04)]",
+              )}
+            >
+              <Icon size={16} />
+              {tab.label}
+            </button>
+          );
+        })}
       </div>
 
       {!isOperationalSchedulingActive() ? (
-        <div className="flex h-32 items-center justify-center rounded-2xl border border-dashed border-border bg-muted/20">
-          <p className="text-sm text-muted-foreground">
-            No CBT windows are active yet. Your institute will publish tests here when they are ready.
-          </p>
-        </div>
-      ) : rows.length === 0 ? (
-        <div className="flex h-32 items-center justify-center rounded-2xl border border-dashed border-border bg-muted/20">
-          <p className="text-sm text-muted-foreground">No institute tests are assigned to you right now.</p>
-        </div>
+        <CalmNotice title="No CBT windows are active yet." body="Your institute will publish tests here when they are ready." />
+      ) : filteredRows.length === 0 ? (
+        <CalmNotice title="Nothing here right now." body="Switch tabs to review older attempts or wait for your next assigned test." />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {rows.map(({ test, schedule, status, hasSubmitted, hasInProgress }, index) => {
-            const startLimit = new Date(schedule.startAt).getTime() + 10 * 60 * 1000;
-            const isLate = Date.now() > startLimit;
-            const missed = status === "active" && !hasSubmitted && !hasInProgress && isLate;
-            const active = status === "active" && !missed;
-            
-            const ctaLabel = hasSubmitted
-              ? "View result"
-              : hasInProgress
-                ? "Resume test"
-                : "Start test";
+        <div className="space-y-8">
+          {nextUp && (
+            <section className="mb-12">
+              <h2 className="mb-4 text-[14px] font-bold uppercase tracking-[0.12em] text-[var(--eg-text-tertiary)] ml-2">
+                Featured
+              </h2>
+              <FeaturedTestCard
+                title={nextUp.test.title}
+                dateBox={dateBox(nextUp.schedule.startAt)}
+                duration={`${nextUp.test.durationMinutes} min`}
+                questions={nextUp.test.questions.length}
+                isActive={nextUp.status === "active" || nextUp.hasInProgress}
+                startsIn={nextUp.status === "upcoming" ? startsInLabel(nextUp.schedule.startAt) : undefined}
+                ctaHref={`/student/tests/${nextUp.test.id}`}
+                ctaText={nextUp.hasInProgress ? "Resume Test" : nextUp.status === "active" ? "Start Test" : "View Details"}
+              />
+            </section>
+          )}
 
-            return (
-              <Card key={`${test.id}-${schedule.id}`} className="group relative overflow-hidden transition-all duration-300 hover:-translate-y-2 hover:shadow-clay-md border-2 border-border bg-card rounded-2xl animate-in fade-in slide-in-from-bottom-4" style={{ animationFillMode: 'backwards', animationDelay: `${index * 100}ms` }}>
-                <CardHeader className="pb-4 border-b-2 border-border bg-muted/50">
-                  <CardTitle className="text-xl font-bold text-foreground group-hover:text-primary transition-colors">{test.title}</CardTitle>
-                  <CardDescription className="text-muted-foreground flex flex-wrap items-center gap-2 mt-2">
-                    <span className="inline-flex items-center rounded-md border border-border bg-background px-2 py-0.5 text-xs font-bold text-foreground">
-                      {test.durationMinutes} min
-                    </span>
-                    <span className="inline-flex items-center rounded-md border border-border bg-background px-2 py-0.5 text-xs font-bold text-foreground">
-                      {test.questions.length} Qs
-                    </span>
-                    <span className="ml-auto text-[10px] font-black uppercase tracking-wider text-muted-foreground bg-muted-foreground/10 px-2 py-1 rounded-md">
-                      {missed ? "Missed" : status}
-                    </span>
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  {hasSubmitted ? (
-                    <Link
-                      href={`/student/tests/${test.id}/result`}
-                      className={cn(buttonVariants({ variant: "outline" }), "w-full font-bold border-2 border-border shadow-clay-sm hover:shadow-clay transition-all hover:-translate-y-1")}
-                    >
-                      {ctaLabel}
-                    </Link>
-                  ) : active ? (
-                    <Link
-                      href={`/student/tests/${test.id}`}
-                      className={cn(
-                        buttonVariants(),
-                        "w-full bg-primary text-primary-foreground font-bold border-2 border-border shadow-clay-sm hover:bg-primary/90 hover:shadow-clay transition-all hover:-translate-y-1",
-                      )}
-                    >
-                      {ctaLabel}
-                    </Link>
-                  ) : missed ? (
-                    <span className="text-sm text-destructive font-bold block text-center bg-destructive/10 border-2 border-destructive/20 p-2 rounded-xl">
-                      Missed (joined more than 10 mins late)
-                    </span>
-                  ) : status === "upcoming" ? (
-                    <span className="text-sm font-bold text-muted-foreground block text-center bg-muted/50 border-2 border-border/10 p-2 rounded-xl">
-                      Opens{" "}
-                      {new Date(schedule.startAt).toLocaleString("en-IN", {
-                        dateStyle: "medium",
-                        timeStyle: "short",
-                      })}
-                    </span>
-                  ) : (
-                    <span className="text-sm font-bold text-muted-foreground block text-center bg-muted/50 border-2 border-border/10 p-2 rounded-xl">Window closed</span>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
+          {listRows.length > 0 && (
+            <section>
+              <h2 className="mb-4 text-[14px] font-bold uppercase tracking-[0.12em] text-[var(--eg-text-tertiary)] ml-2">
+                {activeTab === "Upcoming" ? "Upcoming tests" : activeTab}
+              </h2>
+              <div className="space-y-3">
+                {listRows.map((row) => {
+                  const { test, schedule, status, hasSubmitted, hasInProgress, score, rank, resultDateStr, resultId } = row;
+                  const date = new Date(schedule.startAt);
+                  const isLate = Date.now() > date.getTime() + 10 * 60 * 1000;
+                  const missed = status === "active" && !hasSubmitted && !hasInProgress && isLate;
+                  const isReady = status === "active" && !missed && !hasSubmitted;
+
+                  if (hasSubmitted || status === "completed") {
+                    // Route contract:
+                    // /student/tests/[examId]/solutions
+                    // Always pass examId (test.id).
+                    // Student attempt is resolved server-side using (examId + authenticated student).
+                    return (
+                      <CompletedTestCard
+                        key={test.id}
+                        title={test.title}
+                        dateStr={resultDateStr || date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                        score={score}
+                        rank={rank}
+                        ctaHref={`/student/tests/${test.id}/solutions`}
+                      />
+                    );
+                  }
+
+                  return (
+                    <UpcomingTestCard
+                      key={test.id}
+                      title={test.title}
+                      dateBox={dateBox(schedule.startAt)}
+                      duration={`${test.durationMinutes} min`}
+                      questions={test.questions.length}
+                      isActive={isReady || hasInProgress}
+                      startsIn={status === "upcoming" ? startsInLabel(schedule.startAt) : undefined}
+                      ctaHref={
+                        missed
+                          ? `/student/tests/${test.id}/solutions`
+                          : status === "active" || hasInProgress
+                            ? `/student/tests/${test.id}`
+                            : undefined
+                      }
+                      ctaText={
+                        hasInProgress
+                          ? "Resume Test"
+                          : missed
+                            ? "Review"
+                            : isReady
+                              ? "Start Test"
+                              : "Details"
+                      }
+                      bottomText={status === "upcoming" ? `Opens ${date.toLocaleDateString()}` : missed ? "Missed" : undefined}
+                    />
+                  );
+                })}
+              </div>
+            </section>
+          )}
         </div>
       )}
+
+      <div className="rounded-[28px] bg-white p-5 sm:flex sm:items-center sm:justify-between sm:gap-4" style={{ border: "1px solid rgba(232,234,243,0.9)", boxShadow: "var(--eg-shadow-rest)" }}>
+        <div>
+          <p className="text-sm font-semibold text-[var(--eg-text-primary)]">Looking for an older paper?</p>
+          <p className="mt-1 text-sm text-[var(--eg-text-secondary)]">Past tests live in Completed with results and solution review.</p>
+        </div>
+        <div className="mt-4 sm:mt-0">
+          <CTAButton onClick={() => setActiveTab("Completed")} variant="secondary">
+            View Completed
+          </CTAButton>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CalmNotice({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="flex min-h-44 items-center justify-center rounded-[28px] bg-white p-6 text-center" style={{ border: "1px dashed var(--eg-border)" }}>
+      <div>
+        <p className="text-base font-semibold text-[var(--eg-text-primary)]">{title}</p>
+        <p className="mt-2 text-sm text-[var(--eg-text-secondary)]">{body}</p>
+      </div>
     </div>
   );
 }

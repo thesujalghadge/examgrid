@@ -113,7 +113,7 @@ async function main() {
     p_session_id: sessionId,
     p_test_id: examId, // the UUID
     p_institute_id: instId,
-    p_student_roll_number: studentRoll,
+    p_student_id: studentId,
     p_status: "submitted",
     p_started_at: new Date().toISOString(),
     p_submitted_at: new Date().toISOString(),

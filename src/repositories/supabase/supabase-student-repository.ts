@@ -120,6 +120,7 @@ export class SupabaseStudentRepository implements StudentRepository {
         .select("*")
         .eq("institute_id", session.instituteId)
         .order("full_name", { ascending: true });
+      console.log(`[SupabaseStudentRepository] Fetched students for ${session.instituteId}:`, data?.length);
       throwIfSupabaseError(error, "students", "list");
       this.cache = ((data ?? []) as StudentRow[]).map(rowToStudent);
       this.hydrated = true;

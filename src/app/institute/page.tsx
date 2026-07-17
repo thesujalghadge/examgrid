@@ -1,5 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { hydrateSupabaseRepositories } from "@/lib/supabase/hydrate-repositories";
+
 import Link from "next/link";
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,6 +39,12 @@ export default function InstituteOverviewPage() {
     const nameByRoll = new Map(students.map((s) => [s.rollNumber, s.fullName]));
 
     const recentActivity: { label: string; at: string }[] = []; // Submissions now via API, not local repo
+
+    console.log("[DEBUG RENDER] InstituteOverviewPage", { 
+      instituteId, 
+      cacheSize: repos.students.list().length, 
+      scopedStudents: students.length 
+    });
 
     return {
       students: students.length,

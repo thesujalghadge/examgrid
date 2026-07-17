@@ -69,8 +69,9 @@ async function main() {
   // Setup a fake institute and student to pass the basic student registration check in the RPC
   await adminDb.from("institutes").insert({ id: instId, name: "RPC Test", slug: `rpc-test-${RUN}` });
   await adminDb.from("batches").insert({ id: instId, institute_id: instId, name: "Batch", course_type: "JEE", academic_year: "2026", is_active: true });
+  const studentId = crypto.randomUUID();
   await adminDb.from("students").insert({ 
-    id: crypto.randomUUID(), institute_id: instId, batch_id: instId,
+    id: studentId, institute_id: instId, batch_id: instId,
     roll_number: "rpc-roll", name: "RPC Test", full_name: "RPC Test", application_number: "app1" 
   });
 
@@ -78,7 +79,7 @@ async function main() {
     p_session_id: `sess-${RUN}`,
     p_test_id: fakeTestId, // Injecting fake testId directly!
     p_institute_id: instId,
-    p_student_roll_number: "rpc-roll",
+    p_student_id: studentId,
     p_status: "submitted",
     p_started_at: new Date().toISOString(),
     p_submitted_at: new Date().toISOString(),

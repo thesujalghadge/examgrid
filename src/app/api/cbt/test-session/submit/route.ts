@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse, NextRequest } from "next/server";
+import { after } from 'next/server';
 import { verifySignedAnswerKey } from "@/lib/cbt/answer-key";
 import { getExamByIdServer } from "@/lib/exam-catalog";
 import {
@@ -56,10 +57,8 @@ const submitSessionSchema = z.object({
 import { createSupabaseClientFromEnv } from "@/lib/supabase/client";
 
 export async function POST(request: NextRequest) {
-  require('fs').appendFileSync('cbt_submit_debug.log', `[${new Date().toISOString()}] POST /submit reached\n`);
   const ws = await readVerifiedWorkspaceSession();
   if (!ws || ws.role !== "student") {
-    require('fs').appendFileSync('cbt_submit_debug.log', `[${new Date().toISOString()}] Failed: Unauthorized (ws: ${JSON.stringify(ws)})\n`);
     logSessionWarning("cbt submit denied", { reason: "unauthorized" });
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -68,14 +67,12 @@ export async function POST(request: NextRequest) {
   try {
     payload = await request.json();
   } catch {
-    require('fs').appendFileSync('cbt_submit_debug.log', `[${new Date().toISOString()}] Failed: Invalid JSON\n`);
     logCbtWarning("cbt submit rejected", { reason: "invalid_json", userId: ws.userId });
     return NextResponse.json({ error: "Invalid body" }, { status: 400 });
   }
 
   const parsed = submitSessionSchema.safeParse(payload);
   if (!parsed.success) {
-    require('fs').appendFileSync('cbt_submit_debug.log', `[${new Date().toISOString()}] Failed: Invalid Payload\n`);
     logCbtWarning("cbt submit rejected", {
       reason: "invalid_payload",
       userId: ws.userId,
@@ -86,7 +83,6 @@ export async function POST(request: NextRequest) {
   const body = parsed.data;
 
   if (body.instituteId !== ws.instituteId) {
-    require('fs').appendFileSync('cbt_submit_debug.log', `[${new Date().toISOString()}] Failed: Tenant mismatch\n`);
     logSessionWarning("cbt submit denied", {
       reason: "tenant_mismatch",
       userId: ws.userId,
@@ -109,7 +105,6 @@ export async function POST(request: NextRequest) {
     timer.studentId !== ws.userId ||
     timer.instituteId !== ws.instituteId
   ) {
-    require('fs').appendFileSync('cbt_submit_debug.log', `[${new Date().toISOString()}] Failed: Invalid timer session\n`);
     logSessionWarning("cbt submit denied", {
       reason: "invalid_timer_session",
       userId: ws.userId,
@@ -121,7 +116,6 @@ export async function POST(request: NextRequest) {
 
   const authoritativeExam = await getExamByIdServer(body.testId);
   if (!authoritativeExam) {
-    require('fs').appendFileSync('cbt_submit_debug.log', `[${new Date().toISOString()}] Failed: Exam not found\n`);
     logCbtWarning("cbt submit rejected", {
       reason: "exam_not_found",
       testId: body.testId,
@@ -131,7 +125,6 @@ export async function POST(request: NextRequest) {
   }
 
   if (authoritativeExam.instituteId !== ws.instituteId) {
-    require('fs').appendFileSync('cbt_submit_debug.log', `[${new Date().toISOString()}] Failed: Exam institute mismatch\n`);
     logCbtWarning("cbt submit rejected", {
       reason: "exam_institute_mismatch",
       testId: body.testId,
@@ -143,14 +136,12 @@ export async function POST(request: NextRequest) {
 
   const answerKey = verifySignedAnswerKey(body.signedAnswerKey, body.testId);
   if (!answerKey) {
-    require('fs').appendFileSync('cbt_submit_debug.log', `[${new Date().toISOString()}] Failed: Invalid answer key signature\n`);
     logCbtWarning("cbt submit rejected", {
       reason: "invalid_answer_key_signature",
       testId: body.testId,
       studentId: ws.userId,
       sessionId: body.sessionId,
     });
-    require('fs').writeFileSync('cbt_submit_log.txt', 'Submit Error: Invalid answer key token');
     return NextResponse.json({ error: "Invalid answer key token" }, { status: 400 });
   }
 
@@ -180,14 +171,12 @@ export async function POST(request: NextRequest) {
             invalidAnswer: a,
             studentId: ws.userId,
           });
-          require('fs').writeFileSync('cbt_submit_log.txt', `Submit Error: Invalid option ID ${a} for question ${qId}`);
           return NextResponse.json({ error: `Invalid option ID submitted for question ${qId}` }, { status: 400 });
         }
       }
     }
   }
   
-  require('fs').appendFileSync('cbt_submit_debug.log', `[${new Date().toISOString()}] SUBMIT DIAGNOSTICS:\nbody.answers keys: ${Object.keys(body.answers).length}\nanswerKey keys: ${Object.keys(answerKey).length}\nnormalizedAnswers keys: ${Object.keys(normalizedAnswers).length}\n`);
   const integrityEvents: TestSessionIntegrityEvent[] = (body.integrityEvents ?? [])
     .filter((event) => event.at >= timer.startedAt && event.at <= Date.now() + 60_000)
     .sort((left, right) => left.at - right.at);
@@ -241,10 +230,7 @@ export async function POST(request: NextRequest) {
   };
 
   try {
-    require('fs').appendFileSync('cbt_submit_debug.log', `[${new Date().toISOString()}] Calling saveCbtSubmission\n`);
     await saveCbtSubmission(submission);
-    require('fs').appendFileSync('cbt_submit_debug.log', `[${new Date().toISOString()}] saveCbtSubmission SUCCESS\n`);
-    require('fs').writeFileSync('cbt_submit_log.txt', 'Submit Success!');
 
     // Queue Analytics Job
     try {
@@ -276,23 +262,40 @@ export async function POST(request: NextRequest) {
             status: "PENDING"
           });
           
-          // Trigger the worker async
-          fetch(`${request.nextUrl.origin}/api/internal/analytics/trigger-worker`, {
-            method: "POST"
-          }).catch(console.error);
+          await supabaseAdmin.from("background_jobs").insert({
+            institute_id: ws.instituteId,
+            job_type: "ATTEMPT_FINISHED",
+            status: "PENDING",
+            payload: {
+              attemptId: attemptRow.id,
+              studentId: ws.userId,
+              examId: realUuid,
+              batchId: batchId
+            }
+          });
+          
+          // Trigger the worker async using Next.js 'after' for safe Vercel execution
+          after(() => {
+            const authHeader = process.env.CRON_SECRET ? `Bearer ${process.env.CRON_SECRET}` : "";
+            const headers = authHeader ? { Authorization: authHeader } : undefined;
 
-          // Trigger the solution worker async to ensure solutions are processed smoothly
-          fetch(`${request.nextUrl.origin}/api/internal/solution-worker`, {
-            method: "GET"
-          }).catch(console.error);
+            fetch(`${request.nextUrl.origin}/api/internal/analytics/trigger-worker`, {
+              method: "POST",
+              headers
+            }).catch(console.error);
+
+            // Trigger the solution worker async to ensure solutions are processed smoothly
+            fetch(`${request.nextUrl.origin}/api/internal/solution-worker`, {
+              method: "GET",
+              headers
+            }).catch(console.error);
+          });
         }
       }
     } catch (analyticsErr) {
       console.error("Failed to queue analytics job:", analyticsErr);
     }
   } catch (error) {
-    require('fs').appendFileSync('cbt_submit_debug.log', `[${new Date().toISOString()}] Failed: saveCbtSubmission threw error: ${error instanceof Error ? error.message : "unknown"}\n`);
-    require('fs').writeFileSync('cbt_submit_log.txt', 'Submit Error: ' + (error instanceof Error ? error.message : "unknown"));
     logCbtWarning("cbt submit persistence failed", {
       testId: body.testId,
       sessionId: body.sessionId,
@@ -319,7 +322,6 @@ export async function POST(request: NextRequest) {
     score: resultBreakdown.finalScore,
   });
 
-  require('fs').appendFileSync('cbt_submit_debug.log', `[${new Date().toISOString()}] POST /submit Completed successfully\n`);
   const res = NextResponse.json({
     status,
     score: resultBreakdown.finalScore,

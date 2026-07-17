@@ -1,0 +1,95 @@
+{
+  "examMode": {
+    "concepts": [
+      "Young's Double Slit Experiment",
+      "Fringe Pattern Geometry"
+    ],
+    "keyEquations": [
+      "\\beta = \\frac{\\lambda D}{d}"
+    ],
+    "fastSteps": [
+      "Identify variables: \\lambda = 5 \\times 10^{-7} \\text{ m}, D = 1 \\text{ m}, d = 5 \\times 10^{-4} \\text{ m}",
+      "Apply formula: \\beta = \\frac{(5 \\times 10^{-7} \\times 1)}{5 \\times 10^{-4}}",
+      "Calculate: \\beta = 10^{-3} \\text{ m} = 1.0 \\text{ mm}"
+    ],
+    "estimatedSolveTime": "30 sec",
+    "confidenceScore": 1,
+    "examTricks": [
+      "Convert all units to SI (meters) before calculating to avoid decimal errors.",
+      "Notice 5/5 cancels out, simplifying math."
+    ],
+    "finalAnswerSummary": "The fringe width \\beta is 1.0 mm."
+  },
+  "learnMode": {
+    "keyIdea": "Fringe width represents the periodic spatial distance between consecutive intensity maxima on a screen, determined by the ratio of wavelength to slit angular separation.",
+    "conceptChips": [
+      "Interference",
+      "Wave superposition",
+      "Young's geometry"
+    ],
+    "steps": [
+      {
+        "title": "Define Fringe Width",
+        "reasoning": "The fringe width is the physical separation between adjacent bright or dark fringes. This depends on the ratio of wavelength to the slit separation angle.",
+        "equation": "\\beta = \\frac{\\lambda D}{d}"
+      },
+      {
+        "title": "Unit Normalization",
+        "reasoning": "Ensure all physical parameters are in standard SI units (meters).",
+        "equation": "d = 0.5 \\times 10^{-3} \\text{ m}, \\lambda = 500 \\times 10^{-9} \\text{ m}",
+        "result": "d = 5 \\times 10^{-4} \\text{ m}, \\lambda = 5 \\times 10^{-7} \\text{ m}"
+      },
+      {
+        "title": "Final Calculation",
+        "reasoning": "Substitute the normalized values into the fringe width equation to solve for distance.",
+        "equation": "\\beta = \\frac{(5 \\times 10^{-7} \\text{ m}) \\times (1 \\text{ m})}{5 \\times 10^{-4} \\text{ m}}",
+        "result": "1.0 mm"
+      }
+    ],
+    "takeaway": "Remember that fringe width is directly proportional to wavelength and screen distance, and inversely proportional to slit separation.",
+    "assumptions": [
+      {
+        "assumption": "Small angle approximation (sin θ ≈ tan θ ≈ θ)",
+        "validity": "Valid when screen distance D is much larger than slit separation d.",
+        "failure": "Fails if the screen is placed very close to the slits, where wavefronts are not effectively parallel."
+      }
+    ],
+    "commonMistakes": [
+      "Forgetting to convert mm to m for the slit separation.",
+      "Confusing the separation of the central maximum with fringe width."
+    ],
+    "importantObservation": "The fringe width is constant for a given experimental setup, resulting in a uniform fringe pattern.",
+    "notations": [
+      {
+        "symbol": "\\beta",
+        "meaning": "fringe width"
+      },
+      {
+        "symbol": "\\lambda",
+        "meaning": "wavelength of light"
+      },
+      {
+        "symbol": "D",
+        "meaning": "distance to the screen"
+      },
+      {
+        "symbol": "d",
+        "meaning": "separation between slits"
+      }
+    ]
+  },
+  "finalAnswer": {
+    "value": "1.0 mm",
+    "option": "B"
+  },
+  "availableModes": [
+    "EXAM",
+    "LEARN"
+  ],
+  "subject": "Physics",
+  "topic": "Wave Optics",
+  "subtopic": "Young's Double Slit Experiment",
+  "difficulty": "Easy",
+  "questionType": "MCQ",
+  "primaryConcept": "Fringe width calculation"
+}

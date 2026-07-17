@@ -27,15 +27,11 @@ export default function StudentCbtTestTakePage() {
   const testId = params.testId as string;
   const router = useRouter();
   const candidate = useAuthStore((s) => s.candidate);
-  const hydrateWs = useWorkspaceAuthStore((s) => s.hydrate);
   const [started, setStarted] = useState(false);
   const [allowed, setAllowed] = useState<boolean | null>(null);
 
   const wsSession = useWorkspaceAuthStore((s) => s.session);
 
-  useEffect(() => {
-    hydrateWs();
-  }, [hydrateWs]);
 
   useEffect(() => {
     if (!candidate || (wsSession && wsSession.role !== "student")) {

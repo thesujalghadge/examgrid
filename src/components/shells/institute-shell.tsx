@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { getInstituteDisplayName } from "@/lib/platform-institute-registry";
+import { useInstituteName } from "@/hooks/use-institute-name";
 import { SessionHydrationGate } from "@/components/auth/session-hydration-gate";
 import { WorkspaceShell } from "@/components/shells/workspace-shell";
 import { useWorkspaceAuthStore } from "@/stores/workspace-auth-store";
@@ -23,6 +23,7 @@ export function InstituteShell({ children }: { children: React.ReactNode }) {
   const session = useWorkspaceAuthStore((s) => s.session);
   const isHydrated = useWorkspaceAuthStore((s) => s.isHydrated);
   const logout = useWorkspaceAuthStore((s) => s.logout);
+  const instituteName = useInstituteName(session?.instituteId);
 
   useEffect(() => {
     if (!isHydrated || pathname === "/institute/login") return;
@@ -47,7 +48,7 @@ export function InstituteShell({ children }: { children: React.ReactNode }) {
       ) : (
         <WorkspaceShell
           title="Institute Operations"
-          subtitle={getInstituteDisplayName(session.instituteId)}
+          subtitle={instituteName}
           identity={`${session.userId} | ${session.instituteId}`}
           nav={NAV}
           footer={

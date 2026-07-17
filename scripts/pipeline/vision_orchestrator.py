@@ -5,13 +5,24 @@ import time
 
 def main():
     if len(sys.argv) > 1 and sys.argv[1] == "--verify":
+        print("Python executable:")
+        print(sys.executable)
+        print("\nPython version:")
+        print(sys.version.split(' ')[0])
+        print("\nDependency check:")
         try:
             import fitz
+            print("✓ PyMuPDF")
             import PIL
-            print("[VERIFICATION] PyMuPDF and Pillow successfully imported.")
+            print("✓ Pillow")
+            import google.generativeai
+            print("✓ google-genai")
             sys.exit(0)
         except ImportError as e:
-            print(f"[VERIFICATION ERROR] {e}")
+            print("\nMissing dependency:")
+            # e.name or str(e)
+            missing = str(e).split("'")[1] if "'" in str(e) else str(e)
+            print(f"{missing} ({e})")
             sys.exit(1)
 
     if len(sys.argv) < 3:

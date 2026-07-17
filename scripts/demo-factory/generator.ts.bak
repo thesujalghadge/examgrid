@@ -1,0 +1,461 @@
+import { SupabaseClient } from "@supabase/supabase-js";
+import { DemoConfig } from "./types";
+import { DeterministicRNG } from "./rng";
+
+export class DemoGenerator {
+  private supabase: SupabaseClient;
+  private config: DemoConfig;
+  private rng: DeterministicRNG;
+  
+  private instituteId!: string;
+  private batchMap = new Map<string, string>();
+  private students: any[] = [];
+  private exams: any[] = [];
+  private examQuestions: any[] = [];
+
+  constructor(supabase: SupabaseClient, config: DemoConfig) {
+    this.supabase = supabase;
+    this.config = config;
+    this.rng = new DeterministicRNG(config.seed);
+  }
+
+  public async generate() {
+    console.log(`🚀 Starting Demo Factory Generation for ${this.config.institute.name}...`);
+    
+    console.log("🧹 Resetting environment...");
+    const { error: resetErr } = await this.supabase.rpc('reset_demo_data');
+    if (resetErr) {
+      console.warn("⚠️ Warning: reset_demo_data failed or not found, attempting manual cleanup...");
+    }
+    
+    // Fallback/additive cleanup for tables not in the original reset fn
+    await this.supabase.from('exam_schedules').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await this.supabase.from('audit_logs').delete().neq('id', '0');
+
+    await this.setupInstitute();
+    await this.setupBatches();
+    await this.setupStudents();
+    await this.setupExams();
+    await this.setupQuestions();
+    await this.setupAttempts();
+    await this.setupAISolutionQueue();
+    await this.setupAuditLogs();
+
+    console.log(`✅ Demo Factory Generation Complete for ${this.config.institute.name}!`);
+  }
+
+  private async setupInstitute() {
+    const configName = this.config.institute.name;
+    const adminEmail = `admin${this.config.institute.domain}`;
+
+    let { data: institute, error } = await this.supabase
+      .from('institutes')
+      .select('id')
+      .eq('name', configName)
+      .maybeSingle();
+      
+    if (error) {
+      throw new Error(`❌ Error checking institute: ${error.message}`);
+    }
+
+    if (!institute) {
+      console.log(`🏫 Institute "${configName}" not found. Creating it...`);
+      const id = this.rng.nextUUID();
+      const slug = configName.toLowerCase().replace(/ /g, '-');
+      const { data: newInst, error: insertErr } = await this.supabase
+        .from('institutes')
+        .insert({
+          id,
+          name: configName,
+          slug: `${slug}-${id.split('-')[0]}`,
+          contact_email: adminEmail,
+          is_active: true
+        })
+        .select('id')
+        .single();
+        
+      if (insertErr || !newInst) {
+        throw new Error(`❌ Failed to create institute: ${insertErr?.message}`);
+      }
+      institute = newInst;
+    }
+    this.instituteId = institute.id;
+  }
+
+  private async setupBatches() {
+    console.log("🏫 Generating batches...");
+    const batchesData = this.config.batches.map(b => ({
+      id: this.rng.nextUUID(),
+      institute_id: this.instituteId,
+      name: b.name,
+      course_type: "JEE",
+      academic_year: "2026-2027",
+      is_active: true
+    }));
+
+    const { error } = await this.supabase.from('batches').upsert(batchesData, { onConflict: 'institute_id, name, academic_year' });
+    if (error) throw new Error(`Failed to upsert batches: ${error.message}`);
+    
+    const { data } = await this.supabase.from('batches').select('id, name').eq('institute_id', this.instituteId);
+    data?.forEach(b => this.batchMap.set(b.name, b.id));
+    console.log(`✅ ${batchesData.length} Batches generated.`);
+  }
+
+  private async setupStudents() {
+    console.log("👨‍🎓 Generating students and personas...");
+    let studentCounter = 1;
+
+    for (const batch of this.config.batches) {
+      for (let i = 0; i < batch.size; i++) {
+        const personaIndex = this.config.personas.findIndex(p => p.batch === batch.name && !this.students.some(s => s.email === p.email));
+        const profile = personaIndex !== -1 ? this.config.personas[personaIndex] : null;
+        
+        // Handle teacher/admin personas gracefully if they are in the list
+        if (batch.name === "ADMIN" || batch.name === "TEACHER") continue;
+
+        const student = {
+          id: this.rng.nextUUID(),
+          institute_id: this.instituteId,
+          name: profile ? profile.name : `Student ${studentCounter}`,
+          full_name: profile ? profile.name : `Student ${studentCounter}`,
+          application_number: `APP26-${String(studentCounter).padStart(5, '0')}`,
+          email: profile ? profile.email : `student${studentCounter}${this.config.institute.domain}`,
+          roll_number: `DEMO-${String(studentCounter).padStart(3, '0')}`,
+          phone: `99999${String(studentCounter).padStart(5, '0')}`,
+          batch_id: this.batchMap.get(batch.name) || null
+        };
+        this.students.push(student);
+        studentCounter++;
+      }
+    }
+
+    const { error } = await this.supabase.from('students').upsert(this.students, { onConflict: 'institute_id, roll_number' });
+    if (error) throw new Error(`Failed to upsert students: ${error.message}`);
+    console.log(`✅ ${this.students.length} Students generated.`);
+  }
+
+  private async setupExams() {
+    console.log("📝 Generating exams and schedules...");
+    this.exams = this.config.exams.map(e => ({
+      id: this.rng.nextUUID(),
+      institute_id: this.instituteId,
+      title: e.title,
+      exam_type: "JEE_MAIN",
+      duration_minutes: 180,
+      total_questions: 75,
+      scheduled_at: e.date,
+      is_published: true
+    }));
+
+    const { error } = await this.supabase.from('exams').upsert(this.exams, { onConflict: 'id' });
+    if (error) throw new Error(`Failed to upsert exams: ${error.message}`);
+    
+    const schedules = [];
+    const scheduleBatches = [];
+
+    for (const exam of this.exams) {
+      const scheduleId = this.rng.nextUUID();
+      schedules.push({
+        id: scheduleId,
+        institute_id: this.instituteId,
+        exam_id: exam.id,
+        start_at: new Date(new Date(exam.scheduled_at).getTime() - 1000 * 60 * 60 * 24).toISOString(),
+        end_at: new Date(new Date(exam.scheduled_at).getTime() + 1000 * 60 * 60 * 24 * 7).toISOString(),
+        duration_minutes: exam.duration_minutes,
+        visibility_rule: 'assigned_batches',
+        is_active: true
+      });
+      
+      for (const batchId of Array.from(this.batchMap.values())) {
+        scheduleBatches.push({
+          schedule_id: scheduleId,
+          batch_id: batchId,
+          institute_id: this.instituteId
+        });
+      }
+    }
+
+    const { error: sErr } = await this.supabase.from('exam_schedules').upsert(schedules, { onConflict: 'id' });
+    if (sErr) throw new Error(`Failed to upsert schedules: ${sErr.message}`);
+    
+    const { error: sbErr } = await this.supabase.from('exam_schedule_batches').upsert(scheduleBatches, { onConflict: 'schedule_id, batch_id' });
+    if (sbErr) throw new Error(`Failed to upsert schedule batches: ${sbErr.message}`);
+
+    console.log(`✅ ${this.exams.length} Exams generated with schedules.`);
+  }
+
+  private async setupQuestions() {
+    console.log("❓ Generating dummy questions...");
+    
+    // First setup exam_sections
+    const sections = [];
+    for (const exam of this.exams) {
+      sections.push(
+        { id: "physics", exam_id: exam.id, institute_id: this.instituteId, name: "Physics", sort_order: 1 },
+        { id: "chemistry", exam_id: exam.id, institute_id: this.instituteId, name: "Chemistry", sort_order: 2 },
+        { id: "maths", exam_id: exam.id, institute_id: this.instituteId, name: "Mathematics", sort_order: 3 }
+      );
+    }
+    const { error: secErr } = await this.supabase.from('exam_sections').upsert(sections, { onConflict: 'exam_id, id' });
+    if (secErr) throw new Error(`Failed to upsert sections: ${secErr.message}`);
+
+    const examQuestions = [];
+    
+    for (const exam of this.exams) {
+      const examSections = sections.filter(s => s.exam_id === exam.id);
+      let questionNumber = 1;
+      
+      for (const section of examSections) {
+        for (let i = 0; i < 25; i++) {
+          const qId = this.rng.nextUUID();
+          examQuestions.push({
+            id: qId,
+            exam_id: exam.id,
+            institute_id: this.instituteId,
+            section_id: section.id,
+            question_type: "MCQ_SINGLE",
+            question_text: `Dummy Question ${questionNumber} for ${section.name}`,
+            options: [{ id: "A", text: "Option A" }, { id: "B", text: "Option B" }, { id: "C", text: "Option C" }, { id: "D", text: "Option D" }],
+            marks: 4,
+            negative_marks: 1,
+            correct_option_id: "A",
+            question_number: questionNumber,
+            sort_order: questionNumber
+          });
+          this.examQuestions.push({ exam_id: exam.id, question_id: qId });
+          questionNumber++;
+        }
+      }
+    }
+
+    const { error: qErr } = await this.supabase.from('exam_questions').upsert(examQuestions, { onConflict: 'id' });
+    if (qErr) throw new Error(`Failed to upsert exam_questions: ${qErr.message}`);
+
+    console.log(`✅ ${examQuestions.length} Questions generated.`);
+  }
+
+  private async setupAttempts() {
+    console.log("✍️ Generating student attempts, responses, and analytics jobs...");
+    const attempts = [];
+    const attemptAnswers = [];
+    const analyticsJobs = [];
+    
+    for (const exam of this.exams) {
+      const examConfig = this.config.exams.find(e => e.title === exam.title);
+      const trapAnomaly = examConfig?.anomalies.find(a => a.type === "TRAP_QUESTION") as any;
+      const absenceAnomaly = examConfig?.anomalies.find(a => a.type === "ABSENCE") as any;
+      
+      let absentees = 0;
+
+      for (const student of this.students) {
+        if (absenceAnomaly && absentees < absenceAnomaly.count) {
+          absentees++;
+          continue; // Skip this student to simulate absence
+        }
+
+        const attemptId = this.rng.nextUUID();
+        const answers: Record<string, string> = {};
+        let score = 0;
+        let attemptQuestionsCount = 0;
+        
+        // Find questions for this exam
+        const questionsForExam = this.examQuestions.filter(q => q.exam_id === exam.id);
+        
+        for (let i = 0; i < questionsForExam.length; i++) {
+          const q = questionsForExam[i];
+          const isTrap = trapAnomaly && i === trapAnomaly.questionIndex - 1;
+          
+          let selectedOption = null;
+          let isCorrect = false;
+          let marksAwarded = 0;
+
+          if (isTrap) {
+             const fallsForTrap = this.rng.next() < trapAnomaly.wrongOptionRate;
+             if (fallsForTrap) {
+               selectedOption = trapAnomaly.wrongOption;
+               marksAwarded = -1;
+             } else {
+               selectedOption = "A";
+               marksAwarded = 4;
+               isCorrect = true;
+             }
+          } else {
+             // 50% correct random answers
+             isCorrect = this.rng.next() > 0.5;
+             if (isCorrect) {
+               selectedOption = "A";
+               marksAwarded = 4;
+             } else {
+               selectedOption = "B";
+               marksAwarded = -1;
+             }
+          }
+          
+          answers[q.question_id] = selectedOption;
+          score += marksAwarded;
+          attemptQuestionsCount++;
+
+          attemptAnswers.push({
+            id: this.rng.nextUUID(),
+            attempt_id: attemptId,
+            question_id: q.question_id,
+            selected_answer: selectedOption,
+            is_correct: isCorrect,
+            marks_awarded: marksAwarded
+          });
+        }
+
+        attempts.push({
+          id: attemptId,
+          institute_id: this.instituteId,
+          test_id: exam.id,
+          student_id: student.id,
+          student_roll_number: student.roll_number,
+          session_id: this.rng.nextUUID(),
+          status: "submitted",
+          score: score,
+          answers: answers,
+          started_at: new Date(new Date(exam.scheduled_at).getTime() - 1000 * 60 * 5).toISOString(),
+          submitted_at: new Date(new Date(exam.scheduled_at).getTime() + 1000 * 60 * 175).toISOString(),
+          accuracy: 50,
+          total_questions: 75,
+          attempted_questions: attemptQuestionsCount,
+          result_breakdown: { finalScore: score, maxScore: 300, durationSeconds: 10500 }
+        });
+
+        if (student.batch_id) {
+          analyticsJobs.push({
+            id: this.rng.nextUUID(),
+            attempt_id: attemptId,
+            student_id: student.id,
+            exam_id: exam.id,
+            batch_id: student.batch_id,
+            status: "PENDING"
+          });
+        }
+      }
+    }
+
+    const { error } = await this.supabase.from('cbt_attempts').upsert(attempts, { onConflict: 'id' });
+    if (error) throw new Error(`Failed to upsert attempts: ${error.message}`);
+    
+    // Chunk attempt_answers to avoid payload limits
+    const chunkSize = 2000;
+    for (let i = 0; i < attemptAnswers.length; i += chunkSize) {
+      const chunk = attemptAnswers.slice(i, i + chunkSize);
+      const { error: ansErr } = await this.supabase.from('cbt_attempt_answers').upsert(chunk, { onConflict: 'id' });
+      if (ansErr) throw new Error(`Failed to upsert attempt_answers chunk: ${ansErr.message}`);
+    }
+
+    const { error: ajErr } = await this.supabase.from('analytics_jobs').upsert(analyticsJobs, { onConflict: 'id' });
+    if (ajErr) throw new Error(`Failed to upsert analytics_jobs: ${ajErr.message}`);
+
+    console.log(`✅ ${attempts.length} Exam Attempts, ${attemptAnswers.length} Answers, and ${analyticsJobs.length} Analytics Jobs generated.`);
+  }
+
+  private async setupAISolutionQueue() {
+    console.log("🤖 Generating AI Solution Queue lifecycle states and placeholders...");
+    const queueRows = [];
+    const questionSolutions = [];
+    const dist = this.config.aiPipeline.distribution;
+
+    for (const q of this.examQuestions) {
+      const rand = this.rng.next();
+      let status = "COMPLETED";
+      let attempts = 1;
+      
+      if (rand < dist.FAILED) {
+        status = "FAILED";
+        attempts = 3;
+      } else if (rand < dist.FAILED + dist.REGENERATED) {
+        status = "COMPLETED"; // A regenerated solution is one that is completed but took >1 attempts
+        attempts = 2;
+      } else if (rand < dist.FAILED + dist.REGENERATED + dist.PENDING) {
+        status = "PENDING";
+        attempts = 0;
+      }
+
+      queueRows.push({
+        id: this.rng.nextUUID(),
+        question_id: q.question_id,
+        institute_id: this.instituteId,
+        status: status,
+        attempts: attempts,
+        created_at: new Date().toISOString()
+      });
+
+      if (status === "COMPLETED") {
+        questionSolutions.push({
+          question_id: q.question_id,
+          institute_id: this.instituteId,
+          version: 1,
+          is_active: true,
+          provider: 'demo-factory',
+          model_name: 'placeholder-model',
+          prompt_version: 'v1.0',
+          // Minimal placeholder content isolated for future Sprint 2 replacement
+          content_markdown: `**Solution (Placeholder for Demo)**\n\nThe correct answer is **${this.getCorrectOption(q.question_id)}**.\n\n*Note: This is a temporary placeholder generated by the Demo Factory. In production, this will be generated by the Gemini Knowledge Engine (Sprint 2).*`,
+          final_answer: this.getCorrectOption(q.question_id)
+        });
+      }
+    }
+
+    const { error } = await this.supabase.from('solution_generation_queue').upsert(queueRows, { onConflict: 'id' });
+    if (error) throw new Error(`Failed to upsert queue rows: ${error.message}`);
+    
+    // Chunk question_solutions to avoid payload limits
+    const chunkSize = 2000;
+    for (let i = 0; i < questionSolutions.length; i += chunkSize) {
+      const chunk = questionSolutions.slice(i, i + chunkSize);
+      const { error: qsErr } = await this.supabase.from('question_solutions').upsert(chunk, { onConflict: 'question_id, version' });
+      if (qsErr) throw new Error(`Failed to upsert question_solutions: ${qsErr.message}`);
+    }
+
+    console.log(`✅ ${queueRows.length} AI Queue states and ${questionSolutions.length} Placeholder Solutions generated.`);
+  }
+
+  private getCorrectOption(questionId: string): string {
+    // In our mocked setup, we default to A unless it was a trap.
+    // We just return A for the placeholder.
+    return "A";
+  }
+
+  private async setupAuditLogs() {
+    console.log("📢 Generating Institute Timeline Events (Announcements & Remarks)...");
+    const logs = [
+      {
+        event_id: this.rng.nextUUID(),
+        institute_id: this.instituteId,
+        action_type: 'INSTITUTE_ANNOUNCEMENT',
+        resource_type: 'institute',
+        resource_id: this.instituteId,
+        actor_role: 'admin',
+        actor_id: this.rng.nextUUID(),
+        session_id: this.rng.nextUUID(),
+        source: 'demo-factory',
+        outcome: 'success',
+        timestamp_utc: '2026-05-28T10:00:00Z',
+        metadata: { message: "Welcome to Apex Academy! Let's crack JEE." }
+      },
+      {
+        event_id: this.rng.nextUUID(),
+        institute_id: this.instituteId,
+        action_type: 'TEACHER_REMARK',
+        resource_type: 'batch',
+        resource_id: this.rng.nextUUID(),
+        actor_role: 'admin',
+        actor_id: this.rng.nextUUID(),
+        session_id: this.rng.nextUUID(),
+        source: 'demo-factory',
+        outcome: 'success',
+        timestamp_utc: '2026-06-15T14:00:00Z',
+        metadata: { message: "Pioneer Batch: Your Mechanics performance is weak. Please attend the revision class tomorrow." }
+      }
+    ];
+
+    // Using any casting to bypass strict type checking on audit_logs which might be missing id
+    const { error } = await this.supabase.from('audit_logs').upsert(logs as any, { onConflict: 'event_id' });
+    if (error) throw new Error(`Failed to insert audit logs: ${error.message}`);
+    console.log(`✅ Timeline Events generated.`);
+  }
+}

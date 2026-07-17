@@ -38,25 +38,47 @@ export async function hydrateSupabaseRepositories(): Promise<HydrateResult> {
   const batches = bundle.batches as SupabaseBatchRepository;
   const schedules = bundle.schedules as SupabaseScheduleRepository;
 
+  const startTime = performance.now();
+
   try {
     // Execute sequentially to avoid connection pool exhaustion / 'Failed to fetch' network errors
-    await questions.refreshFromRemote();
+    // We specifically omit 'questions' here to avoid massive startup cost (it will be lazy loaded).
     await exams.refreshFromRemote();
     await students.refreshFromRemote();
     await batches.refreshFromRemote();
     await schedules.refreshFromRemote();
-    const qCount = questions.list().length;
-    const eCount = exams.list().length;
-    const sCount = students.list().length;
-    const bCount = batches.list().length;
-    const scheduleCount = schedules.list().length;
+    
+    const eList = exams.list();
+    const sList = students.list();
+    const bList = batches.list();
+    const scList = schedules.list();
+
+    const eCount = eList.length;
+    const sCount = sList.length;
+    const bCount = bList.length;
+    const scheduleCount = scList.length;
+    
+    const endTime = performance.now();
+    const totalTimeMs = Math.round(endTime - startTime);
+
+    if (process.env.NODE_ENV === "development") {
+      const approxBytes = JSON.stringify(eList).length + JSON.stringify(sList).length + JSON.stringify(bList).length + JSON.stringify(scList).length;
+      const approxKb = (approxBytes / 1024).toFixed(1);
+      
+      console.log(`[Hydration Metrics]
+  - Repositories: exams, students, batches, schedules
+  - Rows Loaded: ${eCount + sCount + bCount + scheduleCount} (${eCount} exams, ${sCount} students, ${bCount} batches, ${scheduleCount} schedules)
+  - Payload Size (approx): ${approxKb} KB
+  - Hydration Time: ${totalTimeMs}ms`);
+    }
+
     logRepositoryMode(
       "supabase",
-      `hydrated ${qCount} questions, ${eCount} exams, ${sCount} students, ${bCount} batches, ${scheduleCount} schedules`,
+      `hydrated ${eCount} exams, ${sCount} students, ${bCount} batches, ${scheduleCount} schedules`,
     );
     return {
       ok: true,
-      questionsCount: qCount,
+      questionsCount: questions.isHydrated ? questions.list().length : 0,
       examsCount: eCount,
       studentsCount: sCount,
       batchesCount: bCount,
@@ -74,6 +96,15 @@ export async function hydrateSupabaseRepositories(): Promise<HydrateResult> {
       schedulesCount: 0,
       error: message,
     };
+  }
+}
+
+export async function hydrateSupabaseQuestions(): Promise<void> {
+  if (getRepositoryMode() !== "supabase") return;
+  const bundle = getRepositories();
+  const questions = bundle.questions as SupabaseQuestionRepository;
+  if (!questions.isHydrated) {
+    await questions.refreshFromRemote();
   }
 }
 

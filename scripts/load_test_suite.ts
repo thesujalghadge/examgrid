@@ -102,7 +102,7 @@ async function main() {
     p_session_id: `sess-${RUN_ID}-${i}`,
     p_test_id: examId,
     p_institute_id: instId,
-    p_student_roll_number: s.roll_number,
+    p_student_id: s.id,
     p_status: "submitted",
     p_started_at: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
     p_submitted_at: new Date().toISOString(),
@@ -183,7 +183,7 @@ async function main() {
       const studentMap = new Map(students.map(s => [s.roll_number, s.id]));
       const jobsToInsert = attempts.map(a => {
         const studentIndex = payloads.findIndex(p => p.p_session_id === a.session_id);
-        const studentId = studentMap.get(payloads[studentIndex].p_student_roll_number);
+        const studentId = studentMap.get(payloads[studentIndex].p_student_id);
         return {
           attempt_id: a.id,
           student_id: studentId,

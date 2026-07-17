@@ -10,12 +10,12 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 export async function verifyAndFetchSolution(
   instituteId: string,
   testId: string,
-  studentRoll: string,
+  studentId: string,
   questionId: string,
   hasAttempted: boolean,
   index?: number
 ) {
-  if (!instituteId || !testId || !studentRoll || !questionId) {
+  if (!instituteId || !testId || !studentId || !questionId) {
     return { error: "400: Missing required parameters" };
   }
 
@@ -23,7 +23,7 @@ export async function verifyAndFetchSolution(
     .from("students")
     .select("id, batch_id, is_active")
     .eq("institute_id", instituteId)
-    .eq("roll_number", studentRoll)
+    .eq("id", studentId)
     .maybeSingle();
 
   if (!student || !student.is_active) {
@@ -124,12 +124,17 @@ export async function verifyAndFetchSolution(
   }
 
   // Phase 4.3 Lazy Loading: Fetch the solution
+  // NOTE: commit_solution_and_job RPC does not set generation_status on question_solutions.
+  // The authoritative completion signal is the queue row's status=COMPLETED.
+  // We fetch the solution row by question_id + institute_id without filtering on generation_status.
   const { data: solution } = await supabase
     .from("question_solutions")
     .select("content_markdown, final_answer, ai_metadata")
     .eq("institute_id", instituteId)
     .eq("question_id", resolvedQuestionId)
     .eq("is_active", true)
+    .order("created_at", { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   if (!solution) {
@@ -144,17 +149,15 @@ export async function verifyAndFetchSolution(
       return { error: "Solution unavailable. Institute has been notified." };
     }
 
-    // 2. Count completed solutions
-
+    // 2. Count completed solutions by checking queue status (authoritative)
     let completed = 0;
     if (total > 0) {
       const qIds = questions!.map(q => q.id);
       const { count } = await supabase
-        .from("question_solutions")
+        .from("solution_generation_queue")
         .select("id", { count: "exact", head: true })
         .in("question_id", qIds)
-        .eq("is_active", true)
-        .eq("generation_status", "COMPLETED");
+        .eq("status", "COMPLETED");
       completed = count || 0;
     }
 

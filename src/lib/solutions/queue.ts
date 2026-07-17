@@ -30,6 +30,21 @@ export async function enqueueQuestionsForGeneration(
     return { enqueued: 0, skipped: questionIds.length };
   }
 
+  // 1.5 Filter out unpublished questions
+  const { data: publishedQuestions, error: pubError } = await supabase
+    .from("exam_questions")
+    .select("id")
+    .in("id", toEnqueue)
+    .not("published_at", "is", null);
+
+  if (pubError) throw pubError;
+  const publishedSet = new Set(publishedQuestions?.map((q: any) => q.id) || []);
+  toEnqueue = toEnqueue.filter(id => publishedSet.has(id));
+
+  if (toEnqueue.length === 0) {
+    return { enqueued: 0, skipped: questionIds.length };
+  }
+
   // 2. Filter out questions that are already in the queue (pending/processing)
   const { data: queuedAlready, error: queueError } = await supabase
     .from("solution_generation_queue")

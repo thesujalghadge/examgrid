@@ -34,7 +34,7 @@ export async function runAnalyticsWorker() {
 
         const { data: answers } = await supabase
           .from("cbt_attempt_answers")
-          .select("question_id, is_correct, marks_awarded, selected_answer, time_taken_seconds")
+          .select("question_id, bank_question_id, is_correct, marks_awarded, selected_answer, time_taken_seconds")
           .eq("attempt_id", attempt.id);
         if (!answers || answers.length === 0) throw new Error("No answers found");
 
@@ -62,36 +62,16 @@ export async function runAnalyticsWorker() {
 
         const realExamId = job.exam_id.startsWith("cbt-") ? job.exam_id.split("-paper-")[0].replace("cbt-", "") : job.exam_id;
 
-        const { data: realQuestions } = await supabase
-          .from("exam_questions")
-          .select("id, question_number")
-          .eq("exam_id", realExamId);
-        
-        const realQuestionsMap = new Map();
-        if (realQuestions) {
-          realQuestions.forEach(rq => {
-            realQuestionsMap.set(String(rq.question_number), rq.id);
-          });
-        }
-
-        const mappedAnswers = answers.map(ans => {
-           const qNumMatch = ans.question_id.match(/question-(\d+)/);
-           const qNum = qNumMatch ? qNumMatch[1] : null;
-           const realId = qNum && realQuestionsMap.has(String(qNum)) ? realQuestionsMap.get(String(qNum)) : ans.question_id;
-           return {
-             ...ans,
-             real_question_id: realId
-           };
-        });
+        // Remove legacy regex mapping: answers already contain question_id (occurrence) and bank_question_id (canonical).
 
         // 2. Rank Engine
         await runRankEngine(job.exam_id, attempt.institute_id);
 
         // 3. Question Analytics
-        await updateQuestionAnalytics(realExamId, mappedAnswers);
+        await updateQuestionAnalytics(realExamId, answers);
 
         // 4. Generate Relational & Cumulative Analytics
-        artifactCount += await generateStudentAnalytics(job.student_id, realExamId, job.batch_id, mappedAnswers);
+        artifactCount += await generateStudentAnalytics(job.student_id, realExamId, job.batch_id, answers);
 
         // 5. Generate Overall Snapshot
         artifactCount += await generateOverallSnapshot(job.student_id, job.exam_id, job.batch_id, {
@@ -167,7 +147,7 @@ async function updateQuestionAnalytics(examId: string, answers: any[]) {
     const isUnattempted = !isAttempted;
 
     return {
-      question_id: ans.real_question_id,
+      question_id: ans.question_id,
       exam_id: examId,
       attempt_count: isAttempted ? 1 : 0,
       correct_count: isCorrect ? 1 : 0,
@@ -189,22 +169,24 @@ async function generateStudentAnalytics(studentId: string, examId: string, batch
   if (!batchId) return 0;
   let artifactCount = 0;
 
-  const questionIds = answers.map(a => a.real_question_id);
+  const bankQuestionIds = answers.map(a => a.bank_question_id).filter(Boolean);
   const { data: mappings } = await supabase
-    .from("question_syllabus_mappings")
-    .select("*")
-    .in("question_id", questionIds)
-    .eq("batch_id", batchId);
+    .from("question_node_mappings")
+    .select("question_id, node_id, curriculum_nodes!inner(node_type)")
+    .in("question_id", bankQuestionIds);
 
-  if (!mappings || mappings.length === 0) return artifactCount;
+  if (!mappings || mappings.length === 0) {
+    console.warn(`[ANALYTICS] No syllabus mappings found for exam ${examId}`);
+    return artifactCount;
+  }
 
   const subjectStats: Record<string, any> = {};
   const chapterStats: Record<string, any> = {};
   const conceptStats: Record<string, any> = {};
 
   answers.forEach(ans => {
-    const mapping = mappings.find(m => m.question_id === ans.real_question_id);
-    if (!mapping) return;
+    const qMappings = mappings.filter(m => m.question_id === ans.bank_question_id);
+    if (qMappings.length === 0) return;
 
     const isAttempted = ans.selected_answer !== null && ans.selected_answer !== "";
     const isCorrect = ans.is_correct;
@@ -221,9 +203,12 @@ async function generateStudentAnalytics(studentId: string, examId: string, batch
       statsObj[key].time += timeSpent;
     };
 
-    if (mapping.syllabus_subject_id) aggregate(subjectStats, mapping.syllabus_subject_id);
-    if (mapping.syllabus_chapter_id) aggregate(chapterStats, mapping.syllabus_chapter_id);
-    if (mapping.syllabus_topic_id) aggregate(conceptStats, mapping.syllabus_topic_id);
+    qMappings.forEach(mapping => {
+      const type = (mapping.curriculum_nodes as any).node_type;
+      if (type === "SUBJECT") aggregate(subjectStats, mapping.node_id);
+      else if (type === "CHAPTER") aggregate(chapterStats, mapping.node_id);
+      else if (type === "TOPIC") aggregate(conceptStats, mapping.node_id);
+    });
   });
 
   // Function to process upserts for exam-specific and cumulative tables

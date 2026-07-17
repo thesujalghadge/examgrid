@@ -1,0 +1,24 @@
+const { createClient } = require('@supabase/supabase-js');
+require('dotenv').config({ path: '.env.local' });
+const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+
+async function checkAllText() {
+  const tables = [
+    'exams', 'exam_schedules', 'cbt_attempts', 'cbt_results', 'analytics_jobs',
+    'analytics_snapshots', 'question_analytics', 'student_recommendations',
+    'student_exam_subject_analytics', 'student_exam_chapter_analytics',
+    'student_exam_concept_analytics', 'exam_solution_status'
+  ];
+  
+  for (const table of tables) {
+    const { data: allData } = await sb.from(table).select('*');
+    for (const row of allData || []) {
+      for (const [key, val] of Object.entries(row)) {
+        if (String(val).includes('12345')) {
+          console.log(`table_name: ${table} | column_name: ${key} | value: ${val} | pk: ${row.id || row.student_id || 'unknown'}`);
+        }
+      }
+    }
+  }
+}
+checkAllText();

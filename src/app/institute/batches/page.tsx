@@ -12,6 +12,7 @@ import { recordAuditEvent } from "@/services/audit-service";
 import { createBatchInput } from "@/services/institute-ops-service";
 import { useWorkspaceAuthStore } from "@/stores/workspace-auth-store";
 import type { Batch } from "@/types/institute-ops";
+import Link from "next/link";
 
 const blank = {
   name: "",
@@ -163,7 +164,18 @@ export default function InstituteBatchesPage() {
               <Input id="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="JEE 2026 A" required />
             </Field>
             <Field label="Course" id="course">
-              <Input id="course" value={form.courseType} onChange={(e) => setForm({ ...form, courseType: e.target.value })} required />
+              <select
+                id="course"
+                value={form.courseType}
+                onChange={(e) => setForm({ ...form, courseType: e.target.value })}
+                required
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="JEE">JEE</option>
+                <option value="NEET">NEET</option>
+                <option value="CET-M">CET-M</option>
+                <option value="CET-B">CET-B</option>
+              </select>
             </Field>
             <Field label="Academic year" id="year">
               <Input id="year" value={form.academicYear} onChange={(e) => setForm({ ...form, academicYear: e.target.value })} required />
@@ -202,6 +214,9 @@ export default function InstituteBatchesPage() {
                 <td className="space-x-2 px-4 py-3 text-right">
                   <Button size="sm" variant="outline" onClick={() => edit(batch)}>
                     Edit
+                  </Button>
+                  <Button size="sm" variant="outline" render={<Link href={`/institute/batches/${batch.id}/syllabus`} />} nativeButton={false}>
+                    Syllabus
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => archive(batch.id)} disabled={!batch.active}>
                     Archive

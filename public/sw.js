@@ -1,4 +1,4 @@
-const CACHE_NAME = 'examgrid-cache-v1';
+const CACHE_NAME = 'examgrid-cache-v2';
 
 const STATIC_ASSETS = [
   '/',
@@ -37,8 +37,9 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Exclude CBT testing interface and API routes from cache
-  if (EXCLUDE_PATHS.some(path => url.pathname.includes(path)) || event.request.method !== 'GET') {
+  // Exclude CBT testing interface, Next API routes, and external Supabase API from cache
+  const isExternalAPI = url.origin !== location.origin;
+  if (isExternalAPI || EXCLUDE_PATHS.some(path => url.pathname.includes(path)) || event.request.method !== 'GET') {
     return; // Fall back to default browser behavior (Network Only)
   }
 

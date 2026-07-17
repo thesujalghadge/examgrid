@@ -33,20 +33,12 @@ export async function fetchExamSolutions(options: SolutionQueryOptions) {
 
     // 2. Student schedule verification and release check (Only for students)
     if (!isTeacherRequest) {
-      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(studentId);
-      const { data: student } = isUuid
-        ? await supabase
-            .from("students")
-            .select("id, batch_id, is_active")
-            .eq("id", studentId)
-            .eq("institute_id", instituteId)
-            .maybeSingle()
-        : await supabase
-            .from("students")
-            .select("id, batch_id, is_active")
-            .eq("roll_number", studentId)
-            .eq("institute_id", instituteId)
-            .maybeSingle();
+      const { data: student } = await supabase
+        .from("students")
+        .select("id, batch_id, is_active")
+        .eq("id", studentId)
+        .eq("institute_id", instituteId)
+        .maybeSingle();
 
       if (!student || !student.is_active) {
         return { status: 403, payload: { error: "Access denied. Student is not active in this institute." } };
