@@ -118,7 +118,8 @@ function rescoreAnswers(
       rawScore += key.marks;
     } else {
       incorrect++;
-      marksAwarded = key.negativeMarks > 0 ? -key.negativeMarks : 0;
+      const penalty = Math.abs(key.negativeMarks || 0);
+      marksAwarded = penalty > 0 ? -penalty : 0;
       rawScore += marksAwarded;
     }
 
@@ -188,10 +189,14 @@ async function rescoreExam(examId: string) {
   console.log(`  ✅ Loaded answer key for ${examQs.length} questions.`);
 
   // 2. Fetch all attempts for this exam
+  const orFilter = examRow.legacy_id
+    ? `test_id.eq.${examRow.id},test_id.eq.${examRow.legacy_id}`
+    : `test_id.eq.${examRow.id}`;
+
   const { data: attempts, error: aErr } = await supabase
     .from("cbt_attempts")
     .select("*")
-    .or(`test_id.eq.${examRow.id},test_id.eq.${examRow.legacy_id}`);
+    .or(orFilter);
 
   if (aErr) {
     console.error("❌ Failed to fetch attempts:", aErr.message);
