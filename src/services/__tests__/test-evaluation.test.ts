@@ -375,3 +375,25 @@ describe("perQuestion result entries", () => {
     expect(result.perQuestion[0].marksAwarded).toBe(0);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Negative marking configuration edge cases
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("Negative marking configuration edge cases", () => {
+  it("deducts points correctly when negativeMarks is configured as a negative number (-1)", () => {
+    const key: TestAnswerKey = { q1: mcqKey("q1-opt-A", 4, -1) };
+    const result = runEval({ answers: { q1: "q1-opt-B" }, answerKey: key });
+    expect(result.incorrect).toBe(1);
+    expect(result.rawScore).toBe(-1); // Absolute value logic ensures this applies -1
+    expect(result.perQuestion[0].marksAwarded).toBe(-1);
+  });
+
+  it("deducts points correctly when negativeMarks is configured as a positive number (1)", () => {
+    const key: TestAnswerKey = { q1: mcqKey("q1-opt-A", 4, 1) };
+    const result = runEval({ answers: { q1: "q1-opt-B" }, answerKey: key });
+    expect(result.incorrect).toBe(1);
+    expect(result.rawScore).toBe(-1);
+    expect(result.perQuestion[0].marksAwarded).toBe(-1);
+  });
+});

@@ -88,9 +88,10 @@ export function evaluateTestSession(input: {
       rawScore += key.marks;
     } else {
       incorrect += 1;
-      marksAwarded = key.negativeMarks > 0 ? -key.negativeMarks : 0;
+      const penalty = Math.abs(key.negativeMarks || 0);
+      marksAwarded = penalty > 0 ? -penalty : 0;
       if (marksAwarded < 0) {
-        negativeMarksTotal += Math.abs(marksAwarded);
+        negativeMarksTotal += penalty;
       }
       rawScore += marksAwarded;
     }

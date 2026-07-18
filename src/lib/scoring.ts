@@ -61,8 +61,9 @@ export function computeExamResult(
         } else {
           sIncorrect++;
           incorrect++;
-          sScore -= q.negativeMarks;
-          totalScore -= q.negativeMarks;
+          const penalty = Math.abs(q.negativeMarks || 0);
+          sScore -= penalty;
+          totalScore -= penalty;
         }
       }
     }

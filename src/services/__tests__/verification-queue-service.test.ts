@@ -48,7 +48,7 @@ describe("Verification Queue Service", () => {
       teacherId: "teacher1"
     });
 
-    expect(mockUpdate).toHaveBeenCalledWith("old-mapping");
+    expect(mockUpdate).toHaveBeenCalledWith("id", "old-mapping");
     expect(mockInsert).toHaveBeenCalled();
     // It should insert with VERIFIED status
   });
